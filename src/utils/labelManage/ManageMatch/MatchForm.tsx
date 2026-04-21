@@ -15,7 +15,7 @@ export const MatchForm = ({
 }) => {
   const matchStatusOptions = Object.values(MatchStatus);
   return (
-    <section className="rounded-3xl bg-white p-8 shadow-lg w-full max-w-3xl mx-auto">
+    <section className="rounded-3xl bg-white p-8 shadow-lg h-fit sticky top-6">
       <div className="mb-8">
         <p className="text-sm uppercase tracking-[0.2em] text-slate-400">
           Admin Match Manager

@@ -1,0 +1,41 @@
+/* Admin Layout Styling */
+
+.admin-layout {
+  display: flex;
+  height: 100%;
+}
+
+.admin-layout-sidebar {
+  width: 220px;
+  border-right: 1px solid #ccc;
+  background-color: #f8f9fa;
+}
+
+.admin-layout-sidebar h3 {
+  padding: 10px;
+  margin: 0;
+  background-color: #343a40;
+  color: white;
+  text-align: center;
+}
+
+.admin-layout-sidebar nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-layout-sidebar nav a {
+  padding: 10px;
+  text-decoration: none;
+  color: #343a40;
+  border-bottom: 1px solid #ddd;
+}
+
+.admin-layout-sidebar nav a:hover {
+  background-color: #e9ecef;
+}
+
+.admin-layout-content {
+  flex: 1;
+  padding: 16px;
+}

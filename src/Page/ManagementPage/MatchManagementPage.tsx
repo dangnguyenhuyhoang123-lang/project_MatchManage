@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import type { MatchModel } from "../model/MatchModel";
-import { MatchStatus } from "../model/enum";
-import { ListMatchManage } from "../utils/labelManage/ManageMatch/ListMatchhManage";
-import { MatchForm } from "../utils/labelManage/ManageMatch/MatchForm";
-import { useAuth } from "../utils/AuthContext";
+import type { MatchModel } from "../../model/MatchModel";
+import { MatchStatus } from "../../model/enum";
+import { ListMatchManage } from "../../utils/labelManage/ManageMatch/ListMatchhManage";
+import { MatchForm } from "../../utils/labelManage/ManageMatch/MatchForm";
+import { useAuth } from "../../utils/AuthContext";
 import {
   createAdminMatch,
   createEmptyMatchFormValues,
@@ -14,8 +14,8 @@ import {
   type MatchFormValues,
   type MatchOptionItem,
   updateAdminMatch,
-} from "../services/AdminMatchAPI";
-import LoadingSpinner from "../components/Spinner/LoadingSpinner";
+} from "../../services/AdminMatchAPI";
+import LoadingSpinner from "../../components/Spinner/LoadingSpinner";
 
 const toDatetimeLocalValue = (date: Date) => {
   const offset = date.getTimezoneOffset();
@@ -41,7 +41,7 @@ const formatStatusLabel = (status: string) =>
 const getOptionLabel = (options: MatchOptionItem[], id: string) =>
   options.find((option) => option.id === id)?.label || "Dang cap nhat";
 
-const AdminMatchManagementPage = () => {
+const MatchManagementPage = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [matches, setMatches] = useState<MatchModel[]>([]);
@@ -313,7 +313,7 @@ const AdminMatchManagementPage = () => {
           ← Quay ve trang chu
         </Link>
 
-        <div className="mt-6 grid xl:grid-cols-[1.1fr_1.7fr] gap-6">
+        <div className="mt-6 grid xl:grid-cols-[420px_1fr] gap-6">
           <MatchForm
             formData={formData}
             options={options}
@@ -343,4 +343,4 @@ const AdminMatchManagementPage = () => {
   );
 };
 
-export default AdminMatchManagementPage;
+export default MatchManagementPage;

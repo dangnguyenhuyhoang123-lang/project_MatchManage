@@ -29,7 +29,7 @@ const Header = () => {
           </Link>
 
           <Link
-            to={`/admin/matches`}
+            to={`/admin/manage/matches`}
             className="hover:text-yellow-400 cursor-pointer"
           >
             Management
