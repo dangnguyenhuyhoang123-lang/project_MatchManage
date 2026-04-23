@@ -1,4 +1,7 @@
 import React, { useState } from "react";
+import { Sidebar } from "../../../utils/SideBar";
+import { AddPlayerModal } from "./AddPlayer";
+import { Modal } from "../../../components/Modal";
 
 // --- Types ---
 interface Player {
@@ -15,6 +18,7 @@ interface Player {
 
 const PlayerManagement: React.FC = () => {
   // Mock data dựa trên file thiết kế của bạn
+  const [open, setOpen] = useState(false);
   const [players] = useState<Player[]>([
     {
       id: "1",
@@ -55,44 +59,11 @@ const PlayerManagement: React.FC = () => {
   ]);
 
   return (
-    <div className="flex min-h-screen bg-[#fbf9f5] text-[#1b1c1a] font-['Inter']">
+    <div className="flex min-h-screen bg-[#fbf9f5] font-sans">
       {/* Sidebar - Cố định bên trái */}
-      <aside className="h-screen w-64 fixed left-0 top-0 bg-[#f5f3ef] flex flex-col py-8 px-4 font-['Be_Vietnam_Pro'] z-50">
-        <div className="flex items-center gap-3 px-4 mb-10">
-          <div className="w-10 h-10 rounded-full bg-[#0d631b] flex items-center justify-center text-white">
-            <span className="material-symbols-outlined fill-1">
-              sports_soccer
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-2xl font-black text-[#2E7D32] tracking-tighter">
-              PitchPro
-            </span>
-            <span className="text-[10px] uppercase tracking-widest opacity-40 font-bold">
-              Elite Management
-            </span>
-          </div>
-        </div>
-
-        <nav className="flex-1 space-y-1">
-          <NavItem icon="dashboard" label="Dashboard" />
-          <NavItem icon="trophy" label="Tournaments" />
-          <NavItem icon="event_repeat" label="Rounds" />
-          <NavItem icon="groups" label="Clubs" />
-          <NavItem icon="person" label="Players" active />
-          <NavItem icon="how_to_reg" label="Registration" />
-          <NavItem icon="calendar_month" label="Schedule" />
-          <NavItem icon="sports_score" label="Results" />
-          <NavItem icon="leaderboard" label="Standings" />
-          <NavItem icon="assessment" label="Reports" />
-          <div className="pt-4 mt-4 border-t border-black/5">
-            <NavItem icon="settings" label="Configuration" />
-          </div>
-        </nav>
-      </aside>
-
+      <Sidebar />
       {/* Main Content Area */}
-      <main className="ml-64 flex-1">
+      <main className="flex-1 md:ml-64 p-6 max-w-7xl mx-auto space-y-8">
         {/* Header Bar */}
         <header className="flex justify-between items-center px-8 h-16 sticky top-0 z-40 bg-[#fbf9f5]/80 backdrop-blur-md border-b border-black/5">
           <div className="relative w-96">
@@ -135,10 +106,11 @@ const PlayerManagement: React.FC = () => {
                 Hệ thống quản lý dữ liệu và thống kê cầu thủ chuyên nghiệp.
               </p>
             </div>
-            <button className="bg-gradient-to-r from-[#0d631b] to-[#2e7d32] text-white px-6 py-3 rounded-full font-bold shadow-lg flex items-center gap-2 hover:scale-105 transition-all">
-              <span className="material-symbols-outlined fill-1">
-                person_add
-              </span>
+            <button
+              onClick={() => setOpen(true)}
+              className="bg-gradient-to-r from-[#0d631b] to-[#2e7d32] text-white px-6 py-3 rounded-full font-bold shadow-lg flex items-center gap-2 hover:scale-105 transition-all"
+            >
+              <span className="material-symbols-outlined fill-1"></span>
               Thêm cầu thủ mới
             </button>
           </div>
@@ -170,7 +142,7 @@ const PlayerManagement: React.FC = () => {
             />
             <div className="flex items-end">
               <button className="w-full h-[42px] bg-[#4c56af] text-white rounded-lg font-semibold flex items-center justify-center gap-2 hover:opacity-90">
-                <span className="material-symbols-outlined">filter_list</span>
+                <span className="material-symbols-outlined"></span>
                 Áp dụng bộ lọc
               </button>
             </div>
@@ -220,6 +192,9 @@ const PlayerManagement: React.FC = () => {
           </div>
         </div>
       </main>
+      <Modal open={open} onClose={() => setOpen(false)}>
+        <AddPlayerModal onClose={() => setOpen(false)} />
+      </Modal>
 
       {/* Floating Action Button */}
       <div className="fixed bottom-8 right-8">

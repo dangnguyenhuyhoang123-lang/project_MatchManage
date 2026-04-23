@@ -1,4 +1,7 @@
 import React, { useState } from "react";
+import { Modal } from "../../../components/Modal";
+import AddClubModal from "./AddClubModal";
+import { Sidebar } from "../../../utils/SideBar";
 
 // --- Interfaces ---
 interface Club {
@@ -57,6 +60,7 @@ const INITIAL_CLUBS: Club[] = [
 
 const ClubManagement: React.FC = () => {
   const [filter, setFilter] = useState<string>("Tất cả");
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="flex min-h-screen bg-[#fbf9f5] text-[#1b1c1a] font-['Inter']">
@@ -71,35 +75,7 @@ const ClubManagement: React.FC = () => {
       />
 
       {/* Sidebar Navigation */}
-      <aside className="w-64 fixed h-full bg-[#f5f3ef] p-6 flex flex-col border-r border-stone-200">
-        <div className="mb-10 px-4">
-          <span className="text-2xl font-black text-[#0d631b] tracking-tighter font-['Be_Vietnam_Pro']">
-            PitchPro
-          </span>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
-            Elite Management
-          </p>
-        </div>
-
-        <nav className="flex-1 space-y-1">
-          <SidebarLink icon="dashboard" label="Dashboard" />
-          <SidebarLink icon="trophy" label="Tournaments" />
-          <SidebarLink icon="groups" label="Clubs" active />
-          <SidebarLink icon="person" label="Players" />
-          <SidebarLink icon="how_to_reg" label="Registration" />
-          <SidebarLink icon="settings" label="Configuration" />
-        </nav>
-
-        <div className="pt-6 border-t border-gray-200 flex items-center gap-3 px-2">
-          <div className="w-10 h-10 rounded-full bg-gray-300" />
-          <div>
-            <p className="font-bold text-xs">Admin PitchPro</p>
-            <p className="text-[10px] opacity-60 uppercase font-bold">
-              Elite Access
-            </p>
-          </div>
-        </div>
-      </aside>
+      <Sidebar />
 
       {/* Main Content */}
       <main className="ml-64 flex-1">
@@ -139,7 +115,10 @@ const ClubManagement: React.FC = () => {
                 </p>
               </div>
             </div>
-            <button className="bg-[#0d631b] text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-green-900/20 flex items-center gap-2 hover:scale-105 transition-transform active:scale-95">
+            <button
+              onClick={() => setOpen(true)}
+              className="bg-[#0d631b] text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-green-900/20 flex items-center gap-2 hover:scale-105 transition-transform active:scale-95"
+            >
               <span className="material-symbols-outlined">add_circle</span>
               Thêm CLB mới
             </button>
@@ -223,6 +202,9 @@ const ClubManagement: React.FC = () => {
           </div>
         </section>
       </main>
+      <Modal open={open} onClose={() => setOpen(false)}>
+        <AddClubModal onClose={() => setOpen(false)} />
+      </Modal>
     </div>
   );
 };

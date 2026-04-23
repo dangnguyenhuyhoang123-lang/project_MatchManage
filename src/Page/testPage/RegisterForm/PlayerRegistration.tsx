@@ -52,7 +52,7 @@ const INITIAL_PLAYERS: Player[] = [
   },
 ];
 
-const PlayerRegistration: React.FC = () => {
+const PlayerRegistration: React.FC = ({ setStep }) => {
   const [players, setPlayers] = useState<Player[]>(INITIAL_PLAYERS);
   const mainPlayers = players.slice(0, 11);
   const subPlayers = players.slice(11);
@@ -62,326 +62,256 @@ const PlayerRegistration: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#fbf9f5] font-['Inter']">
-      {/* External Assets */}
-      <link
-        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@700;900&display=swap"
-        rel="stylesheet"
-      />
-      <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
-        rel="stylesheet"
-      />
+    <>
+      {/* Main Content */}
 
-      {/* Sidebar - Shared Component */}
-      <aside className="w-64 fixed h-full bg-[#f5f3ef] border-r border-gray-200 p-6 flex flex-col font-['Be_Vietnam_Pro']">
-        <div className="mb-10 px-2">
-          <h1 className="text-2xl font-black text-[#0d631b] tracking-tighter italic">
-            PitchPro
-          </h1>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
-            Elite Management
+      {/* Warning Banner */}
+      <div className="bg-[#fff9c4]/40 border border-[#fbc02d]/30 p-5 rounded-xl mb-8 flex items-start gap-4">
+        <span className="material-symbols-outlined text-[#f57f17] text-2xl">
+          warning
+        </span>
+        <div>
+          <h3 className="font-bold text-[#f57f17] text-sm">
+            Cần bổ sung cầu thủ
+          </h3>
+          <p className="text-[#f57f17]/80 text-xs mt-1">
+            Danh sách hiện có <span className="font-bold">14/18</span> cầu thủ.
+            Cần thêm ít nhất 4 cầu thủ. Thời hạn còn{" "}
+            <span className="font-bold text-red-600">3 ngày</span>.
           </p>
         </div>
-        <nav className="flex-1 space-y-1">
-          {["Dashboard", "Tournaments", "Clubs", "Players"].map((item) => (
-            <button
-              key={item}
-              className="w-full flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-[#0d631b] hover:bg-white/50 rounded-full transition-all text-sm font-semibold"
-            >
-              <span className="material-symbols-outlined text-lg">apps</span>{" "}
-              {item}
-            </button>
-          ))}
-          <button className="w-full flex items-center gap-3 px-4 py-3 bg-white text-[#0d631b] rounded-full shadow-sm font-bold text-sm">
-            <span className="material-symbols-outlined text-lg">
-              how_to_reg
-            </span>{" "}
-            Registration
-          </button>
-        </nav>
-      </aside>
+      </div>
 
-      {/* Main Content */}
-      <main className="ml-64 flex-1 p-10">
-        {/* Header Section */}
-        <header className="flex justify-between items-end mb-10">
-          <div>
-            <h2 className="text-4xl font-black text-gray-900 tracking-tight mb-2 font-['Be_Vietnam_Pro']">
-              Hồ sơ Đăng ký Giải đấu
-            </h2>
-            <p className="text-gray-500 text-sm">
-              Đăng ký danh sách cho giải{" "}
-              <span className="font-bold text-[#0d631b]">
-                Vietnam Premier Cup 2024
+      <div className="grid grid-cols-12 gap-8">
+        {/* Main List Section */}
+        <div className="col-span-12 xl:col-span-7">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-gray-900">
+              Đội hình Chính thức{" "}
+              <span className="font-normal text-sm text-gray-400 ml-2">
+                (11 cầu thủ)
               </span>
-              .
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <button className="px-6 py-2.5 rounded-full border border-gray-300 text-gray-600 font-bold hover:bg-white transition-all text-sm">
-              Lưu nháp
-            </button>
-            <button className="px-8 py-2.5 rounded-full bg-[#0d631b] text-white font-bold shadow-lg shadow-green-900/20 hover:bg-green-800 transition-all text-sm">
-              Gửi đơn đăng ký
+            </h3>
+            <button className="flex items-center gap-2 px-4 py-2 bg-white text-[#0d631b] text-xs font-bold rounded-full shadow-sm border border-gray-100 hover:shadow-md transition-all">
+              <span className="material-symbols-outlined text-sm">
+                person_add
+              </span>{" "}
+              Thêm mới
             </button>
           </div>
-        </header>
 
-        {/* Stepper */}
-        <div className="flex items-center justify-between bg-[#f5f3ef] p-6 rounded-2xl mb-8 border border-gray-200">
-          {[
-            { step: 1, label: "Chọn CLB", status: "Hoàn thành" },
-            {
-              step: 2,
-              label: "Danh sách Cầu thủ",
-              status: "Đang thực hiện",
-              active: true,
-            },
-            {
-              step: 3,
-              label: "Kiểm tra & Xác nhận",
-              status: "Chưa bắt đầu",
-              disabled: true,
-            },
-          ].map((s, i) => (
-            <React.Fragment key={i}>
+          <div className="space-y-3">
+            {players.map((player) => (
               <div
-                className={`flex items-center gap-4 flex-1 ${s.disabled ? "opacity-40" : ""}`}
+                key={player.id}
+                className={`flex items-center justify-between bg-white p-4 rounded-xl border transition-all hover:scale-[1.01] ${!player.isValid ? "border-red-200 border-l-4 border-l-red-500" : "border-gray-100"}`}
               >
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${s.active ? "bg-[#0d631b] text-white shadow-lg" : "bg-gray-300 text-gray-600"}`}
-                >
-                  {s.step}
+                <div className="flex items-center gap-4">
+                  <img
+                    src={player.avatar}
+                    alt={player.name}
+                    className="w-12 h-12 rounded-lg bg-gray-100"
+                  />
+                  <div>
+                    <h4
+                      className={`font-bold ${!player.isValid ? "text-red-600" : "text-gray-900"}`}
+                    >
+                      {player.name}
+                    </h4>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span
+                        className={`text-[10px] px-2 py-0.5 font-bold rounded ${player.role === "GK" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}
+                      >
+                        {player.role}
+                      </span>
+                      <span
+                        className={`text-[11px] ${!player.isValid ? "text-red-500 font-semibold" : "text-gray-400"}`}
+                      >
+                        {player.error || `${player.age} tuổi • ${player.type}`}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-900 leading-none">
-                    {s.label}
-                  </p>
-                  <p
-                    className={`text-[11px] mt-1 font-bold ${s.active ? "text-[#0d631b]" : "text-gray-400"}`}
+                <div className="flex items-center gap-4">
+                  <span
+                    className={`material-symbols-outlined ${player.isValid ? "text-[#0d631b]" : "text-red-500"}`}
                   >
-                    {s.status}
-                  </p>
+                    {player.isValid ? "check_circle" : "error"}
+                  </span>
+                  <button
+                    onClick={() => removePlayer(player.id)}
+                    className="material-symbols-outlined text-gray-300 hover:text-red-500 transition-colors"
+                  >
+                    delete
+                  </button>
                 </div>
               </div>
-              {i < 2 && <div className="h-px bg-gray-300 flex-1 mx-4" />}
-            </React.Fragment>
-          ))}
-        </div>
-
-        {/* Warning Banner */}
-        <div className="bg-[#fff9c4]/40 border border-[#fbc02d]/30 p-5 rounded-xl mb-8 flex items-start gap-4">
-          <span className="material-symbols-outlined text-[#f57f17] text-2xl">
-            warning
-          </span>
-          <div>
-            <h3 className="font-bold text-[#f57f17] text-sm">
-              Cần bổ sung cầu thủ
-            </h3>
-            <p className="text-[#f57f17]/80 text-xs mt-1">
-              Danh sách hiện có <span className="font-bold">14/18</span> cầu
-              thủ. Cần thêm ít nhất 4 cầu thủ. Thời hạn còn{" "}
-              <span className="font-bold text-red-600">3 ngày</span>.
-            </p>
+            ))}
+            <div className="border-2 border-dashed border-gray-200 p-8 rounded-xl flex flex-col items-center justify-center text-gray-400 hover:bg-white hover:border-[#0d631b]/30 cursor-pointer transition-all">
+              <span className="material-symbols-outlined text-3xl mb-1">
+                add_circle
+              </span>
+              <p className="text-xs font-bold">
+                Kéo thả hoặc nhấn để thêm cầu thủ
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-8">
-          {/* Main List Section */}
-          <div className="col-span-12 xl:col-span-7">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900">
-                Đội hình Chính thức{" "}
+        {/* Validation & Subs Section */}
+        {/* RIGHT SIDE */}
+        <div className="col-span-12 xl:col-span-5 space-y-6">
+          {/* ĐỘI HÌNH DỰ BỊ */}
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">
+                Đội hình Dự bị{" "}
                 <span className="font-normal text-sm text-gray-400 ml-2">
-                  (11 cầu thủ)
+                  ({subPlayers.length}/7 cầu thủ)
                 </span>
               </h3>
-              <button className="flex items-center gap-2 px-4 py-2 bg-white text-[#0d631b] text-xs font-bold rounded-full shadow-sm border border-gray-100 hover:shadow-md transition-all">
-                <span className="material-symbols-outlined text-sm">
-                  person_add
-                </span>{" "}
-                Thêm mới
-              </button>
             </div>
 
-            <div className="space-y-3">
-              {players.map((player) => (
+            <div className="bg-[#f5f3ef] p-4 rounded-2xl border border-gray-200 space-y-3">
+              {subPlayers.map((player) => (
                 <div
                   key={player.id}
-                  className={`flex items-center justify-between bg-white p-4 rounded-xl border transition-all hover:scale-[1.01] ${!player.isValid ? "border-red-200 border-l-4 border-l-red-500" : "border-gray-100"}`}
+                  className="flex items-center gap-3 bg-white/80 p-3 rounded-lg shadow-sm border border-white"
                 >
-                  <div className="flex items-center gap-4">
-                    <img
-                      src={player.avatar}
-                      alt={player.name}
-                      className="w-12 h-12 rounded-lg bg-gray-100"
-                    />
-                    <div>
-                      <h4
-                        className={`font-bold ${!player.isValid ? "text-red-600" : "text-gray-900"}`}
-                      >
-                        {player.name}
-                      </h4>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span
-                          className={`text-[10px] px-2 py-0.5 font-bold rounded ${player.role === "GK" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}
-                        >
-                          {player.role}
-                        </span>
-                        <span
-                          className={`text-[11px] ${!player.isValid ? "text-red-500 font-semibold" : "text-gray-400"}`}
-                        >
-                          {player.error ||
-                            `${player.age} tuổi • ${player.type}`}
-                        </span>
-                      </div>
-                    </div>
+                  <img
+                    src={player.avatar}
+                    className="w-10 h-10 rounded-full bg-gray-100"
+                    alt="avatar"
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-gray-800">
+                      {player.name}
+                    </p>
+                    <p className="text-[10px] text-[#4c56af] font-bold uppercase">
+                      {player.role} • {player.age} tuổi
+                    </p>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span
-                      className={`material-symbols-outlined ${player.isValid ? "text-[#0d631b]" : "text-red-500"}`}
-                    >
-                      {player.isValid ? "check_circle" : "error"}
+
+                  {/* icon giống UI */}
+                  <button className="text-gray-400 hover:text-[#0d631b] transition-colors">
+                    <span className="material-symbols-outlined text-lg">
+                      swap_horiz
                     </span>
-                    <button
-                      onClick={() => removePlayer(player.id)}
-                      className="material-symbols-outlined text-gray-300 hover:text-red-500 transition-colors"
-                    >
-                      delete
-                    </button>
-                  </div>
+                  </button>
                 </div>
               ))}
-              <div className="border-2 border-dashed border-gray-200 p-8 rounded-xl flex flex-col items-center justify-center text-gray-400 hover:bg-white hover:border-[#0d631b]/30 cursor-pointer transition-all">
-                <span className="material-symbols-outlined text-3xl mb-1">
-                  add_circle
+
+              {/* placeholder giống UI */}
+              {subPlayers.length < 7 && (
+                <div className="p-3 border border-dashed border-gray-300 rounded-lg flex items-center justify-center gap-2 text-gray-400 text-[11px] italic bg-white/20">
+                  <span className="material-symbols-outlined text-sm">
+                    info
+                  </span>
+                  Còn trống {7 - subPlayers.length} vị trí dự bị
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* CARD VALIDATION */}
+          <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[#0d631b]">
+                fact_check
+              </span>{" "}
+              Kiểm tra tính hợp lệ
+            </h3>
+
+            <ul className="space-y-5">
+              <li className="flex items-start gap-3">
+                <span className="material-symbols-outlined text-red-500">
+                  cancel
                 </span>
-                <p className="text-xs font-bold">
-                  Kéo thả hoặc nhấn để thêm cầu thủ
-                </p>
+                <div>
+                  <p className="text-sm font-bold">Số lượng tối thiểu</p>
+                  <p className="text-[11px] text-gray-400">14/18 cầu thủ</p>
+                </div>
+              </li>
+
+              <li className="flex items-start gap-3">
+                <span className="material-symbols-outlined text-[#0d631b]">
+                  check_circle
+                </span>
+                <div>
+                  <p className="text-sm font-bold">Độ tuổi hợp lệ</p>
+                  <p className="text-[11px] text-gray-400">Tất cả hợp lệ</p>
+                </div>
+              </li>
+
+              <li className="flex items-start gap-3">
+                <span className="material-symbols-outlined text-red-500">
+                  error
+                </span>
+                <div>
+                  <p className="text-sm font-bold">Hồ sơ</p>
+                  <p className="text-[11px] text-gray-400">
+                    1 cầu thủ thiếu CCCD
+                  </p>
+                </div>
+              </li>
+            </ul>
+
+            {/* progress */}
+            <div className="mt-8 pt-6 border-t border-gray-100">
+              <div className="flex justify-between mb-2">
+                <span className="text-[10px] font-black text-gray-400 uppercase">
+                  Độ sẵn sàng
+                </span>
+                <span className="text-xs font-black text-[#0d631b]">65%</span>
               </div>
+              <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full bg-[#0d631b]" style={{ width: "65%" }} />
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      {/* ACTION FOOTER */}
+      <div className="fixed bottom-10 left-64 right-0 flex justify-center px-10 pointer-events-none">
+        <div className="bg-white/90 backdrop-blur-xl border border-gray-100 rounded-full p-4 flex items-center justify-between shadow-2xl w-full max-w-4xl pointer-events-auto">
+          {/* INFO */}
+          <div className="flex items-center gap-4 pl-4">
+            <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+              <span className="material-symbols-outlined text-green-700">
+                groups
+              </span>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900">
+                {players.length}/18 cầu thủ
+              </p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                Danh sách hiện tại
+              </p>
             </div>
           </div>
 
-          {/* Validation & Subs Section */}
-          {/* RIGHT SIDE */}
-          <div className="col-span-12 xl:col-span-5 space-y-6">
-            {/* ĐỘI HÌNH DỰ BỊ */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900">
-                  Đội hình Dự bị{" "}
-                  <span className="font-normal text-sm text-gray-400 ml-2">
-                    ({subPlayers.length}/7 cầu thủ)
-                  </span>
-                </h3>
-              </div>
+          {/* ACTION */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => setStep(1)}
+              className="px-8 py-3 rounded-full text-gray-500 hover:bg-gray-50 font-bold text-sm transition-all"
+            >
+              Quay lại
+            </button>
 
-              <div className="bg-[#f5f3ef] p-4 rounded-2xl border border-gray-200 space-y-3">
-                {subPlayers.map((player) => (
-                  <div
-                    key={player.id}
-                    className="flex items-center gap-3 bg-white/80 p-3 rounded-lg shadow-sm border border-white"
-                  >
-                    <img
-                      src={player.avatar}
-                      className="w-10 h-10 rounded-full bg-gray-100"
-                      alt="avatar"
-                    />
-                    <div className="flex-1">
-                      <p className="text-sm font-bold text-gray-800">
-                        {player.name}
-                      </p>
-                      <p className="text-[10px] text-[#4c56af] font-bold uppercase">
-                        {player.role} • {player.age} tuổi
-                      </p>
-                    </div>
-
-                    {/* icon giống UI */}
-                    <button className="text-gray-400 hover:text-[#0d631b] transition-colors">
-                      <span className="material-symbols-outlined text-lg">
-                        swap_horiz
-                      </span>
-                    </button>
-                  </div>
-                ))}
-
-                {/* placeholder giống UI */}
-                {subPlayers.length < 7 && (
-                  <div className="p-3 border border-dashed border-gray-300 rounded-lg flex items-center justify-center gap-2 text-gray-400 text-[11px] italic bg-white/20">
-                    <span className="material-symbols-outlined text-sm">
-                      info
-                    </span>
-                    Còn trống {7 - subPlayers.length} vị trí dự bị
-                  </div>
-                )}
-              </div>
-            </section>
-
-            {/* CARD VALIDATION */}
-            <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-              <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#0d631b]">
-                  fact_check
-                </span>{" "}
-                Kiểm tra tính hợp lệ
-              </h3>
-
-              <ul className="space-y-5">
-                <li className="flex items-start gap-3">
-                  <span className="material-symbols-outlined text-red-500">
-                    cancel
-                  </span>
-                  <div>
-                    <p className="text-sm font-bold">Số lượng tối thiểu</p>
-                    <p className="text-[11px] text-gray-400">14/18 cầu thủ</p>
-                  </div>
-                </li>
-
-                <li className="flex items-start gap-3">
-                  <span className="material-symbols-outlined text-[#0d631b]">
-                    check_circle
-                  </span>
-                  <div>
-                    <p className="text-sm font-bold">Độ tuổi hợp lệ</p>
-                    <p className="text-[11px] text-gray-400">Tất cả hợp lệ</p>
-                  </div>
-                </li>
-
-                <li className="flex items-start gap-3">
-                  <span className="material-symbols-outlined text-red-500">
-                    error
-                  </span>
-                  <div>
-                    <p className="text-sm font-bold">Hồ sơ</p>
-                    <p className="text-[11px] text-gray-400">
-                      1 cầu thủ thiếu CCCD
-                    </p>
-                  </div>
-                </li>
-              </ul>
-
-              {/* progress */}
-              <div className="mt-8 pt-6 border-t border-gray-100">
-                <div className="flex justify-between mb-2">
-                  <span className="text-[10px] font-black text-gray-400 uppercase">
-                    Độ sẵn sàng
-                  </span>
-                  <span className="text-xs font-black text-[#0d631b]">65%</span>
-                </div>
-                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[#0d631b]"
-                    style={{ width: "65%" }}
-                  />
-                </div>
-              </div>
-            </section>
+            <button
+              onClick={() => setStep(3)}
+              disabled={players.length < 14} // optional validate
+              className="px-10 py-3 rounded-full bg-green-700 text-white font-bold shadow-lg shadow-green-700/20 hover:scale-105 active:scale-95 transition-all text-sm disabled:opacity-50"
+            >
+              Tiếp tục
+            </button>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </>
   );
 };
 

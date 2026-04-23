@@ -1,4 +1,8 @@
 import React from "react";
+import { useState } from "react";
+import CreateTournament from "./CreateTournament";
+import { Modal } from "../../../components/Modal";
+import { Sidebar } from "../../../utils/SideBar";
 
 // --- Interfaces ---
 interface Tournament {
@@ -11,24 +15,6 @@ interface Tournament {
 }
 
 // --- Sub-components ---
-
-const SidebarItem: React.FC<{
-  icon: string;
-  label: string;
-  active?: boolean;
-}> = ({ icon, label, active }) => (
-  <a
-    href="#"
-    className={`flex items-center gap-3 px-4 py-3 rounded-full mx-2 font-headline text-sm font-medium transition-all duration-300 ${
-      active
-        ? "bg-[#0d631b] text-white shadow-lg shadow-[#0d631b]/20"
-        : "text-stone-600 dark:text-stone-400 hover:bg-stone-200/50 dark:hover:bg-stone-800 hover:translate-x-1"
-    }`}
-  >
-    <span className="material-symbols-outlined">{icon}</span>
-    {label}
-  </a>
-);
 
 const StatCard: React.FC<{
   title: string;
@@ -128,6 +114,7 @@ const TournamentRow: React.FC<{ tournament: Tournament }> = ({
 // --- Main Page Component ---
 
 const TournamentManagement: React.FC = () => {
+  const [open, setOpen] = useState(false);
   const tournaments: Tournament[] = [
     {
       id: "T-88219",
@@ -166,42 +153,8 @@ const TournamentManagement: React.FC = () => {
   return (
     <div className="flex min-h-screen bg-[#fbf9f5] font-sans">
       {/* Aside Sidebar */}
-      <aside className="hidden md:flex h-screen w-64 fixed left-0 top-0 bg-[#f5f3ef] flex-col py-6 gap-2 z-50">
-        <div className="px-6 mb-8 flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#0d631b] rounded-xl flex items-center justify-center text-white">
-            <span className="material-symbols-outlined">sports_soccer</span>
-          </div>
-          <span className="text-xl font-bold text-[#0d631b] font-headline">
-            PitchMaster
-          </span>
-        </div>
-        <nav className="flex-1 px-2 space-y-1">
-          <SidebarItem icon="dashboard" label="Bảng điều khiển" />
-          <SidebarItem icon="emoji_events" label="Giải đấu" active />
-          <SidebarItem icon="sports_soccer" label="Trận đấu" />
-          <SidebarItem icon="groups" label="Đội bóng" />
-          <SidebarItem icon="leaderboard" label="Phân tích" />
-          <SidebarItem icon="settings" label="Cài đặt" />
-        </nav>
-        <div className="px-6 mt-auto">
-          <div className="p-4 bg-green-50 rounded-2xl border border-green-100">
-            <div className="flex items-center gap-3 mb-3">
-              <img
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBpzKnOrt7vpp2c1pGdftBwEgWWdSa9Lsqq3_rxvfp8XaV5eoasdQfK03v57KpozuzppGFL8hNP3bkA1riCebzAOiV4flmiaNKht22V9nJem_geAlBSV70IqY9tHZ7byIq3tnnadqA8aLnztmgs2s3xHhdgE9CG4EpcRETxX2gjlPwtkXYXWSyYtFkod-omHTkBRkZ5jcT5pWp1r-BUGWg6TxYmvibz-w2DENWOhTTJelRAlqPqIhOFlj5Lks1hyJnjeZ29W9Pzqg"
-                className="w-10 h-10 rounded-full object-cover"
-                alt="Admin"
-              />
-              <div>
-                <p className="text-sm font-bold">Quản Lý Giải</p>
-                <p className="text-xs text-stone-500">Elite Level</p>
-              </div>
-            </div>
-            <button className="w-full py-2 bg-[#0d631b] text-white rounded-full text-xs font-bold shadow-md">
-              Nâng cấp Pro
-            </button>
-          </div>
-        </div>
-      </aside>
+
+      <Sidebar />
 
       {/* Main Content */}
       <main className="flex-1 md:ml-64 p-6 max-w-7xl mx-auto space-y-8">
@@ -219,9 +172,11 @@ const TournamentManagement: React.FC = () => {
                 search
               </span>
             </div>
-            <button className="bg-[#0d631b] text-white px-6 py-2 rounded-full font-bold text-sm shadow-lg shadow-green-900/20 flex items-center gap-2">
-              <span className="material-symbols-outlined text-sm">add</span> Tạo
-              Giải Đấu
+            <button
+              onClick={() => setOpen(true)}
+              className="bg-[#0d631b] text-white px-6 py-2 rounded-full font-bold text-sm shadow-lg shadow-green-900/20 flex items-center gap-2"
+            >
+              Tạo Giải Đấu
             </button>
           </div>
         </header>
@@ -294,6 +249,9 @@ const TournamentManagement: React.FC = () => {
           </div>
         </section>
       </main>
+      <Modal open={open} onClose={() => setOpen(false)}>
+        <CreateTournament onClose={() => setOpen(false)} />
+      </Modal>
     </div>
   );
 };
