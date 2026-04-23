@@ -9,7 +9,7 @@ interface GoalEvent {
   team: "home" | "away";
 }
 
-const MatchResultUpdate: React.FC = () => {
+const MatchResultUpdate: React.FC = ({ onClose }) => {
   const [goals, setGoals] = useState<GoalEvent[]>([
     {
       id: "1",
@@ -47,54 +47,12 @@ const MatchResultUpdate: React.FC = () => {
   ).length;
 
   return (
-    <div className="flex min-h-screen bg-[#fbf9f5] text-[#1b1c1a] font-['Inter']">
-      {/* Sidebar - Tương tự các trang trước */}
-      <aside className="w-64 border-r border-black/5 bg-[#f5f3ef] py-6 px-4 hidden md:flex flex-col sticky top-0 h-screen">
-        <div className="mb-8 px-2">
-          <h1 className="text-xl font-bold text-green-800">Manchester City</h1>
-          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
-            Premier League
-          </p>
-        </div>
-        <nav className="flex-1 space-y-1">
-          <NavItem icon="dashboard" label="Dashboard" />
-          <NavItem icon="strategy" label="Tactics" />
-          <NavItem icon="groups" label="Squad" />
-          <NavItem icon="sports_soccer" label="Matches" active />
-          <NavItem icon="leaderboard" label="Analytics" />
-          <NavItem icon="payments" label="Finances" />
-        </nav>
-      </aside>
-
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-8 bg-[#1b1c1a]/20 backdrop-blur-sm font-sans">
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 flex justify-between items-center px-8 border-b border-black/5 bg-white/80 backdrop-blur-md sticky top-0 z-50">
-          <span className="text-2xl font-black text-green-900 tracking-tight font-['Be_Vietnam_Pro']">
-            Elite Soccer Management
-          </span>
-          <div className="flex items-center gap-4">
-            <button className="p-2 text-gray-500 hover:bg-black/5 rounded-full">
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
-            <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
-              <img
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDndxtpsqlni93PJmdtbRHyTTFsA1u9FdVxabIsa2kHd42wKgF7RuVCx17W6lcWJkbXoCxNKA6FiqbjDoh1qfGw--IKDJPOwtwyl_JLXQ1a0pI71d9MYOG9veT7gbHambqBDpStv3I0m5pyaO_wuxOgGX1X4lqx2FncK8IsYZKtTjUl8qLtsNySZI0hH7yYwLJlRlzX4M1gpKPR1RCvogW_gx7yYRo7wsB43seE3S0Mp4enBx2HSllPfyVDHxsEpMXX8Wrqqafj4g"
-                alt="Avatar"
-              />
-            </div>
-          </div>
-        </header>
-
-        <div className="p-8 space-y-8">
+      <main className="w-full max-w-6xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative">
+        <div className="p-8 md:p-10 space-y-10">
           {/* Breadcrumb & Header */}
           <div className="space-y-4">
-            <nav className="flex items-center gap-2 text-sm text-gray-400 font-medium">
-              <span>Trang chủ</span>{" "}
-              <span className="material-symbols-outlined text-xs">
-                chevron_right
-              </span>
-              <span className="text-gray-900">Kết quả</span>
-            </nav>
             <div className="flex justify-between items-end">
               <div>
                 <h2 className="text-3xl font-black text-green-900 uppercase font-['Be_Vietnam_Pro']">
@@ -160,9 +118,9 @@ const MatchResultUpdate: React.FC = () => {
           </div>
 
           {/* Grid Content */}
-          <div className="grid grid-cols-12 gap-8">
+          <div className="grid grid-cols-12 gap-10">
             {/* Left: Events & Timeline */}
-            <div className="col-span-8 space-y-6">
+            <div className="col-span-9 space-y-6">
               <section className="bg-[#f5f3ef] rounded-2xl p-6">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-lg font-bold text-green-900 flex items-center gap-2">
@@ -226,7 +184,7 @@ const MatchResultUpdate: React.FC = () => {
             </div>
 
             {/* Right: Stats & Notes */}
-            <div className="col-span-4 space-y-6">
+            <div className="col-span-3 space-y-6">
               <section className="bg-white rounded-2xl p-6 border border-black/5 shadow-sm">
                 <h3 className="text-sm font-black text-green-900 uppercase tracking-widest mb-6">
                   Thông số tổng quan

@@ -1,4 +1,5 @@
 import React from "react";
+import { Sidebar } from "../../utils/SideBar";
 
 // Định nghĩa kiểu dữ liệu cho bảng xếp hạng
 interface TeamStanding {
@@ -75,51 +76,7 @@ export default function StandingsPage() {
   return (
     <div className="flex bg-[#f8f9fa] text-slate-900 min-h-screen font-sans">
       {/* Sidebar - Cố định bên trái theo mẫu của bạn */}
-      <aside className="w-64 fixed left-0 top-0 h-screen bg-[#f5f3ef] flex flex-col py-8 px-4 border-r border-gray-200">
-        <div className="mb-10 px-4">
-          <h1 className="text-2xl font-extrabold text-green-800">PitchPro</h1>
-          <p className="text-[10px] opacity-60 font-bold uppercase tracking-widest -mt-1">
-            Elite Management
-          </p>
-        </div>
-
-        <nav className="space-y-2 text-sm">
-          {[
-            "Dashboard",
-            "Tournaments",
-            "Rounds",
-            "Clubs",
-            "Players",
-            "Registration",
-            "Schedule",
-            "Results",
-            "Standings",
-            "Reports",
-          ].map((item, i) => (
-            <div
-              key={i}
-              className={`px-4 py-2 rounded-full cursor-pointer ${
-                i === 0
-                  ? "bg-white text-green-700 font-bold shadow-sm"
-                  : "opacity-70"
-              }`}
-            >
-              {item}
-            </div>
-          ))}
-        </nav>
-
-        {/* User Info Bottom Sidebar */}
-        <div className="mt-auto p-4 bg-white/50 rounded-2xl flex items-center gap-3">
-          <div className="w-10 h-10 bg-green-700 rounded-full flex items-center justify-center text-white font-bold text-xs">
-            HN
-          </div>
-          <div>
-            <p className="text-sm font-bold">Hà Nội FC</p>
-            <p className="text-[10px] opacity-60">Quản trị viên</p>
-          </div>
-        </div>
-      </aside>
+      <Sidebar />
 
       {/* Main Content */}
       <main className="ml-64 flex-1">

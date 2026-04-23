@@ -1,73 +1,18 @@
 import React from "react";
-
+import { Sidebar } from "../../../utils/SideBar";
+import { useState } from "react";
+import AddMatchModal from "./AddMatchModal";
+import { Modal } from "../../../components/Modal";
 export default function MatchSchedule() {
+  const [open, setOpen] = useState(false);
   return (
     <div className="min-h-screen bg-[#fbf9f5] text-[#1b1c1a] font-sans flex">
       {/* --- SIDEBAR --- */}
-      <aside className="w-64 bg-[#f5f3ef] border-r border-gray-200 hidden md:flex flex-col py-6 px-4 shrink-0 h-screen sticky top-0">
-        <div className="flex items-center gap-3 px-4 mb-8">
-          <div className="w-10 h-10 rounded-full bg-[#0d631b] flex items-center justify-center text-white">
-            <span className="material-symbols-outlined">sports_soccer</span>
-          </div>
-          <div>
-            <h2 className="text-sm font-bold text-[#0d631b] leading-tight">
-              Manchester City
-            </h2>
-            <p className="text-[10px] text-gray-500 font-medium uppercase tracking-tighter">
-              Premier League
-            </p>
-          </div>
-        </div>
-
-        <nav className="flex-1 space-y-1">
-          <SidebarLink icon="dashboard" label="Dashboard" />
-          <SidebarLink icon="strategy" label="Tactics" />
-          <SidebarLink icon="groups" label="Squad" />
-          <SidebarLink icon="sports_soccer" label="Matches" active />
-          <SidebarLink icon="leaderboard" label="Analytics" />
-          <SidebarLink icon="payments" label="Finances" />
-        </nav>
-
-        <div className="mt-auto px-2 space-y-2">
-          <button className="w-full bg-[#0d631b] text-white py-3 rounded-full font-bold text-xs shadow-md hover:opacity-90 transition-all">
-            Match Day Live
-          </button>
-          <SidebarLink icon="help" label="Help Center" />
-          <SidebarLink icon="logout" label="Logout" />
-        </div>
-      </aside>
+      <Sidebar />
 
       {/* --- MAIN CONTENT --- */}
       <main className="flex-1 min-w-0">
         {/* Header Bar */}
-        <header className="h-16 border-b border-gray-100 bg-[#fbf9f5]/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between px-8">
-          <span className="text-xl font-black text-[#0d631b]">
-            Elite Soccer Management
-          </span>
-          <div className="flex items-center gap-4">
-            <div className="bg-[#efeeea] px-4 py-1.5 rounded-full flex items-center gap-2">
-              <span className="material-symbols-outlined text-sm text-gray-400">
-                search
-              </span>
-              <input
-                className="bg-transparent border-none focus:ring-0 text-xs w-40 outline-none"
-                placeholder="Tìm kiếm..."
-              />
-            </div>
-            <span className="material-symbols-outlined text-gray-400 cursor-pointer">
-              notifications
-            </span>
-            <span className="material-symbols-outlined text-gray-400 cursor-pointer">
-              settings
-            </span>
-            <div className="w-8 h-8 rounded-full bg-gray-300 overflow-hidden border border-green-600">
-              <img
-                src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
-                alt="avatar"
-              />
-            </div>
-          </div>
-        </header>
 
         <div className="p-8 max-w-6xl mx-auto space-y-6">
           {/* Title & Breadcrumb */}
@@ -86,9 +31,7 @@ export default function MatchSchedule() {
             <span
               className="material-symbols-outlined text-[#ba1a1a]"
               style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              warning
-            </span>
+            ></span>
             <div className="text-sm">
               <p className="font-bold text-[#410002]">Cảnh báo hệ thống</p>
               <p className="text-[#410002]/80">
@@ -119,15 +62,16 @@ export default function MatchSchedule() {
               </div>
             </div>
             <div className="flex gap-3">
-              <button className="bg-white text-[#0d631b] px-5 py-2.5 rounded-full font-bold text-sm shadow-sm border border-green-100 flex items-center gap-2 hover:bg-green-50 transition-all">
-                <span className="material-symbols-outlined text-sm">add</span>{" "}
-                Thêm trận đấu mới
+              <button
+                onClick={() => setOpen(true)}
+                className="bg-white text-[#0d631b] px-5 py-2.5 rounded-full font-bold text-sm shadow-sm border border-green-100 flex items-center gap-2 hover:bg-green-50 transition-all"
+              >
+                <span className="material-symbols-outlined text-sm"></span> Thêm
+                trận đấu mới
               </button>
               <button className="bg-[#0d631b] text-white px-5 py-2.5 rounded-full font-bold text-sm shadow-lg flex items-center gap-2 hover:opacity-90 transition-all">
-                <span className="material-symbols-outlined text-sm">
-                  auto_awesome
-                </span>{" "}
-                Tạo lịch tự động
+                <span className="material-symbols-outlined text-sm"></span> Tạo
+                lịch tự động
               </button>
             </div>
           </div>
@@ -176,6 +120,9 @@ export default function MatchSchedule() {
           </div>
         </div>
       </main>
+      <Modal open={open} onClose={() => setOpen(false)}>
+        <AddMatchModal onClose={() => setOpen(false)} />
+      </Modal>
 
       {/* Floating Save Button */}
       <button className="fixed bottom-8 right-8 w-14 h-14 bg-[#0d631b] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all">
@@ -191,26 +138,6 @@ export default function MatchSchedule() {
 }
 
 // --- Sub-components for Cleanliness ---
-
-function SidebarLink({
-  icon,
-  label,
-  active = false,
-}: {
-  icon: string;
-  label: string;
-  active?: boolean;
-}) {
-  return (
-    <a
-      href="#"
-      className={`flex items-center gap-3 px-4 py-3 rounded-full transition-all ${active ? "bg-white text-[#0d631b] font-bold shadow-sm" : "text-gray-500 hover:text-[#0d631b] hover:bg-gray-200/50"}`}
-    >
-      <span className="material-symbols-outlined text-[20px]">{icon}</span>
-      <span className="text-xs">{label}</span>
-    </a>
-  );
-}
 
 function MatchRow({
   time,
@@ -259,7 +186,7 @@ function MatchRow({
           className={`material-symbols-outlined text-sm ${hasConflict ? "text-[#ba1a1a]" : "text-gray-400"}`}
           style={hasConflict ? { fontVariationSettings: "'FILL' 1" } : {}}
         >
-          {hasConflict ? "warning" : "location_on"}
+          {/* {hasConflict ? "warning" : "location_on"} */}
         </span>
         <span
           className={`text-[11px] font-bold ${hasConflict ? "text-[#ba1a1a]" : "text-gray-600"}`}
@@ -278,10 +205,10 @@ function MatchRow({
 
       <div className="col-span-1 flex justify-end gap-1">
         <button className="p-1.5 hover:bg-gray-100 rounded-full text-gray-400 transition-colors">
-          <span className="material-symbols-outlined text-[18px]">edit</span>
+          <span className="material-symbols-outlined text-[18px]"></span>
         </button>
         <button className="p-1.5 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 transition-colors">
-          <span className="material-symbols-outlined text-[18px]">delete</span>
+          <span className="material-symbols-outlined text-[18px]"></span>
         </button>
       </div>
     </div>

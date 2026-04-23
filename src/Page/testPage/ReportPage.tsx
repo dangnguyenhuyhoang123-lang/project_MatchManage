@@ -1,4 +1,5 @@
 import React from "react";
+import { Sidebar } from "../../utils/SideBar";
 
 // --- Interfaces ---
 interface StatCardProps {
@@ -71,48 +72,7 @@ export default function ReportPage() {
   return (
     <div className="flex bg-[#fbf9f5] text-[#1b1c1a] min-h-screen font-sans">
       {/* Sidebar - Fixed Left */}
-      <aside className="w-64 fixed left-0 top-0 h-screen bg-[#f5f3ef] flex flex-col py-8 px-4 border-r border-gray-200">
-        <div className="mb-10 px-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-green-700 rounded-full flex items-center justify-center text-xl">
-            ⚽
-          </div>
-          <div>
-            <h1 className="text-lg font-black text-slate-900 leading-none">
-              V-League 2024
-            </h1>
-            <p className="text-[10px] opacity-50 font-bold uppercase tracking-wider mt-1">
-              Hệ thống báo cáo
-            </p>
-          </div>
-        </div>
-
-        <nav className="flex-1 space-y-1 overflow-y-auto pr-2">
-          {[
-            "Dashboard",
-            "Giải đấu",
-            "CLB",
-            "Cầu thủ",
-            "Lịch thi đấu",
-            "BXH",
-            "Báo cáo",
-            "Cấu hình",
-          ].map((item, i) => (
-            <div
-              key={i}
-              className={`flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium cursor-pointer transition-all ${
-                item === "Báo cáo"
-                  ? "bg-white text-green-700 shadow-sm border border-gray-100"
-                  : "opacity-60 hover:bg-white/50"
-              }`}
-            >
-              <span className="text-lg">
-                {item === "Báo cáo" ? "📄" : "📁"}
-              </span>
-              {item}
-            </div>
-          ))}
-        </nav>
-      </aside>
+      <Sidebar />
 
       {/* Main Content */}
       <main className="ml-64 flex-1">

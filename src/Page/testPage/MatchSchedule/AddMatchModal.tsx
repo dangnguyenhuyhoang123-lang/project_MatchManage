@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function AddMatchModal() {
+const AddMatchModal = ({ onClose }) => {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-8 bg-[#1b1c1a]/20 backdrop-blur-sm font-sans">
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative">
@@ -121,6 +121,7 @@ export default function AddMatchModal() {
             {/* Actions */}
             <div className="flex flex-col-reverse md:flex-row gap-4 pt-8 border-t border-gray-100 mt-10">
               <button
+                onClick={onClose}
                 type="button"
                 className="flex-1 md:flex-none px-10 py-3.5 rounded-full font-bold text-gray-500 hover:bg-gray-100 transition-all active:scale-95"
               >
@@ -128,14 +129,13 @@ export default function AddMatchModal() {
               </button>
               <button
                 type="submit"
+                onClick={onClose}
                 className="flex-1 bg-gradient-to-r from-[#0d631b] to-[#2e7d32] px-10 py-3.5 rounded-full font-bold text-white shadow-lg shadow-green-900/20 hover:shadow-green-900/40 transition-all active:scale-95 flex items-center justify-center gap-2"
               >
                 <span
                   className="material-symbols-outlined text-xl"
                   style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  save
-                </span>
+                ></span>
                 Lưu trận đấu
               </button>
             </div>
@@ -144,7 +144,7 @@ export default function AddMatchModal() {
       </div>
     </div>
   );
-}
+};
 
 // --- Internal UI Components ---
 
@@ -207,3 +207,5 @@ function InputGroup({ label, icon, type }: any) {
     </div>
   );
 }
+
+export default AddMatchModal;
