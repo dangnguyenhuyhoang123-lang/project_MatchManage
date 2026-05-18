@@ -14,10 +14,11 @@ export const Sidebar = () => {
     { label: "Kết quả", path: "/results" },
     { label: "Bảng xếp hạng", path: "/standings" },
     { label: "Báo cáo", path: "/reports" },
+    { label: "Quản lý đăng ký thi đấu", path: "/manageRegisger" },
   ];
 
   return (
-    <aside className="w-64 bg-[#f5f3ef] p-6 hidden md:flex flex-col">
+    <aside className="w-64 bg-[#f5f3ef] p-6 hidden md:flex flex-col h-screen sticky top-0">
       {/* Logo */}
       <div className="mb-8">
         <h1 className="text-2xl font-black text-green-700">PitchPro</h1>

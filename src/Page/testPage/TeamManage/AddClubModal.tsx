@@ -1,28 +1,75 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { TeamModel } from "../../../model/TeamModel";
+import TeamService from "../../../services/TeamService";
+import StadiumService from "../../../services/StadiumService";
 
-// --- Types ---
-interface ClubFormData {
+type StadiumOption = {
+  id: number;
   name: string;
-  foundedYear: string;
-  city: string;
-  stadium: string;
-  owner: string;
-  description: string;
-}
+};
 
 interface Props {
   onClose: () => void;
+  currentTeam?: TeamModel | null;
+  onSuccess: () => void;
 }
 
-const AddClubModal: React.FC<Props> = ({ onClose }) => {
-  const [formData, setFormData] = useState<ClubFormData>({
+const createEmptyTeam = () =>
+  new TeamModel({
     name: "",
-    foundedYear: "2024",
-    city: "Hà Nội",
-    stadium: "",
+    logo: null,
+    establishedYear: new Date().getFullYear(),
+    city: "",
+    region: "Nam",
     owner: "",
     description: "",
+    status: "ACTIVE",
+    stadiumId: null,
+    stadiumName: null,
   });
+
+const AddClubModal: React.FC<Props> = ({
+  onClose,
+  currentTeam,
+  onSuccess,
+}) => {
+  const [team, setTeam] = useState<TeamModel>(createEmptyTeam());
+  const [stadiums, setStadiums] = useState<StadiumOption[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isEditMode = useMemo(() => Boolean(currentTeam?.id), [currentTeam]);
+
+  useEffect(() => {
+    setTeam(currentTeam ? new TeamModel(currentTeam) : createEmptyTeam());
+  }, [currentTeam]);
+
+  useEffect(() => {
+    const fetchStadiums = async () => {
+      try {
+        const response = await StadiumService.getAllStadiums();
+        const rawStadiums = Array.isArray(response.data)
+          ? response.data
+          : response.data?.content ?? [];
+
+        setStadiums(
+          rawStadiums
+            .map((stadium: any) => ({
+              id: Number(stadium.id),
+              name: stadium.name,
+            }))
+            .filter(
+              (stadium: StadiumOption) =>
+                Number.isFinite(stadium.id) && Boolean(stadium.name),
+            ),
+        );
+      } catch (error) {
+        console.error("Lỗi khi tải danh sách sân:", error);
+        setStadiums([]);
+      }
+    };
+
+    fetchStadiums();
+  }, []);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -30,134 +77,215 @@ const AddClubModal: React.FC<Props> = ({ onClose }) => {
     >,
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    setTeam((prev) => {
+      const next = new TeamModel(prev);
+
+      if (name === "establishedYear") {
+        next.establishedYear = Number(value);
+        return next;
+      }
+
+      if (name === "stadiumId") {
+        const stadiumId = value ? Number(value) : null;
+        next.stadiumId = stadiumId;
+        next.stadiumName =
+          stadiums.find((stadium) => stadium.id === stadiumId)?.name ?? null;
+        next.stadium = next.stadiumName ?? "";
+        return next;
+      }
+
+      (next as unknown as Record<string, unknown>)[name] = value || "";
+      return next;
+    });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Dữ liệu CLB:", formData);
-    onClose();
-  };
 
-  if (!open) return null;
+    if (!team.name.trim()) {
+      alert("Vui lòng nhập tên đội bóng.");
+      return;
+    }
+
+    if (!team.city.trim()) {
+      alert("Vui lòng nhập thành phố.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      if (team.id) {
+        await TeamService.updateTeam(team.id, team);
+      } else {
+        await TeamService.addTeam(team);
+      }
+
+      onSuccess();
+      onClose();
+    } catch (error) {
+      console.error("Lỗi khi lưu đội bóng:", error);
+      alert("Có lỗi xảy ra khi lưu đội bóng.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Overlay */}
       <div
         onClick={onClose}
         className="absolute inset-0 bg-black/30 backdrop-blur-sm"
       />
 
-      {/* Modal */}
-      <div className="relative z-10 w-full max-w-6xl mx-4">
-        <div className="w-full max-h-[90vh] overflow-y-auto bg-[#fbf9f5] rounded-3xl shadow-2xl">
+      <div className="relative z-10 mx-4 w-full max-w-6xl">
+        <div className="max-h-[90vh] w-full overflow-y-auto rounded-3xl bg-[#fbf9f5] shadow-2xl">
           <main className="flex-1">
-            <div className="p-10 max-w-5xl mx-auto">
-              {/* Title */}
+            <div className="mx-auto max-w-5xl p-10">
               <div className="mb-12">
-                <div className="flex items-center gap-4 mb-4">
+                <div className="mb-4 flex items-center gap-4">
                   <button
                     onClick={onClose}
-                    className="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-zinc-100"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border hover:bg-zinc-100"
                   >
-                    ←
+                    <span className="material-symbols-outlined">arrow_back</span>
                   </button>
 
-                  <span className="text-blue-500 text-xs uppercase font-bold">
+                  <span className="text-xs font-bold uppercase text-blue-500">
                     Hệ Thống Quản Lý CLB
                   </span>
                 </div>
 
-                <h1 className="text-4xl font-black mb-2">
-                  Thêm Câu Lạc Bộ Mới
+                <h1 className="mb-2 text-4xl font-black">
+                  {isEditMode ? "Cập nhật Câu Lạc Bộ" : "Thêm Câu Lạc Bộ Mới"}
                 </h1>
 
                 <p className="text-zinc-500">
-                  Khởi tạo hồ sơ câu lạc bộ chuyên nghiệp.
+                  Đồng bộ dữ liệu đội bóng với API quản lý đội.
                 </p>
               </div>
 
-              {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-8">
                 <div className="grid grid-cols-12 gap-6">
-                  {/* Logo */}
-                  <div className="col-span-12 md:col-span-4 bg-white p-8 rounded-2xl border flex flex-col items-center">
-                    <div className="w-32 h-32 rounded-full border-2 border-dashed flex items-center justify-center mb-4">
-                      📷
+                  <div className="col-span-12 flex flex-col items-center rounded-2xl border bg-white p-8 md:col-span-4">
+                    <div className="mb-4 flex h-32 w-32 items-center justify-center overflow-hidden rounded-full border-2 border-dashed">
+                      {team.logo ? (
+                        <img
+                          src={team.logo}
+                          alt={team.name || "logo"}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="material-symbols-outlined text-4xl text-gray-400">
+                          image
+                        </span>
+                      )}
                     </div>
                     <h3 className="font-bold">Biểu trưng CLB</h3>
+                    <p className="mt-2 text-center text-sm text-gray-500">
+                      Dùng URL logo để hiển thị ảnh đại diện.
+                    </p>
                   </div>
 
-                  {/* Info */}
-                  <div className="col-span-12 md:col-span-8 bg-white p-8 rounded-2xl border">
-                    <input
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      placeholder="Tên CLB"
-                      className="w-full mb-4 p-3 rounded bg-gray-100"
-                    />
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <input
-                        name="foundedYear"
-                        value={formData.foundedYear}
+                  <div className="col-span-12 rounded-2xl border bg-white p-8 md:col-span-8">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <InputField
+                        name="name"
+                        value={team.name}
                         onChange={handleInputChange}
-                        className="p-3 rounded bg-gray-100"
+                        placeholder="Tên CLB"
+                        label="Tên đội bóng"
                       />
-
-                      <select
-                        name="city"
-                        value={formData.city}
+                      <InputField
+                        name="logo"
+                        value={team.logo ?? ""}
                         onChange={handleInputChange}
-                        className="p-3 rounded bg-gray-100"
-                      >
-                        <option>Hà Nội</option>
-                        <option>TP.HCM</option>
-                      </select>
+                        placeholder="https://..."
+                        label="Logo URL"
+                      />
+                      <InputField
+                        name="establishedYear"
+                        type="number"
+                        value={team.establishedYear}
+                        onChange={handleInputChange}
+                        label="Năm thành lập"
+                      />
+                      <InputField
+                        name="city"
+                        value={team.city}
+                        onChange={handleInputChange}
+                        placeholder="TP. Hồ Chí Minh"
+                        label="Thành phố"
+                      />
+                      <SelectField
+                        name="region"
+                        value={team.region}
+                        onChange={handleInputChange}
+                        label="Khu vực"
+                        options={["Bắc", "Trung", "Nam"]}
+                      />
+                      <SelectField
+                        name="status"
+                        value={team.status}
+                        onChange={handleInputChange}
+                        label="Trạng thái"
+                        options={["ACTIVE", "INACTIVE"]}
+                      />
                     </div>
                   </div>
 
-                  {/* Stadium */}
-                  <div className="col-span-12 md:col-span-7 bg-gray-100 p-8 rounded-2xl">
-                    <input
-                      name="stadium"
-                      value={formData.stadium}
-                      onChange={handleInputChange}
-                      placeholder="Sân vận động"
-                      className="w-full mb-4 p-3 rounded"
-                    />
-
-                    <input
-                      name="owner"
-                      value={formData.owner}
-                      onChange={handleInputChange}
-                      placeholder="Chủ sở hữu"
-                      className="w-full p-3 rounded"
-                    />
+                  <div className="col-span-12 rounded-2xl bg-gray-100 p-8 md:col-span-7">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <InputField
+                        name="owner"
+                        value={team.owner}
+                        onChange={handleInputChange}
+                        placeholder="Chủ sở hữu"
+                        label="Chủ sở hữu"
+                      />
+                      <SelectField
+                        name="stadiumId"
+                        value={team.stadiumId ? String(team.stadiumId) : ""}
+                        onChange={handleInputChange}
+                        label="Sân vận động"
+                        options={stadiums.map((stadium) => ({
+                          label: stadium.name,
+                          value: String(stadium.id),
+                        }))}
+                        placeholder="Chọn sân"
+                      />
+                    </div>
                   </div>
 
-                  {/* Description */}
-                  <div className="col-span-12 md:col-span-5 bg-blue-500 text-white p-8 rounded-2xl">
+                  <div className="col-span-12 rounded-2xl bg-blue-500 p-8 text-white md:col-span-5">
+                    <label className="mb-2 block text-sm font-bold uppercase tracking-wider">
+                      Mô tả
+                    </label>
                     <textarea
                       name="description"
-                      value={formData.description}
+                      value={team.description}
                       onChange={handleInputChange}
-                      className="w-full p-3 rounded bg-white/10"
-                      placeholder="Mô tả..."
+                      className="min-h-[160px] w-full rounded bg-white/10 p-3 outline-none placeholder:text-white/70"
+                      placeholder="Mô tả đội bóng..."
                     />
                   </div>
                 </div>
 
-                {/* Actions */}
                 <div className="flex justify-end gap-4">
                   <button type="button" onClick={onClose}>
                     Hủy
                   </button>
 
-                  <button className="bg-green-600 text-white px-6 py-2 rounded">
-                    Lưu
+                  <button
+                    disabled={isSubmitting}
+                    className="rounded bg-green-600 px-6 py-2 text-white disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {isSubmitting
+                      ? "Đang lưu..."
+                      : isEditMode
+                        ? "Cập nhật"
+                        : "Lưu"}
                   </button>
                 </div>
               </form>
@@ -168,5 +296,81 @@ const AddClubModal: React.FC<Props> = ({ onClose }) => {
     </div>
   );
 };
+
+type InputFieldProps = {
+  label: string;
+  name: string;
+  value: string | number;
+  onChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+  ) => void;
+  placeholder?: string;
+  type?: string;
+};
+
+const InputField = ({
+  label,
+  name,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+}: InputFieldProps) => (
+  <div>
+    <label className="mb-2 block text-sm font-bold text-gray-700">{label}</label>
+    <input
+      type={type}
+      name={name}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      className="w-full rounded bg-gray-100 p-3"
+    />
+  </div>
+);
+
+type SelectFieldProps = {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+  ) => void;
+  options: Array<string | { label: string; value: string }>;
+  placeholder?: string;
+};
+
+const SelectField = ({
+  label,
+  name,
+  value,
+  onChange,
+  options,
+  placeholder = "Chọn",
+}: SelectFieldProps) => (
+  <div>
+    <label className="mb-2 block text-sm font-bold text-gray-700">{label}</label>
+    <select
+      name={name}
+      value={value}
+      onChange={onChange}
+      className="w-full rounded bg-gray-100 p-3"
+    >
+      <option value="">{placeholder}</option>
+      {options.map((option) => {
+        const normalized =
+          typeof option === "string"
+            ? { label: option, value: option }
+            : option;
+
+        return (
+          <option key={normalized.value} value={normalized.value}>
+            {normalized.label}
+          </option>
+        );
+      })}
+    </select>
+  </div>
+);
 
 export default AddClubModal;

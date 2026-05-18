@@ -1,213 +1,241 @@
-import React from "react";
-import { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { League } from "../../../model/LeagueModel";
+import LeagueService from "../../../services/LeagueService";
 
-export default function CreateTournament({ onClose }: { onClose: () => void }) {
-  const [open, setOpen] = useState(false);
+interface Props {
+  onClose: () => void;
+  currentLeague?: League | null;
+  onSuccess: () => void;
+}
+
+const createEmptyLeague = () =>
+  new League({
+    name: "",
+    country: "Việt Nam",
+    scale: "Quốc gia",
+    status: "ACTIVE",
+    logo: null,
+  });
+
+export default function CreateTournament({
+  onClose,
+  currentLeague,
+  onSuccess,
+}: Props) {
+  const [league, setLeague] = useState<League>(createEmptyLeague());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isEditMode = useMemo(() => Boolean(currentLeague?.id), [currentLeague]);
+
+  useEffect(() => {
+    setLeague(currentLeague ? new League(currentLeague) : createEmptyLeague());
+  }, [currentLeague]);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
+    const { name, value } = e.target;
+    setLeague((prev) => {
+      const next = new League(prev);
+      (next as unknown as Record<string, unknown>)[name] = value || null;
+      return next;
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!league.name.trim()) {
+      alert("Vui lòng nhập tên giải đấu.");
+      return;
+    }
+
+    if (!league.country.trim()) {
+      alert("Vui lòng nhập quốc gia.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      if (league.id) {
+        await LeagueService.updateLeague(league.id, league);
+      } else {
+        await LeagueService.addLeague(league);
+      }
+
+      onSuccess();
+      onClose();
+    } catch (error) {
+      console.error("Lỗi khi lưu giải đấu:", error);
+      alert("Có lỗi xảy ra khi lưu giải đấu.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <div className="w-full max-w-5xl max-h-[90vh] flex flex-col">
-      {/* HEADER */}
-      <div className="px-6 py-4 border-b">
-        <h1 className="text-2xl font-black">Khởi tạo giải đấu mới</h1>
+    <div className="flex max-h-[90vh] w-full max-w-5xl flex-col">
+      <div className="border-b px-6 py-4">
+        <h1 className="text-2xl font-black">
+          {isEditMode ? "Cập nhật giải đấu" : "Khởi tạo giải đấu mới"}
+        </h1>
         <p className="text-sm text-gray-500">
-          Thiết lập thông tin cơ bản và quy định vận hành
+          Đồng bộ dữ liệu giải đấu với API backend.
         </p>
       </div>
 
-      {/* BODY */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-10">
-        {/* SECTION 1 */}
-        <div className="grid grid-cols-3 gap-6">
-          {/* LEFT */}
+      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div>
             <h3 className="font-bold">Thông tin chung</h3>
-            <p className="text-sm text-gray-500 mt-1">
-              Cung cấp thông tin nhận diện
+            <p className="mt-1 text-sm text-gray-500">
+              Cung cấp dữ liệu nhận diện của giải đấu.
             </p>
 
-            {/* Upload */}
-            <div className="mt-4 w-40 h-40 border-2 border-dashed rounded-xl flex items-center justify-center text-xs text-gray-400 cursor-pointer hover:border-green-700">
-              Upload logo
+            <div className="mt-4 flex h-40 w-40 items-center justify-center overflow-hidden rounded-xl border-2 border-dashed text-xs text-gray-400">
+              {league.logo ? (
+                <img
+                  src={league.logo}
+                  alt={league.name || "logo"}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                "Logo giải đấu"
+              )}
             </div>
           </div>
 
-          {/* RIGHT */}
-          <div className="col-span-2 bg-stone-50 p-6 rounded-2xl space-y-4">
-            <input
-              placeholder="Tên giải đấu"
-              className="w-full bg-white px-4 py-3 rounded-xl outline-none"
+          <div className="col-span-2 space-y-4 rounded-2xl bg-stone-50 p-6">
+            <InputField
+              label="Tên giải đấu"
+              name="name"
+              value={league.name}
+              onChange={handleChange}
+              placeholder="Giải Vô địch Quốc gia (V.League 1)"
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <SelectBox
-                label="Mùa giải"
-                options={["Mùa 2023-2024", "Mùa 2024-2025"]}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <InputField
+                label="Quốc gia"
+                name="country"
+                value={league.country}
+                onChange={handleChange}
+                placeholder="Việt Nam"
               />
-              <SelectBox
+              <SelectField
                 label="Quy mô"
-                options={["Cấp quốc gia", "Cấp khu vực"]}
+                name="scale"
+                value={league.scale}
+                onChange={handleChange}
+                options={["Quốc gia", "Khu vực", "Quốc tế"]}
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <InputDate label="Ngày bắt đầu" />
-              <InputDate label="Ngày kết thúc" />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <SelectField
+                label="Trạng thái"
+                name="status"
+                value={league.status}
+                onChange={handleChange}
+                options={["ACTIVE", "INACTIVE"]}
+              />
+              <InputField
+                label="Logo URL"
+                name="logo"
+                value={league.logo ?? ""}
+                onChange={handleChange}
+                placeholder="https://..."
+              />
             </div>
           </div>
         </div>
 
-        {/* SECTION 2 */}
-        <div className="grid grid-cols-3 gap-6">
-          {/* LEFT */}
-          <div>
-            <h3 className="font-bold">Cấu hình</h3>
-            <p className="text-sm text-gray-500">Thiết lập quy định</p>
-          </div>
+        <div className="mt-8 flex justify-end gap-3 border-t px-0 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-gray-200 px-6 py-2"
+          >
+            Hủy bỏ
+          </button>
 
-          {/* RIGHT */}
-          <div className="col-span-2 bg-stone-50 p-6 rounded-2xl space-y-6">
-            {/* NUMBER */}
-            <div className="grid grid-cols-3 gap-4">
-              <NumberInput label="Số đội" val={16} />
-              <NumberInput label="Tuổi min" val={18} />
-              <NumberInput label="Tuổi max" val={45} />
-            </div>
-
-            {/* POINT */}
-            <div className="grid grid-cols-3 gap-4">
-              <PointCard
-                label="Thắng"
-                score="3"
-                color="text-green-700"
-                bg="bg-green-50"
-              />
-              <PointCard
-                label="Hòa"
-                score="1"
-                color="text-blue-700"
-                bg="bg-blue-50"
-              />
-              <PointCard
-                label="Thua"
-                score="0"
-                color="text-red-700"
-                bg="bg-red-50"
-              />
-            </div>
-
-            {/* TOGGLE */}
-            <ToggleItem icon="verified_user" label="Xác minh cầu thủ" active />
-            <ToggleItem icon="public" label="Công khai thông tin" />
-          </div>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="rounded-full bg-green-700 px-6 py-2 text-white disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isSubmitting
+              ? "Đang lưu..."
+              : isEditMode
+                ? "Cập nhật"
+                : "Lưu"}
+          </button>
         </div>
-      </div>
-
-      {/* FOOTER */}
-      <div className="px-6 py-4 border-t flex justify-end gap-3">
-        <button
-          onClick={onClose}
-          className="px-6 py-2 rounded-full bg-gray-200"
-        >
-          Hủy bỏ
-        </button>
-
-        <button
-          onClick={onClose}
-          className="px-6 py-2 bg-green-700 text-white rounded-full"
-        >
-          Lưu
-        </button>
-      </div>
+      </form>
     </div>
   );
 }
 
-function SelectBox({ label, options }: { label: string; options: string[] }) {
-  return (
-    <div className="flex flex-col">
-      <label className="text-sm font-bold text-gray-600 mb-2">{label}</label>
-      <div className="relative">
-        <select className="w-full bg-[#f5f3ef] border-none rounded-xl px-4 py-3 appearance-none outline-none">
-          {options.map((opt) => (
-            <option key={opt}>{opt}</option>
-          ))}
-        </select>
-      </div>
-    </div>
-  );
-}
+type InputFieldProps = {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+};
 
-function InputDate({ label }: { label: string }) {
+function InputField({
+  label,
+  name,
+  value,
+  onChange,
+  placeholder,
+}: InputFieldProps) {
   return (
     <div className="flex flex-col">
-      <label className="text-sm font-bold text-gray-600 mb-2">{label}</label>
-      <div className="relative">
-        <input
-          type="date"
-          className="w-full bg-[#f5f3ef] border-none rounded-xl px-4 py-3 outline-none"
-        />
-      </div>
-    </div>
-  );
-}
-
-function NumberInput({ label, val }: { label: string; val: number }) {
-  return (
-    <div className="flex flex-col">
-      <label className="text-sm font-bold text-gray-600 mb-2">{label}</label>
+      <label className="mb-2 text-sm font-bold text-gray-600">{label}</label>
       <input
-        type="number"
-        defaultValue={val}
-        className="w-full bg-[#f5f3ef] border-none rounded-xl px-4 py-3 text-center font-black outline-none"
+        name={name}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className="w-full rounded-xl border-none bg-white px-4 py-3 outline-none"
       />
     </div>
   );
 }
 
-function PointCard({
-  label,
-  score,
-  color,
-  bg,
-}: {
+type SelectFieldProps = {
   label: string;
-  score: string;
-  color: string;
-  bg: string;
-}) {
-  return (
-    <div
-      className={`${bg} ${color} p-4 rounded-xl flex flex-col items-center border border-transparent hover:border-current transition-all`}
-    >
-      <span className="text-2xl font-black">{score}</span>
-      <span className="text-[10px] font-bold uppercase mt-1 opacity-70">
-        {label}
-      </span>
-    </div>
-  );
-}
+  name: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  options: string[];
+};
 
-function ToggleItem({
-  icon,
+function SelectField({
   label,
-  active = false,
-}: {
-  icon: string;
-  label: string;
-  active?: boolean;
-}) {
+  name,
+  value,
+  onChange,
+  options,
+}: SelectFieldProps) {
   return (
-    <div className="flex items-center justify-between p-4 bg-[#f5f3ef] rounded-xl hover:bg-white border border-transparent hover:border-gray-100 transition-all">
-      <div className="flex items-center gap-3">
-        <span className="material-symbols-outlined text-gray-400">{icon}</span>
-        <span className="text-sm font-bold text-gray-700">{label}</span>
-      </div>
-      <div
-        className={`w-10 h-5 rounded-full relative transition-all ${active ? "bg-[#0d631b]" : "bg-gray-300"}`}
+    <div className="flex flex-col">
+      <label className="mb-2 text-sm font-bold text-gray-600">{label}</label>
+      <select
+        name={name}
+        value={value}
+        onChange={onChange}
+        className="w-full appearance-none rounded-xl border-none bg-white px-4 py-3 outline-none"
       >
-        <div
-          className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${active ? "right-1" : "left-1"}`}
-        ></div>
-      </div>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

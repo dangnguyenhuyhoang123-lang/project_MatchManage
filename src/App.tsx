@@ -19,9 +19,10 @@ import RoundManagement from "./Page/testPage/RoundManage/RoundManagement";
 import ClubManagement from "./Page/testPage/TeamManage/ClubManagement";
 import PlayerManagement from "./Page/testPage/PlayerManage/PlayerManagement";
 import RegisterFormMatch from "./Page/testPage/RegisterForm/RegisterFormMatch";
-import MatchResults from "./Page/testPage/MatchAndShedule/MatchResults";
+import MatchResults from "./Page/testPage/Matchresult/MatchResults";
 import StandingsPage from "./Page/testPage/StadingPage";
 import ReportPage from "./Page/testPage/ReportPage";
+import AdminRegistrationManager from "./Page/testPage/RegisterForm/AdminRegistrationManager";
 
 function App() {
   return (
@@ -38,6 +39,10 @@ function App() {
         <Route path="/results" element={<MatchResults />}></Route>
         <Route path="/standings" element={<StandingsPage />}></Route>
         <Route path="/reports" element={<ReportPage />}></Route>
+        <Route
+          path="/manageRegisger"
+          element={<AdminRegistrationManager />}
+        ></Route>
         {/* <Route path="/matches/:id" element={<MatchDetail />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/sign-up" element={<SignUpPage />} />

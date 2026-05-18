@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { PhanTrang } from "../utils/PhanTrang";
 import { Link, useNavigate } from "react-router-dom";
 import { getListMatches } from "../services/MatchAPI";
-import type { MatchModel } from "../model/MatchModel";
+import type { MatchModel } from "../model/Match/MatchModel";
 import { getTeamDetailPath } from "../utils/teamRoute";
 import ButtonLink from "../components/Button/ButtonLink";
 

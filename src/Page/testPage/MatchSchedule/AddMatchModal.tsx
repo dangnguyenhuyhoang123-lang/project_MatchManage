@@ -1,6 +1,111 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import SeasonService from "../../../services/SeasonService";
+import RoundService from "../../../services/RoundService";
 
-const AddMatchModal = ({ onClose }) => {
+const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
+  const [seasons, setSeasons] = useState<any[]>([]);
+  const [rounds, setRounds] = useState<any[]>([]);
+  const [teams, setTeams] = useState<any[]>([]);
+
+  const [selectedSeason, setSelectedSeason] = useState<number | "">("");
+  const [selectedRound, setSelectedRound] = useState<number | "">("");
+  const [homeTeam, setHomeTeam] = useState<number | "">("");
+  const [awayTeam, setAwayTeam] = useState<number | "">("");
+  const [stadium, setStadium] = useState<string>("");
+  const [matchDate, setMatchDate] = useState<string>("");
+  const [matchTime, setMatchTime] = useState<string>("");
+
+  useEffect(() => {
+    if (initialData) {
+      setSelectedSeason(initialData.season?.id || initialData.seasonId || initialData.league?.id || "");
+      setSelectedRound(initialData.round?.id || initialData.roundId || "");
+      setHomeTeam(initialData.homeTeam?.id || initialData.homeTeam?.teamId || initialData.homeTeamId || "");
+      setAwayTeam(initialData.awayTeam?.id || initialData.awayTeam?.teamId || initialData.awayTeamId || "");
+      setStadium(initialData.stadium || "");
+      
+      if (initialData.matchDate) {
+        const d = new Date(initialData.matchDate);
+        setMatchDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+        setMatchTime(`${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`);
+      }
+    } else {
+      setSelectedSeason("");
+      setSelectedRound("");
+      setHomeTeam("");
+      setAwayTeam("");
+      setStadium("");
+      setMatchDate("");
+      setMatchTime("");
+    }
+  }, [initialData]);
+
+  useEffect(() => {
+    const fetchSeasons = async () => {
+      try {
+        const response = await SeasonService.getAllSeasons(0, 100);
+        setSeasons(response.data?.content || []);
+      } catch (error) {
+        console.error("Lỗi lấy danh sách giải đấu:", error);
+      }
+    };
+    fetchSeasons();
+  }, []);
+
+  useEffect(() => {
+    if (selectedSeason) {
+      const fetchRounds = async () => {
+        try {
+          const response = await RoundService.getAllRoundsNormalized(0, 100, Number(selectedSeason));
+          setRounds(response.content || []);
+        } catch (error) {
+          console.error("Lỗi lấy dữ liệu vòng đấu:", error);
+          setRounds([]);
+        }
+      };
+
+      const fetchTeams = async () => {
+        try {
+          const response = await SeasonService.getTeamsBySeason(Number(selectedSeason));
+          setTeams(response.data?.content || response.data || []);
+        } catch (error) {
+          console.error("Lỗi lấy dữ liệu đội bóng:", error);
+          setTeams([]);
+        }
+      };
+
+      fetchRounds();
+      fetchTeams();
+    } else {
+      setRounds([]);
+      setTeams([]);
+    }
+  }, [selectedSeason]);
+
+  useEffect(() => {
+    if (homeTeam) {
+      const team = teams.find((t: any) => 
+         t.id === Number(homeTeam) || 
+         t.teamId === Number(homeTeam) || 
+         t.clubId === Number(homeTeam)
+      );
+      if (team && team.stadiumName) {
+        setStadium(team.stadiumName);
+      } else {
+        setStadium("");
+      }
+    } else {
+      setStadium("");
+    }
+  }, [homeTeam, teams]);
+
+  const seasonOptions = seasons.map((s: any) => ({ value: s.id, label: s.name || s.year }));
+  const roundOptions = rounds.map((r: any) => ({ value: r.id, label: r.name || `Vòng ${r.roundNumber}` }));
+  const teamOptions = teams.map((t: any) => ({ value: t.id || t.teamId || t.clubId, label: t.name || t.clubName || t.teamName || "Đội bóng" }));
+  const stadiumOptions = Array.from(new Set(teams.map((t: any) => t.stadium).filter(Boolean))).map(s => ({ value: s, label: s as string }));
+  if (stadium && !stadiumOptions.find((o: any) => o.value === stadium)) {
+     stadiumOptions.push({ value: stadium, label: stadium });
+  }
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-8 bg-[#1b1c1a]/20 backdrop-blur-sm font-sans">
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative">
@@ -46,25 +151,55 @@ const AddMatchModal = ({ onClose }) => {
           <div className="flex justify-between items-center mb-8">
             <h3 className="text-2xl font-black text-[#1b1c1a] flex items-center gap-3">
               <span className="w-1.5 h-8 bg-[#0d631b] rounded-full"></span>
-              Thêm trận đấu mới
+              {initialData ? "Sửa trận đấu" : "Thêm trận đấu mới"}
             </h3>
-            <button className="md:hidden p-2 text-gray-400">
+            <button type="button" onClick={onClose} className="md:hidden p-2 text-gray-400">
               <span className="material-symbols-outlined">close</span>
             </button>
           </div>
 
-          <form className="space-y-6">
+          <form className="space-y-6" onSubmit={(e) => {
+            e.preventDefault();
+            if (!selectedSeason || !selectedRound || !homeTeam || !awayTeam || !matchDate || !matchTime) {
+              alert("Vui lòng điền đầy đủ thông tin bắt buộc!");
+              return;
+            }
+            if (homeTeam === awayTeam) {
+              alert("Đội nhà và đội khách không được trùng nhau!");
+              return;
+            }
+            onSave({
+              seasonId: Number(selectedSeason),
+              roundId: Number(selectedRound),
+              homeTeamId: Number(homeTeam),
+              awayTeamId: Number(awayTeam),
+              stadium: stadium,
+              matchDate: `${matchDate}T${matchTime}:00`,
+              status: initialData?.status || "SCHEDULED",
+            });
+          }}>
             {/* Tournament & Round Selection */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <SelectGroup
                 label="Chọn giải đấu"
                 icon="emoji_events"
-                options={["V-League 1 - 2024", "Cúp Quốc Gia 2024"]}
+                options={seasonOptions}
+                value={selectedSeason}
+                onChange={(e: any) => {
+                  setSelectedSeason(e.target.value ? Number(e.target.value) : "");
+                  setSelectedRound("");
+                  setHomeTeam("");
+                  setAwayTeam("");
+                  setStadium("");
+                }}
               />
               <SelectGroup
                 label="Chọn vòng đấu"
                 icon="reorder"
-                options={["Vòng 10", "Vòng 11", "Vòng 12"]}
+                options={roundOptions}
+                value={selectedRound}
+                onChange={(e: any) => setSelectedRound(e.target.value ? Number(e.target.value) : "")}
+                disabled={!selectedSeason}
               />
             </div>
 
@@ -85,14 +220,20 @@ const AddMatchModal = ({ onClose }) => {
                   side="left"
                   color="text-[#0d631b]"
                   icon="stadium"
-                  options={["Hà Nội FC", "Công An Hà Nội"]}
+                  options={teamOptions}
+                  value={homeTeam}
+                  onChange={(e: any) => setHomeTeam(e.target.value ? Number(e.target.value) : "")}
+                  disabled={!selectedSeason}
                 />
                 <TeamSelect
                   label="Đội khách"
                   side="right"
                   color="text-[#4c56af]"
                   icon="flight_takeoff"
-                  options={["Thép Xanh Nam Định", "Hải Phòng FC"]}
+                  options={teamOptions}
+                  value={awayTeam}
+                  onChange={(e: any) => setAwayTeam(e.target.value ? Number(e.target.value) : "")}
+                  disabled={!selectedSeason}
                 />
               </div>
             </div>
@@ -101,11 +242,10 @@ const AddMatchModal = ({ onClose }) => {
             <SelectGroup
               label="Sân vận động"
               icon="location_on"
-              options={[
-                "Sân vận động Hàng Đẫy",
-                "Sân vận động Mỹ Đình",
-                "Sân vận động Thiên Trường",
-              ]}
+              options={stadiumOptions}
+              value={stadium}
+              onChange={(e: any) => setStadium(e.target.value)}
+              disabled={stadiumOptions.length === 0}
             />
 
             {/* Date & Time */}
@@ -114,8 +254,16 @@ const AddMatchModal = ({ onClose }) => {
                 label="Ngày thi đấu"
                 icon="calendar_today"
                 type="date"
+                value={matchDate}
+                onChange={(e: any) => setMatchDate(e.target.value)}
               />
-              <InputGroup label="Giờ thi đấu" icon="schedule" type="time" />
+              <InputGroup 
+                label="Giờ thi đấu" 
+                icon="schedule" 
+                type="time" 
+                value={matchTime}
+                onChange={(e: any) => setMatchTime(e.target.value)}
+              />
             </div>
 
             {/* Actions */}
@@ -129,7 +277,6 @@ const AddMatchModal = ({ onClose }) => {
               </button>
               <button
                 type="submit"
-                onClick={onClose}
                 className="flex-1 bg-gradient-to-r from-[#0d631b] to-[#2e7d32] px-10 py-3.5 rounded-full font-bold text-white shadow-lg shadow-green-900/20 hover:shadow-green-900/40 transition-all active:scale-95 flex items-center justify-center gap-2"
               >
                 <span
@@ -148,7 +295,7 @@ const AddMatchModal = ({ onClose }) => {
 
 // --- Internal UI Components ---
 
-function SelectGroup({ label, icon, options }: any) {
+function SelectGroup({ label, icon, options, value, onChange, disabled }: any) {
   return (
     <div className="space-y-2">
       <label className="text-xs font-bold text-gray-500 flex items-center gap-2 px-1">
@@ -156,9 +303,15 @@ function SelectGroup({ label, icon, options }: any) {
         {label}
       </label>
       <div className="relative">
-        <select className="w-full bg-[#efeeea] border-none rounded-xl py-3.5 px-4 appearance-none focus:ring-2 focus:ring-[#0d631b] transition-all font-bold text-sm">
-          {options.map((opt: string) => (
-            <option key={opt}>{opt}</option>
+        <select 
+          className="w-full bg-[#efeeea] border-none rounded-xl py-3.5 px-4 appearance-none focus:ring-2 focus:ring-[#0d631b] transition-all font-bold text-sm disabled:opacity-50"
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+        >
+          <option value="">-- Chọn {label.toLowerCase()} --</option>
+          {options.map((opt: any) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
         <span className="material-symbols-outlined absolute right-3 top-3.5 pointer-events-none text-gray-400">
@@ -169,7 +322,7 @@ function SelectGroup({ label, icon, options }: any) {
   );
 }
 
-function TeamSelect({ label, side, color, icon, options }: any) {
+function TeamSelect({ label, side, color, icon, options, value, onChange, disabled }: any) {
   return (
     <div className={`space-y-2 ${side === "right" ? "text-right" : ""}`}>
       <label className="text-xs font-bold text-gray-400 uppercase tracking-tight">
@@ -177,10 +330,14 @@ function TeamSelect({ label, side, color, icon, options }: any) {
       </label>
       <div className="relative">
         <select
-          className={`w-full bg-white border-2 border-transparent focus:border-current rounded-xl py-4 px-4 appearance-none transition-all text-lg font-black ${color} ${side === "right" ? "text-right pr-12" : "pl-12"}`}
+          className={`w-full bg-white border-2 border-transparent focus:border-current rounded-xl py-4 px-4 appearance-none transition-all text-lg font-black ${color} ${side === "right" ? "text-right pr-12" : "pl-12"} disabled:opacity-50`}
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
         >
-          {options.map((opt: string) => (
-            <option key={opt}>{opt}</option>
+          <option value="">-- Chọn đội --</option>
+          {options.map((opt: any) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
         <span
@@ -193,7 +350,7 @@ function TeamSelect({ label, side, color, icon, options }: any) {
   );
 }
 
-function InputGroup({ label, icon, type }: any) {
+function InputGroup({ label, icon, type, value, onChange }: any) {
   return (
     <div className="space-y-2">
       <label className="text-xs font-bold text-gray-500 flex items-center gap-2 px-1">
@@ -202,6 +359,8 @@ function InputGroup({ label, icon, type }: any) {
       </label>
       <input
         type={type}
+        value={value}
+        onChange={onChange}
         className="w-full bg-[#efeeea] border-none rounded-xl py-3.5 px-4 focus:ring-2 focus:ring-[#0d631b] transition-all font-bold text-sm"
       />
     </div>

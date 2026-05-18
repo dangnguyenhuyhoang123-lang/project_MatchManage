@@ -1,303 +1,583 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
+import type {
+  FullRegistrationDTO,
+  RegistrationSummaryDTO,
+} from "../../../model/Registration";
+import RegistrationService from "../../../services/RegistrationService";
+import type { RegistrationDraft, SelectedPlayer } from "./RegisterFormMatch";
 
-// --- Interfaces ---
-interface PlayerSummary {
-  id: string;
-  name: string;
-  position: string;
-  number: number;
-  dob: string;
-  idCard: string;
-  image: string;
-}
+type Props = {
+  setStep: (step: number) => void;
+  draft: RegistrationDraft;
+};
 
-const TOP_PLAYERS: PlayerSummary[] = [
-  {
-    id: "1",
-    name: "Nguyễn Văn Quyết",
-    position: "Tiền đạo",
-    number: 10,
-    dob: "01/07/1991",
-    idCard: "001091******",
-    image: "https://placehold.co/100x100?text=VQ10",
-  },
-  {
-    id: "2",
-    name: "Phạm Tuấn Hải",
-    position: "Tiền đạo",
-    number: 9,
-    dob: "19/05/1998",
-    idCard: "001098******",
-    image: "https://placehold.co/100x100?text=TH09",
-  },
-];
+const roleLabels: Record<string, string> = {
+  HEAD_COACH: "Huấn luyện viên trưởng",
+  ASSISTANT_COACH: "Trợ lý huấn luyện viên",
+  GOALKEEPER_COACH: "Huấn luyện viên thủ môn",
+  FITNESS_COACH: "Huấn luyện viên thể lực",
+  TEAM_DOCTOR: "Bác sĩ đội bóng",
+};
 
-const FinalConfirmation: React.FC = ({ setStep }) => {
+const grassLabels = {
+  NATURAL: "Tự nhiên",
+  ARTIFICIAL: "Nhân tạo",
+  HYBRID: "Hybrid",
+};
+
+const getPlayerShirtNumber = (player: SelectedPlayer) =>
+  Number(player.shirtNumber ?? player.number ?? 0);
+
+const getPlayerPosition = (player: SelectedPlayer) =>
+  player.position || "Cầu thủ";
+
+const FinalConfirmation: React.FC<Props> = ({ setStep, draft }) => {
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedSummary, setSubmittedSummary] =
+    useState<RegistrationSummaryDTO | null>(null);
+
+  const allPlayers = useMemo(
+    () => [...draft.mainPlayers, ...draft.subPlayers],
+    [draft.mainPlayers, draft.subPlayers],
+  );
+
+  const missingItems = useMemo(() => {
+    const missing: string[] = [];
+
+    if (!draft.season?.id) {
+      missing.push("Chưa chọn mùa giải");
+    }
+
+    if (draft.coaches.length < 3) {
+      missing.push("Ban huấn luyện chưa đủ tối thiểu 3 thành viên");
+    }
+
+    if (allPlayers.length < 14) {
+      missing.push("Danh sách cầu thủ chưa đủ tối thiểu 14 người");
+    }
+
+    if (!draft.stadium.name.trim() || !draft.stadium.address.trim()) {
+      missing.push("Thông tin sân vận động chưa đầy đủ");
+    }
+
+    return missing;
+  }, [allPlayers.length, draft]);
+
+  const canSubmit = missingItems.length === 0 && isConfirmed && !isSubmitting;
+
+  const payload = useMemo<FullRegistrationDTO | null>(() => {
+    if (!draft.season?.id) {
+      return null;
+    }
+
+    return {
+      seasonID: draft.season.id,
+      teamInfo: {
+        id: draft.team.id,
+      },
+      stadiumInfo: {
+        name: draft.stadium.name.trim(),
+        address: draft.stadium.address.trim(),
+        capacity: Number(draft.stadium.capacity) || 0,
+        grass: draft.stadium.grass,
+      },
+      listPlayerInfo: allPlayers
+        .filter((player) => Number.isFinite(Number(player.id)))
+        .map((player) => ({
+          playerId: Number(player.id),
+          shirtNumber: getPlayerShirtNumber(player),
+          position: getPlayerPosition(player),
+        })),
+      listCoachInfo: draft.coaches
+        .filter((coach) => coach.coachId != null)
+        .map((coach) => ({
+          coachId: Number(coach.coachId),
+          role: coach.role,
+        })),
+    };
+  }, [allPlayers, draft]);
+
+  const completionPercent = Math.round(
+    ((5 - missingItems.length) / 5) * 100,
+  );
+
+  const handleSubmit = async () => {
+    if (!payload || !canSubmit) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await RegistrationService.submitRegistration(payload);
+      setSubmittedSummary(response.data);
+    } catch (error) {
+      console.error("Lỗi khi gửi đơn đăng ký:", error);
+      alert("Không thể gửi đơn đăng ký. Vui lòng kiểm tra lại dữ liệu.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <>
-      {/* Styles & Fonts */}
-
-      {/* Sidebar - Consistent with previous pages */}
-
-      {/* Main Content */}
-
-      {/* Breadcrumb */}
-      {/* <nav className="flex items-center gap-2 text-xs text-gray-400 mb-6 font-semibold uppercase tracking-wider">
-            <span>Trang chủ</span>
-            <span className="material-symbols-outlined text-[10px]">
-              chevron_right
-            </span>
-            <span>Đăng ký thi đấu</span>
-            <span className="material-symbols-outlined text-[10px]">
-              chevron_right
-            </span>
-            <span className="text-[#0d631b]">Kiểm tra & Xác nhận</span>
-          </nav> */}
-
-      {/* <header className="mb-10">
-            <h1 className="text-4xl font-black text-gray-900 tracking-tight mb-2 font-['Be_Vietnam_Pro']">
-              Đăng ký thi đấu - Bước 3
-            </h1>
-            <p className="text-gray-500 text-lg">
-              Vui lòng rà soát lại toàn bộ thông tin trước khi gửi đơn đăng ký
-              chính thức.
-            </p>
-          </header> */}
-
-      {/* Stepper Display */}
-      {/* <div className="flex items-center justify-between mb-10 bg-[#f5f3ef] p-6 rounded-2xl border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-50 text-[#0d631b] flex items-center justify-center border border-green-200">
-                <span className="material-symbols-outlined">check</span>
-              </div>
-              <span className="font-bold text-gray-500">1. Chọn CLB</span>
-            </div>
-            <div className="flex-1 h-px bg-gray-300 mx-6"></div>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-50 text-[#0d631b] flex items-center justify-center border border-green-200">
-                <span className="material-symbols-outlined">check</span>
-              </div>
-              <span className="font-bold text-gray-500">
-                2. Danh sách cầu thủ
-              </span>
-            </div>
-            <div className="flex-1 h-px bg-gray-300 mx-6"></div>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#0d631b] text-white flex items-center justify-center font-bold shadow-lg shadow-green-900/30">
-                3
-              </div>
-              <span className="font-bold text-[#0d631b]">
-                3. Kiểm tra & Xác nhận
-              </span>
-            </div>
-          </div> */}
-
-      {/* Bento Summary Section */}
-      <div className="grid grid-cols-12 gap-6 mb-8">
-        {/* Club Info */}
-        <div className="col-span-12 lg:col-span-7 bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
-          <span
-            className="material-symbols-outlined absolute -right-4 -bottom-4 text-9xl text-gray-50 opacity-10"
-            style={{ fontSize: "160px" }}
-          >
-            stadium
+    <div className="pb-28">
+      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#0d631b] to-[#2e7d32] p-8 md:p-10 text-white shadow-xl shadow-green-900/20 mb-8">
+        <div className="absolute -right-12 -bottom-16 opacity-10">
+          <span className="material-symbols-outlined text-[220px]">
+            assignment_turned_in
           </span>
-          <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">
-            Thông tin CLB
-          </h2>
-          <div className="flex items-center gap-6 relative z-10">
-            <div className="w-24 h-24 rounded-2xl bg-[#f5f3ef] flex items-center justify-center p-3 border border-gray-200">
-              <img
-                src="https://placehold.co/100x100?text=HNFC"
-                alt="Hà Nội FC"
-                className="w-full h-full object-contain"
+        </div>
+
+        <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-xs font-black uppercase tracking-widest">
+              <span className="material-symbols-outlined text-sm">
+                workspace_premium
+              </span>
+              Bước 5 / 5
+            </span>
+
+            <h2 className="mt-6 text-4xl md:text-5xl font-black tracking-tight font-['Be_Vietnam_Pro']">
+              Kiểm tra & xác nhận hồ sơ
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm md:text-base text-white/75 leading-relaxed">
+              Dữ liệu bên dưới được lấy trực tiếp từ các bước bạn vừa chọn trong
+              form đăng ký.
+            </p>
+          </div>
+
+          <div className="rounded-3xl bg-white/12 p-5 backdrop-blur border border-white/10 min-w-[220px]">
+            <div className="flex items-end justify-between">
+              <span className="text-sm font-bold text-white/70">Tiến độ</span>
+              <span className="text-3xl font-black">{completionPercent}%</span>
+            </div>
+            <div className="mt-4 h-2 rounded-full bg-white/20 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-white transition-all"
+                style={{ width: `${completionPercent}%` }}
               />
             </div>
-            <div>
-              <h3 className="text-3xl font-black text-gray-900 mb-1">
-                Hà Nội FC
-              </h3>
-              <div className="flex items-center gap-2 text-gray-500">
-                <span className="material-symbols-outlined text-sm">
-                  location_on
-                </span>
-                <span className="font-medium">Sân vận động Hàng Đẫy</span>
-              </div>
-              <div className="mt-4 inline-flex items-center px-3 py-1 bg-green-50 text-[#0d631b] text-[10px] font-bold rounded-full uppercase tracking-wider">
-                Hạng Nhất Quốc Gia
-              </div>
-            </div>
           </div>
         </div>
+      </section>
 
-        {/* Quick Stats */}
-        <div className="col-span-12 lg:col-span-5 bg-[#4c56af] p-8 rounded-2xl shadow-sm flex flex-col justify-between text-white">
-          <h2 className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-6">
-            Thống kê đội hình
-          </h2>
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              { v: "25", l: "Cầu thủ" },
-              { v: "05", l: "Cán bộ" },
-              { v: "03", l: "Thủ môn" },
-            ].map((stat, idx) => (
-              <div key={idx} className="text-center">
-                <p className="text-4xl font-black">{stat.v}</p>
-                <p className="text-[10px] font-bold opacity-70 uppercase">
-                  {stat.l}
+      <div className="grid grid-cols-12 gap-6">
+        <section className="col-span-12 xl:col-span-8 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <SummaryCard
+              icon="emoji_events"
+              label="Mùa giải"
+              value={draft.season?.name || draft.season?.year || "Chưa chọn"}
+              tone="bg-amber-50 text-amber-700"
+            />
+            <SummaryCard
+              icon="shield"
+              label="Câu lạc bộ"
+              value={draft.team.name}
+              tone="bg-green-50 text-green-700"
+            />
+            <SummaryCard
+              icon="stadium"
+              label="Sân vận động"
+              value={draft.stadium.name || "Chưa nhập"}
+              tone="bg-blue-50 text-blue-700"
+            />
+            <SummaryCard
+              icon="verified"
+              label="Trạng thái"
+              value={missingItems.length === 0 ? "Sẵn sàng gửi" : "Cần bổ sung"}
+              tone={
+                missingItems.length === 0
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-rose-50 text-rose-600"
+              }
+            />
+          </div>
+
+          <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-6 md:p-8">
+            <div className="flex items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 className="text-2xl font-black text-gray-900 font-['Be_Vietnam_Pro']">
+                  Tổng quan đăng ký
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Số liệu được tổng hợp từ danh sách bạn đã chọn.
                 </p>
               </div>
-            ))}
-          </div>
-          <div className="mt-8 pt-6 border-t border-white/10 flex justify-between items-center">
-            <span className="text-sm font-medium">Trạng thái hồ sơ</span>
-            <span className="text-xs font-black bg-white/20 px-3 py-1 rounded-full uppercase">
-              Hoàn tất 100%
-            </span>
-          </div>
-        </div>
-      </div>
+            </div>
 
-      {/* Player List Summary */}
-      <div className="mb-10">
-        <div className="flex justify-between items-end mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              Danh sách cầu thủ tiêu biểu
-            </h2>
-            <p className="text-gray-500 text-sm">
-              Hiển thị 5 cầu thủ vừa cập nhật hồ sơ
-            </p>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard
+                icon="sports_soccer"
+                label="Cầu thủ chính thức"
+                value={String(draft.mainPlayers.length).padStart(2, "0")}
+              />
+              <StatCard
+                icon="groups"
+                label="Cầu thủ dự bị"
+                value={String(draft.subPlayers.length).padStart(2, "0")}
+              />
+              <StatCard
+                icon="manage_accounts"
+                label="Ban huấn luyện"
+                value={String(draft.coaches.length).padStart(2, "0")}
+              />
+              <StatCard
+                icon="event_seat"
+                label="Sức chứa sân"
+                value={draft.stadium.capacity.toLocaleString("vi-VN")}
+              />
+            </div>
           </div>
-          <button className="text-[#0d631b] font-bold text-sm flex items-center gap-1 hover:underline">
-            Xem toàn bộ danh sách{" "}
-            <span className="material-symbols-outlined text-sm">
-              open_in_new
-            </span>
-          </button>
-        </div>
 
-        <div className="space-y-3">
-          {TOP_PLAYERS.map((player) => (
-            <div
-              key={player.id}
-              className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-100 hover:shadow-md transition-shadow"
+          <div className="grid grid-cols-12 gap-6">
+            <ReviewSection
+              className="col-span-12 lg:col-span-7"
+              title="Danh sách cầu thủ"
+              description={`${allPlayers.length} cầu thủ đã được chọn`}
+              editStep={3}
+              setStep={setStep}
             >
-              <div className="flex items-center gap-4 flex-1">
-                <img
-                  src={player.image}
-                  alt={player.name}
-                  className="w-12 h-12 rounded-full object-cover bg-gray-100"
-                />
-                <div>
-                  <h4 className="font-bold text-gray-900">{player.name}</h4>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                    {player.position} • Số {player.number}
-                  </p>
+              <div className="space-y-3">
+                {allPlayers.slice(0, 5).map((player) => (
+                  <div
+                    key={player.id}
+                    className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-3"
+                  >
+                    {player.avatar ? (
+                      <img
+                        src={player.avatar}
+                        alt={player.name}
+                        className="h-12 w-12 rounded-xl object-cover bg-gray-100"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 rounded-xl bg-green-50 text-green-700 flex items-center justify-center font-black">
+                        {player.name?.charAt(0)?.toUpperCase() || "P"}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-bold text-gray-900 truncate">
+                        {player.name}
+                      </h4>
+                      <p className="text-xs text-gray-500">
+                        {getPlayerPosition(player)} • Số{" "}
+                        {getPlayerShirtNumber(player) || "--"}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-green-50 px-3 py-1 text-[10px] font-black uppercase text-green-700">
+                      Hợp lệ
+                    </span>
+                  </div>
+                ))}
+
+                {allPlayers.length === 0 && (
+                  <EmptyLine text="Chưa có cầu thủ nào được chọn." />
+                )}
+
+                {allPlayers.length > 5 && (
+                  <div className="rounded-2xl border border-dashed border-gray-200 bg-[#f5f3ef] p-4 text-sm font-bold text-gray-500">
+                    ... và {allPlayers.length - 5} cầu thủ khác
+                  </div>
+                )}
+              </div>
+            </ReviewSection>
+
+            <ReviewSection
+              className="col-span-12 lg:col-span-5"
+              title="Ban huấn luyện"
+              description={`${draft.coaches.length} thành viên đã được chọn`}
+              editStep={2}
+              setStep={setStep}
+            >
+              <div className="space-y-3">
+                {draft.coaches.slice(0, 5).map((coach) => (
+                  <div
+                    key={coach.assignmentId ?? coach.coachId ?? coach.name}
+                    className="rounded-2xl bg-[#f5f3ef] p-4"
+                  >
+                    <p className="font-black text-gray-900">{coach.name}</p>
+                    <p className="mt-1 text-xs font-bold text-green-700">
+                      {roleLabels[coach.role] ?? coach.role}
+                    </p>
+                  </div>
+                ))}
+
+                {draft.coaches.length === 0 && (
+                  <EmptyLine text="Chưa có thành viên ban huấn luyện." />
+                )}
+              </div>
+            </ReviewSection>
+          </div>
+
+          <ReviewSection
+            title="Sân vận động"
+            description="Thông tin địa điểm thi đấu chính thức"
+            editStep={4}
+            setStep={setStep}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-5">
+              <img
+                src={draft.stadium.image}
+                alt={draft.stadium.name}
+                className="h-40 w-full rounded-2xl object-cover bg-[#f5f3ef]"
+              />
+              <div className="rounded-2xl bg-[#f5f3ef] p-5">
+                <h4 className="text-xl font-black text-gray-900">
+                  {draft.stadium.name}
+                </h4>
+                <p className="mt-2 text-sm text-gray-500">
+                  {draft.stadium.address}
+                </p>
+                <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
+                  <InfoPill
+                    label="Sức chứa"
+                    value={`${draft.stadium.capacity.toLocaleString("vi-VN")} người`}
+                  />
+                  <InfoPill
+                    label="Mặt cỏ"
+                    value={grassLabels[draft.stadium.grass]}
+                  />
                 </div>
               </div>
-              <div className="flex-1 hidden md:block">
-                <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">
-                  Ngày sinh
-                </p>
-                <p className="text-sm font-semibold text-gray-900">
-                  {player.dob}
-                </p>
-              </div>
-              <div className="flex-1 hidden md:block">
-                <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">
-                  Số CCCD
-                </p>
-                <p className="text-sm font-semibold text-gray-900">
-                  {player.idCard}
-                </p>
-              </div>
-              <div className="bg-green-50 text-[#0d631b] px-4 py-2 rounded-full border border-green-100 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[#0d631b]"></div>
-                <span className="text-[10px] font-black uppercase tracking-wider">
-                  Hợp lệ
-                </span>
-              </div>
             </div>
-          ))}
-          <div className="p-4 bg-white/50 rounded-xl border border-dashed border-gray-200 flex items-center gap-4 opacity-60">
-            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
-              <span className="material-symbols-outlined">person</span>
-            </div>
-            <span className="text-sm font-bold italic text-gray-500">
-              ... và 23 cầu thủ khác đã được xác thực
-            </span>
-          </div>
-        </div>
-      </div>
+          </ReviewSection>
+        </section>
 
-      {/* Commitment Section */}
-      <div className="bg-[#efeeea] p-8 rounded-2xl mb-12 border border-gray-200">
-        <div className="flex items-start gap-4">
-          <input
-            type="checkbox"
-            id="commit"
-            checked={isConfirmed}
-            onChange={() => setIsConfirmed(!isConfirmed)}
-            className="w-6 h-6 mt-1 rounded border-gray-300 text-[#0d631b] focus:ring-[#0d631b]/20 cursor-pointer"
-          />
-          <label htmlFor="commit" className="cursor-pointer">
-            <h3 className="font-bold text-gray-900 text-lg mb-1 font-['Be_Vietnam_Pro']">
-              Cam kết & Quy định
+        <aside className="col-span-12 xl:col-span-4 space-y-6">
+          <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-6 md:p-8">
+            <h3 className="text-xl font-black text-gray-900 font-['Be_Vietnam_Pro'] mb-6">
+              Trạng thái hồ sơ
             </h3>
-            <p className="text-gray-500 text-sm leading-relaxed font-medium">
-              Tôi xác nhận rằng tất cả thông tin khai báo trên đây là chính xác
-              và trung thực. Tôi đã đọc và đồng ý tuân thủ các quy định, điều lệ
-              của giải đấu do Ban tổ chức ban hành. Mọi sai sót hoặc thông tin
-              giả mạo sẽ dẫn đến việc loại hồ sơ đăng ký mà không cần thông báo
-              trước.
-            </p>
-          </label>
+
+            <div className="space-y-4">
+              {[
+                {
+                  text: "Đã chọn mùa giải đăng ký",
+                  passed: Boolean(draft.season?.id),
+                },
+                {
+                  text: "Ban huấn luyện đủ tối thiểu 3 thành viên",
+                  passed: draft.coaches.length >= 3,
+                },
+                {
+                  text: "Danh sách cầu thủ đủ tối thiểu 14 người",
+                  passed: allPlayers.length >= 14,
+                },
+                {
+                  text: "Thông tin sân vận động đầy đủ",
+                  passed:
+                    Boolean(draft.stadium.name.trim()) &&
+                    Boolean(draft.stadium.address.trim()),
+                },
+              ].map((item) => (
+                <div key={item.text} className="flex items-start gap-3">
+                  <span
+                    className={`material-symbols-outlined ${
+                      item.passed ? "text-green-700" : "text-red-500"
+                    }`}
+                  >
+                    {item.passed ? "check_circle" : "cancel"}
+                  </span>
+                  <p className="text-sm font-semibold text-gray-700">
+                    {item.text}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {missingItems.length > 0 && (
+              <div className="mt-8 rounded-2xl bg-red-50 p-5 border border-red-100">
+                <p className="font-black text-red-600">Cần bổ sung</p>
+                <ul className="mt-2 space-y-1 text-xs text-red-500">
+                  {missingItems.map((item) => (
+                    <li key={item}>• {item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-[#f5f3ef] rounded-[2rem] border border-gray-200 p-6 md:p-8">
+            <div className="flex items-start gap-4">
+              <input
+                type="checkbox"
+                id="commit"
+                checked={isConfirmed}
+                onChange={() => setIsConfirmed((prev) => !prev)}
+                className="mt-1 h-5 w-5 rounded border-gray-300 text-green-700 focus:ring-green-700/20 cursor-pointer"
+              />
+              <label htmlFor="commit" className="cursor-pointer">
+                <h3 className="font-black text-gray-900 font-['Be_Vietnam_Pro']">
+                  Cam kết thông tin
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-gray-500">
+                  Tôi xác nhận các thông tin trong hồ sơ đăng ký là chính xác,
+                  trung thực và đồng ý tuân thủ điều lệ giải đấu.
+                </p>
+              </label>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div className="fixed bottom-10 left-64 right-0 flex justify-center px-10 pointer-events-none z-40">
+        <div className="bg-white/90 backdrop-blur-xl border border-gray-100 rounded-full p-4 flex items-center justify-between shadow-2xl w-full max-w-4xl pointer-events-auto">
+          <div className="flex items-center gap-4 pl-4">
+            <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+              <span className="material-symbols-outlined text-green-700">
+                assignment
+              </span>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900">
+                Hồ sơ {draft.team.name}
+              </p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                Kiểm tra lần cuối trước khi gửi
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setStep(4)}
+              className="px-8 py-3 rounded-full text-gray-500 hover:bg-gray-50 font-bold text-sm transition-all"
+            >
+              Quay lại
+            </button>
+
+            <button
+              type="button"
+              disabled={!canSubmit}
+              onClick={handleSubmit}
+              className="px-10 py-3 rounded-full bg-green-700 text-white font-bold shadow-lg shadow-green-700/20 hover:scale-105 active:scale-95 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? "Đang gửi..." : "Gửi đơn đăng ký"}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Final Actions */}
-      <div className="flex items-center justify-between pt-8 border-t border-gray-200">
-        <button className="px-8 py-3 rounded-full border-2 border-gray-200 text-gray-600 font-bold hover:bg-gray-50 transition-all flex items-center gap-2 text-sm">
-          <span className="material-symbols-outlined text-sm">arrow_back</span>{" "}
-          Quay lại
-        </button>
-        <button
-          disabled={!isConfirmed}
-          className={`px-12 py-4 rounded-full font-black text-lg shadow-xl flex items-center gap-3 transition-all active:scale-95 ${
-            isConfirmed
-              ? "bg-gradient-to-r from-[#0d631b] to-[#2e7d32] text-white shadow-green-900/30"
-              : "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
-          }`}
-        >
-          Gửi đơn đăng ký{" "}
-          <span className="material-symbols-outlined">send</span>
-        </button>
-      </div>
-
-      {/* Floating Toast Notification */}
-      <div className="fixed bottom-8 right-8 z-50">
-        <div className="bg-white/80 backdrop-blur-xl p-5 rounded-2xl shadow-2xl border border-white flex items-center gap-4 max-w-sm">
-          <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-[#0d631b]">
-            <span className="material-symbols-outlined font-bold">
-              verified
-            </span>
+      {submittedSummary && (
+        <div className="fixed bottom-28 right-8 z-50 max-w-sm rounded-2xl border border-green-100 bg-white/90 p-5 shadow-2xl backdrop-blur">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-50 text-green-700">
+              <span className="material-symbols-outlined">mark_email_read</span>
+            </div>
+            <div>
+              <h4 className="font-black text-gray-900">Đã gửi hồ sơ</h4>
+              <p className="text-xs font-semibold text-gray-500">
+                Mã hồ sơ #{submittedSummary.id} • Trạng thái{" "}
+                {submittedSummary.status}
+              </p>
+            </div>
           </div>
-          <div>
-            <h4 className="font-bold text-gray-900 text-sm">Hồ sơ sẵn sàng</h4>
-            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">
-              Dữ liệu đã được kiểm tra tự động
-            </p>
-          </div>
-          <button className="ml-4 text-gray-400 hover:text-gray-900">
-            <span className="material-symbols-outlined text-sm">close</span>
-          </button>
         </div>
-      </div>
-    </>
+      )}
+    </div>
   );
 };
+
+const SummaryCard = ({
+  icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  tone: string;
+}) => (
+  <div className="rounded-[1.5rem] border border-gray-100 bg-white p-5 shadow-sm">
+    <div className="flex items-center gap-4">
+      <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tone}`}>
+        <span className="material-symbols-outlined">{icon}</span>
+      </div>
+      <div className="min-w-0">
+        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+          {label}
+        </p>
+        <h3 className="mt-1 truncate text-lg font-black text-gray-900">
+          {value}
+        </h3>
+      </div>
+    </div>
+  </div>
+);
+
+const StatCard = ({
+  icon,
+  label,
+  value,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+}) => (
+  <div className="rounded-2xl bg-[#f5f3ef] p-5 border border-gray-100">
+    <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-white text-green-700">
+      <span className="material-symbols-outlined text-xl">{icon}</span>
+    </div>
+    <p className="text-3xl font-black text-gray-900">{value}</p>
+    <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-gray-400">
+      {label}
+    </p>
+  </div>
+);
+
+const ReviewSection = ({
+  title,
+  description,
+  editStep,
+  setStep,
+  className = "",
+  children,
+}: {
+  title: string;
+  description: string;
+  editStep: number;
+  setStep: (step: number) => void;
+  className?: string;
+  children: React.ReactNode;
+}) => (
+  <div
+    className={`bg-white rounded-[2rem] border border-gray-100 shadow-sm p-6 md:p-8 ${className}`.trim()}
+  >
+    <div className="mb-6 flex items-center justify-between">
+      <div>
+        <h3 className="text-xl font-black text-gray-900 font-['Be_Vietnam_Pro']">
+          {title}
+        </h3>
+        <p className="text-sm text-gray-500 mt-1">{description}</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => setStep(editStep)}
+        className="text-xs font-black text-green-700 hover:underline"
+      >
+        Chỉnh sửa
+      </button>
+    </div>
+    {children}
+  </div>
+);
+
+const EmptyLine = ({ text }: { text: string }) => (
+  <div className="rounded-2xl border border-dashed border-gray-200 bg-[#f5f3ef] p-4 text-sm font-bold text-gray-400">
+    {text}
+  </div>
+);
+
+const InfoPill = ({ label, value }: { label: string; value: string }) => (
+  <div className="rounded-xl bg-white p-3">
+    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+      {label}
+    </p>
+    <p className="mt-1 font-black text-gray-900">{value}</p>
+  </div>
+);
 
 export default FinalConfirmation;

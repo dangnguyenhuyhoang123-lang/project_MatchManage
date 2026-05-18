@@ -1,6 +1,6 @@
 import { MatchEvent } from "../../model/MatchEvents";
 import type { Player } from "../../model/Player";
-import { getPlayerById } from "../../services/PlayerAPI";
+import PlayerService from "../../services/PlayerService";
 import { useState, useEffect } from "react";
 import { SubstitutionEvent } from "./SubstitutionEvent";
 const EVENT_ICONS: Record<string, string> = {
@@ -23,7 +23,7 @@ export const EventItem = ({
   useEffect(() => {
     if (!event.playerId) return;
 
-    getPlayerById(event.playerId).then(setPlayer);
+    PlayerService.getPlayerById(event.playerId).then(setPlayer);
   }, [event.playerId]);
 
   const isHome = event.teamName === homeTeam;

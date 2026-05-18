@@ -1,4 +1,4 @@
-import { MatchModel } from "../model/MatchModel";
+import { MatchModel } from "../model/Match/MatchModel";
 import { my_request } from "./Request";
 import { MatchStats } from "../model/MatchStats";
 import type { MatchEvent } from "../model/MatchEvents";

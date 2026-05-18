@@ -1,106 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { PhanTrang } from "../../../utils/PhanTrang";
-
-// --- Interface & Mock Data ---
-interface Club {
-  id: string;
-  name: string;
-  stadium: string;
-  squadCount: number;
-  status: string;
-  logo: string;
-}
-
-const CLUBS: Club[] = [
-  {
-    id: "1",
-    name: "Hà Nội FC",
-    stadium: "Sân vận động Hàng Đẫy",
-    squadCount: 28,
-    status: "Hạng Nhất",
-    logo: "https://placehold.co/100x100?text=HNFC",
-  },
-  {
-    id: "2",
-    name: "Công An Hà Nội",
-    stadium: "Sân vận động Mỹ Đình",
-    squadCount: 30,
-    status: "Đương kim vô địch",
-    logo: "https://placehold.co/100x100?text=CAHN",
-  },
-  {
-    id: "3",
-    name: "Thể Công Viettel",
-    stadium: "Sân vận động Mỹ Đình",
-    squadCount: 26,
-    status: "Hạng Nhất",
-    logo: "https://placehold.co/100x100?text=TCV",
-  },
-  {
-    id: "4",
-    name: "LPBank HAGL",
-    stadium: "Sân vận động Pleiku",
-    squadCount: 25,
-    status: "Hạng Nhất",
-    logo: "https://placehold.co/100x100?text=HAGL",
-  },
-  {
-    id: "5",
-    name: "Hải Phòng FC",
-    stadium: "Sân vận động Lạch Tray",
-    squadCount: 24,
-    status: "Hạng Nhất",
-    logo: "https://placehold.co/100x100?text=HPFC",
-  },
-  {
-    id: "6",
-    name: "B.Bình Dương",
-    stadium: "Sân vận động Gò Đậu",
-    squadCount: 29,
-    status: "Hạng Nhất",
-    logo: "https://placehold.co/100x100?text=BBD",
-  },
-  {
-    id: "7",
-    name: "B.Bình Dương",
-    stadium: "Sân vận động Gò Đậu",
-    squadCount: 29,
-    status: "Hạng Nhất",
-    logo: "https://placehold.co/100x100?text=BBD",
-  },
-  {
-    id: "8",
-    name: "B.Bình Dương",
-    stadium: "Sân vận động Gò Đậu",
-    squadCount: 29,
-    status: "Hạng Nhất",
-    logo: "https://placehold.co/100x100?text=BBD",
-  },
-  {
-    id: "9",
-    name: "B.Bình Dương",
-    stadium: "Sân vận động Gò Đậu",
-    squadCount: 29,
-    status: "Hạng Nhất",
-    logo: "https://placehold.co/100x100?text=BBD",
-  },
-  {
-    id: "10",
-    name: "B.Bình Dương",
-    stadium: "Sân vận động Gò Đậu",
-    squadCount: 29,
-    status: "Hạng Nhất",
-    logo: "https://placehold.co/100x100?text=BBD",
-  },
-];
+import SeasonService from "../../../services/SeasonService";
+import type { SelectedSeason } from "./RegisterFormMatch";
 
 // --- Sub-components ---
-const ClubCard = ({
-  club,
+const SeasonCard = ({
+  season,
   isSelected,
   onSelect,
 }: {
-  club: Club;
+  season: any;
   isSelected: boolean;
   onSelect: () => void;
 }) => (
@@ -113,12 +22,8 @@ const ClubCard = ({
     }`}
   >
     <div className="flex justify-between items-start">
-      <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center p-3">
-        <img
-          src={club.logo}
-          alt={club.name}
-          className="w-full h-full object-contain"
-        />
+      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-3 text-green-700">
+        <span className="material-symbols-outlined text-3xl">emoji_events</span>
       </div>
       <span
         className={`material-symbols-outlined text-3xl transition-opacity ${
@@ -133,19 +38,20 @@ const ClubCard = ({
     </div>
 
     <div>
-      <h3 className="text-xl font-bold text-gray-900 mb-1">{club.name}</h3>
+      <h3 className="text-xl font-bold text-gray-900 mb-1">
+        {season.name || season.year}
+      </h3>
 
       <div className="flex items-center gap-2 text-gray-500 text-sm mb-3">
-        <span className="material-symbols-outlined text-base">stadium</span>
-        <span>{club.stadium}</span>
+        <span className="material-symbols-outlined text-base">calendar_month</span>
+        <span>
+          {season.startDate} đến {season.endDate}
+        </span>
       </div>
 
       <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-wider">
         <span className="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full">
-          {club.squadCount} Cầu thủ
-        </span>
-        <span className="bg-green-50 text-green-700 px-2.5 py-1 rounded-full">
-          {club.status}
+          {season.leagueName || "Giải đấu"}
         </span>
       </div>
     </div>
@@ -153,27 +59,52 @@ const ClubCard = ({
 );
 
 // --- Main Component ---
-const RegistrationPortal: React.FC<{ setStep: (step: number) => void }> = ({
+type Props = {
+  setStep: (step: number) => void;
+  selectedSeason: SelectedSeason | null;
+  onSeasonSelected: (season: SelectedSeason) => void;
+};
+
+const RegistrationPortal: React.FC<Props> = ({
   setStep,
+  selectedSeason,
+  onSeasonSelected,
 }) => {
-  const [selectedClubId, setSelectedClubId] = useState<string | null>("2");
+  const [selectedSeasonId, setSelectedSeasonId] = useState<number | null>(
+    selectedSeason?.id ?? null,
+  );
   const [search, setSearch] = useState("");
   const [trangHienTai, setTrangHienTai] = useState(1);
 
-  const selectedClub = CLUBS.find((c) => c.id === selectedClubId);
+  const [seasons, setSeasons] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredClubs = useMemo(() => {
-    return CLUBS.filter((club) =>
-      club.name.toLowerCase().includes(search.toLowerCase().trim()),
+  useEffect(() => {
+    const fetchSeasons = async () => {
+      try {
+        const response = await SeasonService.getAllSeasons(0, 100);
+        setSeasons(response.data?.content || []);
+      } catch (error) {
+        console.error("Lỗi lấy danh sách mùa giải:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSeasons();
+  }, []);
+
+  const filteredSeasons = useMemo(() => {
+    return seasons.filter((season) =>
+      (season.name || season.year || "").toLowerCase().includes(search.toLowerCase().trim()),
     );
-  }, [search]);
+  }, [search, seasons]);
 
-  const tongSoTrang = Math.max(1, Math.ceil(filteredClubs.length / 6));
+  const tongSoTrang = Math.max(1, Math.ceil(filteredSeasons.length / 6));
 
-  const dsCLBTheoTrang = useMemo(() => {
+  const dsSeasonTheoTrang = useMemo(() => {
     const startIndex = (trangHienTai - 1) * 6;
-    return filteredClubs.slice(startIndex, startIndex + 6);
-  }, [filteredClubs, trangHienTai]);
+    return filteredSeasons.slice(startIndex, startIndex + 6);
+  }, [filteredSeasons, trangHienTai]);
 
   useEffect(() => {
     setTrangHienTai(1);
@@ -189,8 +120,11 @@ const RegistrationPortal: React.FC<{ setStep: (step: number) => void }> = ({
     setTrangHienTai(page);
   };
 
+  const selectedSeasonData =
+    seasons.find((s) => s.id === selectedSeasonId) ?? selectedSeason;
+
   return (
-    <>
+    <div className="pb-24">
       {/* Search */}
       <div className="mb-6">
         <div className="relative max-w-md">
@@ -199,54 +133,76 @@ const RegistrationPortal: React.FC<{ setStep: (step: number) => void }> = ({
           </span>
           <input
             type="text"
-            placeholder="Tìm kiếm câu lạc bộ..."
+            placeholder="Tìm kiếm mùa giải..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-full text-sm focus:ring-2 focus:ring-[#0d631b]/20 outline-none"
+            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-full text-sm focus:ring-2 focus:ring-[#0d631b]/20 outline-none shadow-sm"
           />
         </div>
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {dsCLBTheoTrang.map((club) => (
-          <ClubCard
-            key={club.id}
-            club={club}
-            isSelected={selectedClubId === club.id}
-            onSelect={() => setSelectedClubId(club.id)}
-          />
-        ))}
-      </div>
-
-      {/* Empty state */}
-      {filteredClubs.length === 0 && (
-        <div className="text-center text-gray-400 py-10">
-          Không tìm thấy câu lạc bộ
+      {loading ? (
+        <div className="text-center py-10 text-gray-500 font-bold">
+          Đang tải danh sách mùa giải...
         </div>
-      )}
+      ) : (
+        <>
+          {/* Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+            {dsSeasonTheoTrang.map((season) => (
+              <SeasonCard
+                key={season.id}
+                season={season}
+                isSelected={selectedSeasonId === season.id}
+                onSelect={() => {
+                  setSelectedSeasonId(season.id);
+                  onSeasonSelected({
+                    id: Number(season.id),
+                    name: season.name,
+                    year: season.year,
+                    leagueName: season.leagueName,
+                    startDate: season.startDate,
+                    endDate: season.endDate,
+                  });
+                }}
+              />
+            ))}
+          </div>
 
-      {/* Pagination */}
-      {filteredClubs.length > 0 && (
-        <PhanTrang
-          tongSoTrang={tongSoTrang}
-          trangHienTai={trangHienTai}
-          xuLyTrang={handlePageChange}
-        />
+          {/* Empty state */}
+          {filteredSeasons.length === 0 && (
+            <div className="text-center text-gray-400 py-10 font-bold">
+              Không tìm thấy mùa giải nào
+            </div>
+          )}
+
+          {/* Pagination */}
+          {filteredSeasons.length > 0 && (
+            <div className="mt-8 flex justify-center">
+              <PhanTrang
+                tongSoTrang={tongSoTrang}
+                trangHienTai={trangHienTai}
+                xuLyTrang={handlePageChange}
+              />
+            </div>
+          )}
+        </>
       )}
 
       {/* Footer */}
-      <div className="fixed bottom-10 left-64 right-0 flex justify-center px-10 pointer-events-none">
+      <div className="fixed bottom-10 left-64 right-0 flex justify-center px-10 pointer-events-none z-50">
         <div className="bg-white/90 backdrop-blur-xl border border-gray-100 rounded-full p-4 flex items-center justify-between shadow-2xl w-full max-w-4xl pointer-events-auto">
           <div className="flex items-center gap-4 pl-4">
             <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
               <span className="material-symbols-outlined text-green-700">
-                info
+                emoji_events
               </span>
             </div>
             <div>
               <p className="text-sm font-bold text-gray-900">
-                {selectedClub?.name || "Chưa chọn CLB"}
+                {selectedSeasonData?.name ||
+                  selectedSeasonData?.year ||
+                  "Chưa chọn Mùa giải"}
               </p>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                 Đã chọn để đăng ký
@@ -261,15 +217,17 @@ const RegistrationPortal: React.FC<{ setStep: (step: number) => void }> = ({
 
             <button
               className="px-10 py-3 rounded-full bg-green-700 text-white font-bold shadow-lg shadow-green-700/20 hover:scale-105 active:scale-95 transition-all text-sm disabled:opacity-50"
-              disabled={!selectedClubId}
-              onClick={() => setStep(2)}
+              disabled={!selectedSeasonId}
+              onClick={() => {
+                setStep(2);
+              }}
             >
               Tiếp tục
             </button>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

@@ -5,7 +5,7 @@ import {
   getListEventMatch,
   getLineupByMatch,
 } from "../services/MatchAPI";
-import { MatchModel } from "../model/MatchModel";
+import { MatchModel } from "../model/Match/MatchModel";
 import { useState, useEffect } from "react";
 import { MatchStats } from "../model/MatchStats";
 import { MatchEvent } from "../model/MatchEvents";

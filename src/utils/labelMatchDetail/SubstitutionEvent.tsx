@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { MatchEvent } from "../../model/MatchEvents";
 import { Player } from "../../model/Player";
-import { getPlayerById } from "../../services/PlayerAPI";
+
+import PlayerService from "../../services/PlayerService";
 export const SubstitutionEvent = ({
   event,
   isHome,
@@ -18,8 +19,8 @@ export const SubstitutionEvent = ({
     if (!event.playerInId || !event.playerOutId) return;
 
     Promise.all([
-      getPlayerById(event.playerInId),
-      getPlayerById(event.playerOutId),
+      PlayerService.getPlayerById(event.playerInId),
+      PlayerService.getPlayerById(event.playerOutId),
     ]).then(([pIn, pOut]) => {
       setPlayerIn(pIn);
       setPlayerOut(pOut);

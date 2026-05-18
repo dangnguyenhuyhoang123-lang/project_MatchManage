@@ -1,15 +1,15 @@
-import type { League } from "./LeagueModel";
-import type { SeasonModel } from "./SeasonModel";
-import type { TeamModel } from "./TeamModel";
-import { MatchStatus } from "./enum";
+import type { League } from "../LeagueModel";
+import type { SeasonModel } from "../SeasonModel";
+import type { TeamModel } from "../TeamModel";
+import { MatchStatus } from "../enum";
 export class MatchModel {
   readonly id?: number;
   status: MatchStatus;
   homeScore?: number;
   awayScore?: number;
   matchDate: Date;
-  league: League;
-  season: SeasonModel;
+  league?: League;
+  season?: SeasonModel;
   homeTeam: TeamModel;
   awayTeam: TeamModel;
 
@@ -29,12 +29,12 @@ export class MatchModel {
     homeScore?: number;
     awayScore?: number;
     matchDate?: Date | string;
-    league: League;
-    season: SeasonModel;
+    league?: League;
+    season?: SeasonModel;
     homeTeam: TeamModel;
     awayTeam: TeamModel;
   }) {
-    if (homeTeam.id === awayTeam.id) {
+    if (homeTeam?.id === awayTeam?.id) {
       throw new Error("Home team and away team cannot be the same");
     }
 

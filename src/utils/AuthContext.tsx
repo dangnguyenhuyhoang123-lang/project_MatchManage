@@ -8,6 +8,7 @@ export type User = {
   displayName?: string;
   email?: string;
   phone?: string;
+  avatar?: string;
 };
 
 type AuthType = {

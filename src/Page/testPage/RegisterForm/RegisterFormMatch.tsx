@@ -1,145 +1,226 @@
 import React, { useState } from "react";
-
-import RegistrationPortal from "./RegistrationPortal";
-import PlayerRegistration from "./PlayerRegistration";
-import FinalConfirmation from "./FinalConfirmation";
+import type { GrassType } from "../../../model/Registration";
 import { AppLayout } from "../../../components/AppLayout";
-import { Container } from "../../../utils/Container";
+import CoachRegistration from "./CoachRegistration";
+import FinalConfirmation from "./FinalConfirmation";
+import PlayerRegistration from "./PlayerRegistration";
+import RegistrationPortal from "./RegistrationPortal";
+import StadiumRegistration from "./StadiumRegistration";
 
-// --- Main Page Component ---
+export type SelectedSeason = {
+  id: number;
+  name?: string;
+  year?: string;
+  leagueName?: string;
+  startDate?: string;
+  endDate?: string;
+};
+
+export type SelectedCoach = {
+  assignmentId?: number;
+  coachId?: number;
+  name: string;
+  role: string;
+  idCode?: string;
+  nationality?: string;
+  avatar?: string;
+  status: string;
+  assignedDate?: string;
+};
+
+export type SelectedPlayer = {
+  id: number;
+  name: string;
+  position?: string;
+  shirtNumber?: number;
+  number?: number;
+  avatar?: string | null;
+  dateOfBirth?: string;
+};
+
+export type StadiumDraft = {
+  name: string;
+  clubName: string;
+  address: string;
+  capacity: number;
+  grass: GrassType;
+  image?: string;
+};
+
+export type RegistrationDraft = {
+  season: SelectedSeason | null;
+  team: {
+    id: number;
+    name: string;
+  };
+  coaches: SelectedCoach[];
+  mainPlayers: SelectedPlayer[];
+  subPlayers: SelectedPlayer[];
+  stadium: StadiumDraft;
+};
+
+const defaultDraft: RegistrationDraft = {
+  season: null,
+  team: {
+    id: 1,
+    name: "Becamex Bình Dương",
+  },
+  coaches: [],
+  mainPlayers: [],
+  subPlayers: [],
+  stadium: {
+    name: "Starlight Arena",
+    clubName: "Becamex Bình Dương",
+    address: "123 Pitch Flow Avenue, Sport District, HCMC",
+    capacity: 65000,
+    grass: "NATURAL",
+    image:
+      "https://images.unsplash.com/photo-1577223625816-7546f13df25d?q=80&w=1600&auto=format&fit=crop",
+  },
+};
 
 const RegisterFormMatch: React.FC = () => {
   const [step, setStep] = useState(1);
+  const [draft, setDraft] = useState<RegistrationDraft>(defaultDraft);
+
   const steps = [
-    { step: 1, label: "Chọn CLB" },
-    { step: 2, label: "Danh sách Cầu thủ" },
-    { step: 3, label: "Kiểm tra & Xác nhận" },
+    { step: 1, label: "Chọn Giải đấu" },
+    { step: 2, label: "Danh sách Ban Huấn Luyện" },
+    { step: 3, label: "Danh sách Cầu thủ" },
+    { step: 4, label: "Sân vận động" },
+    { step: 5, label: "Kiểm tra & Xác nhận" },
   ];
+
+  const selectedSeasonLabel =
+    draft.season?.name || draft.season?.year || draft.season?.leagueName;
 
   return (
     <AppLayout>
-      <Container>
-        {/* Breadcrumb */}
-        {/* <nav className="flex items-center gap-2 text-xs text-gray-400 mb-8 font-semibold uppercase tracking-wider">
-                  <a href="#" className="hover:text-green-700">
-                    Trang chủ
-                  </a>
-                  <span className="material-symbols-outlined text-[10px]">
-                    chevron_right
-                  </span>
-                  <span className="text-gray-900">Chọn Câu lạc bộ</span>
-                </nav> */}
-
-        {/* <div className="mb-12">
-                  <h1 className="text-4xl font-black text-gray-900 tracking-tight mb-3 font-['Be_Vietnam_Pro']">
-                    Đăng ký thi đấu - Bước 1
-                  </h1>
-                  <p className="text-gray-500 max-w-2xl leading-relaxed">
-                    Vui lòng lựa chọn câu lạc bộ bạn muốn đại diện trong mùa giải
-                    2024/25. Sau khi chọn, bạn sẽ tiếp tục đến bước lập danh sách thi
-                    đấu.
-                  </p>
-                </div> */}
-        <header className="flex justify-between items-end mb-10">
-          <div>
-            <h2 className="text-4xl font-black text-gray-900 tracking-tight mb-2 font-['Be_Vietnam_Pro']">
-              Hồ sơ Đăng ký Giải đấu
-            </h2>
+      <header className="flex flex-col gap-4 md:flex-row md:justify-between md:items-end mb-10">
+        <div>
+          <h2 className="text-4xl font-black text-gray-900 tracking-tight mb-2 font-['Be_Vietnam_Pro']">
+            Hồ sơ Đăng ký Giải đấu
+          </h2>
+          {step > 1 && selectedSeasonLabel && (
             <p className="text-gray-500 text-sm">
-              Đăng ký danh sách cho giải{" "}
+              Đăng ký thi đấu cho giải{" "}
               <span className="font-bold text-[#0d631b]">
-                Vietnam Premier Cup 2024
+                {selectedSeasonLabel}
               </span>
               .
             </p>
-          </div>
-          <div className="flex gap-3">
-            <button className="px-6 py-2.5 rounded-full border border-gray-300 text-gray-600 font-bold hover:bg-white transition-all text-sm">
-              Lưu nháp
-            </button>
-            {/* <button className="px-8 py-2.5 rounded-full bg-[#0d631b] text-white font-bold shadow-lg shadow-green-900/20 hover:bg-green-800 transition-all text-sm">
-                Gửi đơn đăng ký
-              </button> */}
-          </div>
-        </header>
-
-        {/* Stepper Custom */}
-        {/* <div className="mb-16 flex items-center justify-between max-w-3xl mx-auto relative">
-                  <div className="absolute top-6 left-0 w-full h-[2px] bg-gray-200 -z-10"></div>
-                  {[
-                    { step: 1, label: "Chọn CLB", active: true },
-                    { step: 2, label: "Danh sách cầu thủ", active: false },
-                    { step: 3, label: "Kiểm tra & Xác nhận", active: false },
-                  ].map((s, i) => (
-                    <div key={i} className="flex flex-col items-center gap-3">
-                      <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ring-8 ring-[#fbf9f5] ${s.active ? "bg-green-700 text-white shadow-xl shadow-green-700/20" : "bg-gray-200 text-gray-400"}`}
-                      >
-                        {s.step}
-                      </div>
-                      <span
-                        className={`text-xs font-bold ${s.active ? "text-green-700" : "text-gray-400"}`}
-                      >
-                        {s.label}
-                      </span>
-                    </div>
-                  ))}
-                </div> */}
-        <div className="flex items-center justify-between bg-[#f5f3ef] p-6 rounded-2xl mb-8 border border-gray-200">
-          {steps.map((s, i) => {
-            const isActive = step === s.step;
-            const isDone = step > s.step;
-
-            return (
-              <React.Fragment key={s.step}>
-                <button
-                  type="button"
-                  onClick={() => setStep(s.step)}
-                  className="flex items-center gap-4 flex-1 text-left"
-                >
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
-                      isDone || isActive
-                        ? "bg-[#0d631b] text-white shadow-lg"
-                        : "bg-gray-300 text-gray-600"
-                    }`}
-                  >
-                    {s.step}
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-bold text-gray-900 leading-none">
-                      {s.label}
-                    </p>
-                    <p
-                      className={`text-[11px] mt-1 font-bold ${
-                        isActive
-                          ? "text-[#0d631b]"
-                          : isDone
-                            ? "text-green-600"
-                            : "text-gray-400"
-                      }`}
-                    >
-                      {isActive
-                        ? "Đang thực hiện"
-                        : isDone
-                          ? "Hoàn thành"
-                          : "Chưa bắt đầu"}
-                    </p>
-                  </div>
-                </button>
-
-                {i < steps.length - 1 && (
-                  <div className="h-px bg-gray-300 flex-1 mx-4" />
-                )}
-              </React.Fragment>
-            );
-          })}
+          )}
         </div>
-        {step === 1 && <RegistrationPortal setStep={setStep} />}
-        {step === 2 && <PlayerRegistration setStep={setStep} />}
-        {step === 3 && <FinalConfirmation setStep={setStep} />}
-      </Container>
+
+        <button className="self-start md:self-auto px-6 py-2.5 rounded-full border border-gray-300 text-gray-600 font-bold hover:bg-white transition-all text-sm">
+          Lưu nháp
+        </button>
+      </header>
+
+      <div className="flex items-center justify-between bg-[#f5f3ef] p-6 rounded-2xl mb-8 border border-gray-200 overflow-x-auto">
+        {steps.map((s) => {
+          const isActive = step === s.step;
+          const isDone = step > s.step;
+
+          return (
+            <button
+              key={s.step}
+              type="button"
+              onClick={() => setStep(s.step)}
+              className="flex items-center gap-4 flex-1 min-w-[160px] text-left"
+            >
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
+                  isDone || isActive
+                    ? "bg-[#0d631b] text-white shadow-lg"
+                    : "bg-gray-300 text-gray-600"
+                }`}
+              >
+                {isDone ? (
+                  <span className="material-symbols-outlined text-base">
+                    check
+                  </span>
+                ) : (
+                  s.step
+                )}
+              </div>
+
+              <div>
+                <p className="text-sm font-bold text-gray-900 leading-none">
+                  {s.label}
+                </p>
+                <p
+                  className={`text-[11px] mt-1 font-bold ${
+                    isActive
+                      ? "text-[#0d631b]"
+                      : isDone
+                        ? "text-green-600"
+                        : "text-gray-400"
+                  }`}
+                >
+                  {isActive
+                    ? "Đang thực hiện"
+                    : isDone
+                      ? "Hoàn thành"
+                      : "Chưa bắt đầu"}
+                </p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {step === 1 && (
+        <RegistrationPortal
+          setStep={setStep}
+          selectedSeason={draft.season}
+          onSeasonSelected={(season) =>
+            setDraft((prev) => ({
+              ...prev,
+              season,
+            }))
+          }
+        />
+      )}
+      {step === 2 && (
+        <CoachRegistration
+          setStep={setStep}
+          selectedCoaches={draft.coaches}
+          onCoachesChange={(coaches) =>
+            setDraft((prev) => ({
+              ...prev,
+              coaches,
+            }))
+          }
+        />
+      )}
+      {step === 3 && (
+        <PlayerRegistration
+          setStep={setStep}
+          mainPlayers={draft.mainPlayers}
+          subPlayers={draft.subPlayers}
+          onPlayersChange={(mainPlayers, subPlayers) =>
+            setDraft((prev) => ({
+              ...prev,
+              mainPlayers,
+              subPlayers,
+            }))
+          }
+        />
+      )}
+      {step === 4 && (
+        <StadiumRegistration
+          setStep={setStep}
+          stadium={draft.stadium}
+          onStadiumChange={(stadium) =>
+            setDraft((prev) => ({
+              ...prev,
+              stadium,
+            }))
+          }
+        />
+      )}
+      {step === 5 && <FinalConfirmation setStep={setStep} draft={draft} />}
     </AppLayout>
   );
 };

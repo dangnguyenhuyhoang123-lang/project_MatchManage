@@ -1,216 +1,419 @@
-import React from "react";
-import { Sidebar } from "../../../utils/SideBar";
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
+
 import AddMatchModal from "./AddMatchModal";
 import { Modal } from "../../../components/Modal";
+import { AppLayout } from "../../../components/AppLayout";
+import { PhanTrang } from "../../../utils/PhanTrang";
+
+import { MatchModel } from "../../../model/Match/MatchModel";
+
+import MatchService from "../../../services/MatchService";
+import LeagueService from "../../../services/LeagueService";
+import RoundService from "../../../services/RoundService";
+
 export default function MatchSchedule() {
   const [open, setOpen] = useState(false);
+  const [matches, setMatches] = useState<MatchModel[]>([]);
+  const [editingMatch, setEditingMatch] = useState<MatchModel | null>(null);
+
+  const handleSaveMatch = async (payload: any) => {
+    try {
+      if (editingMatch) {
+        await MatchService.updateMatch(editingMatch.id!, payload);
+      } else {
+        await MatchService.addMatch(payload);
+      }
+      setOpen(false);
+      setEditingMatch(null);
+      fetchMatches(trangHienTai);
+    } catch (error) {
+      console.error("Lỗi khi lưu trận đấu:", error);
+      alert("Có lỗi xảy ra khi lưu trận đấu!");
+    }
+  };
+
+  const handleDeleteMatch = async (id: number) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa trận đấu này?")) {
+      try {
+        await MatchService.deleteMatch(id);
+        fetchMatches(trangHienTai);
+      } catch (error) {
+        console.error("Lỗi khi xóa trận đấu:", error);
+        alert("Có lỗi xảy ra khi xóa trận đấu!");
+      }
+    }
+  };
+
+  const [leagues, setLeagues] = useState<any[]>([]);
+  const [seasons, setSeasons] = useState<any[]>([]);
+  const [rounds, setRounds] = useState<any[]>([]);
+
+  const [selectedLeague, setSelectedLeague] = useState<number | "">(1);
+  const [selectedSeason, setSelectedSeason] = useState<number | "">(1);
+  const [selectedRound, setSelectedRound] = useState<number | "">("");
+
+  useEffect(() => {
+    const fetchLeagues = async () => {
+      try {
+        const response = await LeagueService.getAllLeaguesNormalized(0, 100);
+        setLeagues(response.content || []);
+      } catch (error) {
+        console.error("Lỗi khi lấy danh sách giải đấu:", error);
+      }
+    };
+    fetchLeagues();
+  }, []);
+
+  useEffect(() => {
+    if (selectedLeague) {
+      const fetchSeasons = async () => {
+        try {
+          const response = await LeagueService.getSeasonsByLeague(Number(selectedLeague));
+          setSeasons(response);
+        } catch (error) {
+          console.error("Lỗi khi lấy danh sách mùa giải:", error);
+        }
+      };
+      fetchSeasons();
+    } else {
+      setSeasons([]);
+    }
+  }, [selectedLeague]);
+
+  useEffect(() => {
+    if (selectedSeason) {
+      const fetchRounds = async () => {
+        try {
+          const response = await RoundService.getAllRoundsNormalized(0, 100, Number(selectedSeason));
+          setRounds(response.content || []);
+        } catch (error) {
+          console.error("Lỗi lấy dữ liệu vòng đấu:", error);
+          setRounds([]);
+        }
+      };
+      fetchRounds();
+    } else {
+      setRounds([]);
+    }
+  }, [selectedSeason]);
+
+  const [trangHienTai, setTrangHienTai] = useState(1);
+  const [tongSoTrang, setTongSoTrang] = useState(0);
+  const [tongSoPhanTu, setTongSoPhanTu] = useState(0);
+
+  const SO_TRAN_MOI_TRANG = 8;
+
+  const [filters, setFilters] = useState({
+    status: "Tất cả trạng thái",
+    search: "",
+  });
+
+  /* ================= FETCH ================= */
+  const fetchMatches = async (page = 1) => {
+    try {
+      const res = await MatchService.getAllMatches(
+        page - 1,
+        SO_TRAN_MOI_TRANG,
+        {
+          ...filters,
+          seasonId: selectedSeason ? selectedSeason : undefined,
+          roundId: selectedRound ? selectedRound : undefined,
+        }
+      );
+
+      const data = res.data;
+
+      setMatches(data.content);
+      setTongSoTrang(data.totalPages);
+      setTongSoPhanTu(data.totalElements);
+      setTrangHienTai(data.number + 1);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchMatches(trangHienTai);
+  }, [trangHienTai, filters, selectedSeason, selectedRound]);
+
+  /* ================= FILTER ================= */
+  const handleFilterChange = (
+    e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>,
+  ) => {
+    const { name, value } = e.target;
+    setFilters((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleApplyFilter = () => {
+    setTrangHienTai(1);
+  };
+
+  /* ================= UI ================= */
   return (
-    <div className="min-h-screen bg-[#fbf9f5] text-[#1b1c1a] font-sans flex">
-      {/* --- SIDEBAR --- */}
-      <Sidebar />
-
-      {/* --- MAIN CONTENT --- */}
-      <main className="flex-1 min-w-0">
-        {/* Header Bar */}
-
-        <div className="p-8 max-w-6xl mx-auto space-y-6">
-          {/* Title & Breadcrumb */}
+    <AppLayout>
+      <div className="space-y-6">
+        {/* Page Title & Filters */}
+        <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
-              <span>Trang chủ</span> <span>/</span>{" "}
-              <span className="text-[#1b1c1a]">Lịch thi đấu</span>
-            </div>
-            <h1 className="text-3xl font-black tracking-tighter">
-              LẬP LỊCH THI ĐẤU
+            <h1 className="text-4xl font-black tracking-tight text-slate-900">
+              <span className="text-green-700">Lịch Thi</span> Đấu
             </h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Quản lý và cập nhật lịch thi đấu mới nhất
+            </p>
           </div>
 
-          {/* Warning Alert */}
-          <div className="bg-[#ffdad6] border-l-4 border-[#ba1a1a] p-4 rounded-r-xl flex items-start gap-3">
-            <span
-              className="material-symbols-outlined text-[#ba1a1a]"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            ></span>
-            <div className="text-sm">
-              <p className="font-bold text-[#410002]">Cảnh báo hệ thống</p>
-              <p className="text-[#410002]/80">
-                Phát hiện trùng lịch thi đấu tại <b>Sân vận động Etihad</b> vào
-                ngày 12/05/2024. Vui lòng kiểm tra lại!
-              </p>
-            </div>
-          </div>
+          <div className="flex flex-wrap gap-2">
+            <select
+              className="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold shadow-sm hover:bg-gray-50 outline-none appearance-none cursor-pointer"
+              value={selectedLeague}
+              onChange={(e) => {
+                setSelectedLeague(e.target.value ? Number(e.target.value) : "");
+                setSelectedSeason("");
+                setSelectedRound("");
+              }}
+            >
+              <option value="">-- Chọn Giải đấu --</option>
+              {leagues.map((league) => (
+                <option key={league.id} value={league.id}>{league.name}</option>
+              ))}
+            </select>
 
-          {/* Filters & Actions */}
-          <div className="bg-[#f5f3ef] p-6 rounded-2xl flex flex-wrap items-center justify-between gap-4">
-            <div className="flex gap-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase px-1">
-                  Giải đấu
-                </label>
-                <select className="bg-white border-none rounded-lg text-sm font-bold py-2 pl-3 pr-8 focus:ring-1 focus:ring-green-600">
-                  <option>V-League 1 2023/24</option>
+            <select
+              className="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold shadow-sm hover:bg-gray-50 outline-none appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              value={selectedSeason}
+              onChange={(e) => {
+                setSelectedSeason(e.target.value ? Number(e.target.value) : "");
+                setSelectedRound("");
+              }}
+              disabled={!selectedLeague}
+            >
+              <option value="">-- Chọn Mùa giải --</option>
+              {seasons.map((season) => (
+                <option key={season.id} value={season.id}>{season.name || season.year}</option>
+              ))}
+            </select>
+
+            <select
+              className="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold shadow-sm hover:bg-gray-50 outline-none appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              value={selectedRound}
+              onChange={(e) => setSelectedRound(e.target.value ? Number(e.target.value) : "")}
+              disabled={!selectedSeason}
+            >
+              <option value="">-- Chọn Vòng đấu --</option>
+              {rounds.map((round) => (
+                <option key={round.id} value={round.id}>{round.name || `Vòng ${round.roundNumber}`}</option>
+              ))}
+            </select>
+          </div>
+        </header>
+
+        {/* MAIN CONTAINER */}
+        <div className="bg-[#f0ede6]/40 p-6 rounded-[2rem] border border-gray-200 shadow-sm space-y-4">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex gap-4 items-center w-full max-w-2xl">
+              <div className="flex-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Trạng thái</label>
+                <select
+                  name="status"
+                  value={filters.status}
+                  onChange={handleFilterChange}
+                  className="w-full bg-white rounded-xl p-3 border border-gray-100 text-sm font-bold shadow-sm outline-none"
+                >
+                  <option>Tất cả trạng thái</option>
+                  <option value="SCHEDULED">Chưa diễn ra</option>
+                  <option value="FINISHED">Đã kết thúc</option>
+                  <option value="CONFLICT">Xung đột</option>
                 </select>
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase px-1">
-                  Vòng đấu
-                </label>
-                <select className="bg-white border-none rounded-lg text-sm font-bold py-2 pl-3 pr-8 focus:ring-1 focus:ring-green-600">
-                  <option>Vòng 12</option>
-                </select>
+
+              <div className="flex-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Tìm kiếm</label>
+                <input
+                  name="search"
+                  value={filters.search}
+                  onChange={handleFilterChange}
+                  placeholder="Tên đội..."
+                  className="w-full bg-white rounded-xl p-3 border border-gray-100 text-sm font-bold shadow-sm outline-none"
+                />
               </div>
             </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setOpen(true)}
-                className="bg-white text-[#0d631b] px-5 py-2.5 rounded-full font-bold text-sm shadow-sm border border-green-100 flex items-center gap-2 hover:bg-green-50 transition-all"
-              >
-                <span className="material-symbols-outlined text-sm"></span> Thêm
-                trận đấu mới
-              </button>
-              <button className="bg-[#0d631b] text-white px-5 py-2.5 rounded-full font-bold text-sm shadow-lg flex items-center gap-2 hover:opacity-90 transition-all">
-                <span className="material-symbols-outlined text-sm"></span> Tạo
-                lịch tự động
-              </button>
-            </div>
+            
+            <button
+              onClick={() => { setEditingMatch(null); setOpen(true); }}
+              className="bg-green-700 text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-green-800 transition-colors whitespace-nowrap"
+            >
+              + Thêm trận đấu
+            </button>
           </div>
 
-          {/* Match List Table */}
-          <div className="space-y-3">
-            {/* Table Header */}
-            <div className="grid grid-cols-12 px-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+          {/* TABLE */}
+          <div className="space-y-3 min-h-[600px] mt-6">
+            {/* HEADER */}
+            <div className="grid grid-cols-12 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 pt-4 border-t border-gray-200/60">
               <div className="col-span-2">Thời gian</div>
               <div className="col-span-4 text-center">Trận đấu</div>
-              <div className="col-span-3">Sân vận động</div>
+              <div className="col-span-3">Sân</div>
               <div className="col-span-2 text-right">Trạng thái</div>
               <div className="col-span-1"></div>
             </div>
 
-            {/* Row 1: Normal */}
-            <MatchRow
-              time="15:00"
-              date="12/05/2024"
-              team1="Hà Nội FC"
-              team2="Hải Phòng"
-              stadium="SVĐ Hàng Đẫy"
-              status="Chưa diễn ra"
-            />
+          {/* ROWS */}
+          {[
+            ...matches,
+            ...Array(Math.max(0, SO_TRAN_MOI_TRANG - matches.length)).fill(
+              null,
+            ),
+          ].map((match, index) =>
+            match ? (
+              <MatchRow 
+                key={match.id ?? index} 
+                match={match} 
+                onEdit={(m) => { setEditingMatch(m); setOpen(true); }} 
+                onDelete={handleDeleteMatch} 
+              />
+            ) : (
+              <MatchSkeleton key={index} />
+            ),
+          )}
 
-            {/* Row 2: Conflict */}
-            <MatchRow
-              time="15:00"
-              date="12/05/2024"
-              team1="Nam Định"
-              team2="Bình Định"
-              stadium="SVĐ Hàng Đẫy"
-              status="Trùng lịch sân"
-              hasConflict
-            />
+          {/* PAGINATION */}
+          <div className="flex justify-between items-center pt-6 border-t">
+            <p className="text-sm">
+              Hiển thị{" "}
+              <b>
+                {tongSoPhanTu === 0
+                  ? "0"
+                  : `${(trangHienTai - 1) * SO_TRAN_MOI_TRANG + 1} - ${Math.min(
+                      trangHienTai * SO_TRAN_MOI_TRANG,
+                      tongSoPhanTu,
+                    )}`}
+              </b>{" "}
+              trong {tongSoPhanTu} trận
+            </p>
 
-            {/* Row 3: Normal */}
-            <MatchRow
-              time="18:00"
-              date="12/05/2024"
-              team1="LPBank HAGL"
-              team2="TP.HCM FC"
-              stadium="SVĐ Pleiku"
-              status="Chưa diễn ra"
+            <PhanTrang
+              tongSoTrang={tongSoTrang}
+              trangHienTai={trangHienTai}
+              xuLyTrang={(p) => setTrangHienTai(p)}
             />
           </div>
         </div>
-      </main>
-      <Modal open={open} onClose={() => setOpen(false)}>
-        <AddMatchModal onClose={() => setOpen(false)} />
-      </Modal>
+      </div>
 
-      {/* Floating Save Button */}
-      <button className="fixed bottom-8 right-8 w-14 h-14 bg-[#0d631b] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all">
-        <span
-          className="material-symbols-outlined"
-          style={{ fontVariationSettings: "'FILL' 1" }}
-        >
-          save
+      <Modal open={open} onClose={() => { setOpen(false); setEditingMatch(null); }}>
+        {open && (
+          <AddMatchModal
+            onClose={() => { setOpen(false); setEditingMatch(null); }}
+            initialData={editingMatch}
+            onSave={handleSaveMatch}
+          />
+        )}
+      </Modal>
+      </div>
+    </AppLayout>
+  );
+}
+
+/* ================= ROW ================= */
+function MatchRow({ match, onEdit, onDelete }: { match: MatchModel; onEdit: (m: MatchModel) => void; onDelete: (id: number) => void }) {
+  const date = new Date(match.matchDate);
+
+  const isConflict = match.status === "CONFLICT";
+
+  const renderStatus = (status: string) => {
+    switch (status) {
+      case "SCHEDULED":
+        return <span className="px-3 py-1 text-xs rounded-full font-bold bg-blue-100 text-blue-600">Chưa diễn ra</span>;
+      case "FINISHED":
+        return <span className="px-3 py-1 text-xs rounded-full font-bold bg-green-100 text-green-600">Đã kết thúc</span>;
+      case "CONFLICT":
+        return <span className="px-3 py-1 text-xs rounded-full font-bold bg-red-100 text-red-600">Xung đột</span>;
+      default:
+        return <span className="px-3 py-1 text-xs rounded-full font-bold bg-gray-100 text-gray-600">{status}</span>;
+    }
+  };
+
+  return (
+    <div
+      className={`grid grid-cols-12 items-center p-6 rounded-xl transition-all
+        ${
+          isConflict
+            ? "bg-red-50 border-2 border-red-200"
+            : "bg-white shadow-sm hover:shadow-md"
+        }`}
+    >
+      {/* TIME */}
+      <div className="col-span-2">
+        <p className={`text-sm font-bold ${isConflict ? "text-red-500" : ""}`}>
+          {date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        </p>
+        <p className="text-xs text-gray-400">{date.toLocaleDateString()}</p>
+      </div>
+
+      {/* MATCH */}
+      <div className="col-span-4 flex items-center justify-center gap-6">
+        {/* HOME */}
+        <div className="flex flex-col items-center gap-1 w-24">
+          <img
+            src={match.homeTeam?.logo || "/default.png"}
+            className="w-10 h-10 object-contain"
+          />
+          <span className="text-xs font-bold text-center">
+            {match.homeTeam?.name}
+          </span>
+        </div>
+
+        <div className="text-lg font-black text-gray-300 italic">VS</div>
+
+        {/* AWAY */}
+        <div className="flex flex-col items-center gap-1 w-24">
+          <img
+            src={match.awayTeam?.logo || "/default.png"}
+            className="w-10 h-10 object-contain"
+          />
+          <span className="text-xs font-bold text-center">
+            {match.awayTeam?.name}
+          </span>
+        </div>
+      </div>
+
+      {/* STADIUM */}
+      <div className="col-span-3 flex items-center gap-2">
+        <span className="material-symbols-outlined text-gray-400">
+          location_on
         </span>
-      </button>
+        <span
+          className={`text-sm ${isConflict ? "text-red-500 font-bold" : ""}`}
+        >
+          {match.league?.name}
+        </span>
+      </div>
+
+      {/* STATUS */}
+      <div className="col-span-2 text-right">
+        {renderStatus(match.status)}
+      </div>
+
+      {/* ACTION */}
+      <div className="col-span-1 flex justify-end gap-1">
+        <button onClick={() => onEdit(match)} className="p-1.5 hover:bg-gray-100 rounded-full">
+          <span className="material-symbols-outlined text-sm">edit</span>
+        </button>
+
+        <button onClick={() => onDelete(match.id!)} className="p-1.5 hover:bg-red-100 rounded-full text-red-500">
+          <span className="material-symbols-outlined text-sm">delete</span>
+        </button>
+      </div>
     </div>
   );
 }
 
-// --- Sub-components for Cleanliness ---
-
-function MatchRow({
-  time,
-  date,
-  team1,
-  team2,
-  stadium,
-  status,
-  hasConflict = false,
-}: any) {
+/* ================= SKELETON ================= */
+function MatchSkeleton() {
   return (
-    <div
-      className={`grid grid-cols-12 items-center p-5 rounded-2xl transition-all border ${hasConflict ? "bg-[#fff1f0] border-[#ffdad6]" : "bg-white border-transparent hover:border-gray-100 shadow-sm"}`}
-    >
-      <div className="col-span-2">
-        <p
-          className={`text-sm font-black ${hasConflict ? "text-[#ba1a1a]" : "text-[#1b1c1a]"}`}
-        >
-          {time}
-        </p>
-        <p
-          className={`text-[10px] font-bold ${hasConflict ? "text-[#ba1a1a]/70" : "text-gray-400"}`}
-        >
-          {date}
-        </p>
-      </div>
-
-      <div className="col-span-4 flex items-center justify-center gap-4">
-        <div className="flex flex-col items-center w-20">
-          <div className="w-8 h-8 bg-gray-100 rounded-full mb-1"></div>
-          <span className="text-[10px] font-black text-center leading-tight">
-            {team1}
-          </span>
-        </div>
-        <span className="text-gray-300 font-black italic">VS</span>
-        <div className="flex flex-col items-center w-20">
-          <div className="w-8 h-8 bg-gray-100 rounded-full mb-1"></div>
-          <span className="text-[10px] font-black text-center leading-tight">
-            {team2}
-          </span>
-        </div>
-      </div>
-
-      <div className="col-span-3 flex items-center gap-2">
-        <span
-          className={`material-symbols-outlined text-sm ${hasConflict ? "text-[#ba1a1a]" : "text-gray-400"}`}
-          style={hasConflict ? { fontVariationSettings: "'FILL' 1" } : {}}
-        >
-          {/* {hasConflict ? "warning" : "location_on"} */}
-        </span>
-        <span
-          className={`text-[11px] font-bold ${hasConflict ? "text-[#ba1a1a]" : "text-gray-600"}`}
-        >
-          {stadium}
-        </span>
-      </div>
-
-      <div className="col-span-2 text-right">
-        <span
-          className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${hasConflict ? "bg-[#ba1a1a] text-white" : "bg-[#efeeea] text-gray-500"}`}
-        >
-          {status}
-        </span>
-      </div>
-
-      <div className="col-span-1 flex justify-end gap-1">
-        <button className="p-1.5 hover:bg-gray-100 rounded-full text-gray-400 transition-colors">
-          <span className="material-symbols-outlined text-[18px]"></span>
-        </button>
-        <button className="p-1.5 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 transition-colors">
-          <span className="material-symbols-outlined text-[18px]"></span>
-        </button>
-      </div>
+    <div className="grid grid-cols-12 p-5 bg-white/50 rounded-xl animate-pulse">
+      <div className="col-span-12 h-4 bg-gray-200 rounded"></div>
     </div>
   );
 }

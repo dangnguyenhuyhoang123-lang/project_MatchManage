@@ -2,22 +2,16 @@ export class League {
   id?: number;
   name: string;
   country: string;
-  logo: string;
+  scale: string;
+  status: string;
+  logo: string | null;
 
-  constructor({
-    id,
-    name = "",
-    country = "",
-    logo = "",
-  }: {
-    id?: number;
-    name?: string;
-    country?: string;
-    logo?: string;
-  } = {}) {
-    this.id = id;
-    this.name = name;
-    this.country = country;
-    this.logo = logo;
+  constructor(data: Partial<League> = {}) {
+    this.id = data.id;
+    this.name = data.name ?? "";
+    this.country = data.country ?? "";
+    this.scale = data.scale ?? "";
+    this.status = data.status ?? "ACTIVE";
+    this.logo = data.logo ?? null;
   }
 }

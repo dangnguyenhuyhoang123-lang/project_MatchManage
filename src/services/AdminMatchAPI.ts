@@ -1,4 +1,4 @@
-import { MatchModel } from "../model/MatchModel";
+import { MatchModel } from "../model/Match/MatchModel";
 import type { League } from "../model/LeagueModel";
 import type { SeasonModel } from "../model/SeasonModel";
 import type { TeamModel } from "../model/TeamModel";

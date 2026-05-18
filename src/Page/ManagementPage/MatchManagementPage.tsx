@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import type { MatchModel } from "../../model/MatchModel";
+import type { MatchModel } from "../../model/Match/MatchModel";
 import { MatchStatus } from "../../model/enum";
 import { ListMatchManage } from "../../utils/labelManage/ManageMatch/ListMatchhManage";
 import { MatchForm } from "../../utils/labelManage/ManageMatch/MatchForm";
