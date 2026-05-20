@@ -7,4 +7,6 @@ export interface Coach {
   birthDay?: string;
   description?: string;
   status: string;
+  teamId: number;
+  teamName: string;
 }

@@ -13,7 +13,7 @@ export const PhanTrang = ({ tongSoTrang, trangHienTai, xuLyTrang }: Props) => {
     const pages: Array<number | "..."> = [];
 
     if (tongSoTrang <= 7) {
-      for (let i = 1; i <= tongSoTrang; i++) {
+      for (let i = 1; i <= tongSoTrang; i += 1) {
         pages.push(i);
       }
       return pages;
@@ -24,51 +24,38 @@ export const PhanTrang = ({ tongSoTrang, trangHienTai, xuLyTrang }: Props) => {
     const start = Math.max(2, currentPage - 1);
     const end = Math.min(tongSoTrang - 1, currentPage + 1);
 
-    if (start > 2) {
-      pages.push("...");
-    }
+    if (start > 2) pages.push("...");
 
-    for (let i = start; i <= end; i++) {
+    for (let i = start; i <= end; i += 1) {
       pages.push(i);
     }
 
-    if (end < tongSoTrang - 1) {
-      pages.push("...");
-    }
+    if (end < tongSoTrang - 1) pages.push("...");
 
     pages.push(tongSoTrang);
 
     return pages;
   };
 
-  const dsTrang = taoDanhSachTrang();
-
   return (
-    <div className="flex justify-center mt-6">
-      <nav className="inline-flex items-center gap-1 flex-wrap">
-        <button
-          type="button"
-          disabled={currentPage === 1}
-          onClick={() => xuLyTrang(1)}
-          className="px-3 py-2 border rounded disabled:opacity-50"
-        >
+    <div className="mt-6 flex justify-center">
+      <nav className="inline-flex flex-wrap items-center gap-1">
+        <PageButton disabled={currentPage === 1} onClick={() => xuLyTrang(1)}>
           Đầu
-        </button>
+        </PageButton>
 
-        <button
-          type="button"
+        <PageButton
           disabled={currentPage === 1}
           onClick={() => xuLyTrang(currentPage - 1)}
-          className="px-3 py-2 border rounded disabled:opacity-50"
         >
           Trước
-        </button>
+        </PageButton>
 
-        {dsTrang.map((item, index) =>
+        {taoDanhSachTrang().map((item, index) =>
           item === "..." ? (
             <span
               key={`dots-${index}`}
-              className="px-3 py-2 text-gray-500 select-none"
+              className="select-none px-3 py-2 text-gray-500"
             >
               ...
             </span>
@@ -76,12 +63,12 @@ export const PhanTrang = ({ tongSoTrang, trangHienTai, xuLyTrang }: Props) => {
             <button
               type="button"
               key={item}
-              onClick={() => xuLyTrang(Number(item))}
+              onClick={() => xuLyTrang(item)}
               aria-current={item === currentPage ? "page" : undefined}
-              className={`px-4 py-2 border rounded ${
+              className={`rounded border px-4 py-2 text-sm font-semibold transition ${
                 item === currentPage
-                  ? "bg-indigo-600 text-white"
-                  : "bg-white hover:bg-gray-100"
+                  ? "border-[#008C2F] bg-[#008C2F] text-white"
+                  : "border-gray-200 bg-white text-gray-700 hover:bg-[#f5f3ef]"
               }`}
             >
               {item}
@@ -89,24 +76,41 @@ export const PhanTrang = ({ tongSoTrang, trangHienTai, xuLyTrang }: Props) => {
           ),
         )}
 
-        <button
-          type="button"
+        <PageButton
           disabled={currentPage === tongSoTrang}
           onClick={() => xuLyTrang(currentPage + 1)}
-          className="px-3 py-2 border rounded disabled:opacity-50"
         >
           Sau
-        </button>
+        </PageButton>
 
-        <button
-          type="button"
+        <PageButton
           disabled={currentPage === tongSoTrang}
           onClick={() => xuLyTrang(tongSoTrang)}
-          className="px-3 py-2 border rounded disabled:opacity-50"
         >
           Cuối
-        </button>
+        </PageButton>
       </nav>
     </div>
   );
 };
+
+function PageButton({
+  children,
+  disabled,
+  onClick,
+}: {
+  children: string;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="rounded border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-[#f5f3ef] disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {children}
+    </button>
+  );
+}

@@ -1,6 +1,6 @@
 export type RegistrationStatus = "PENDING" | "APPROVED" | "REJECTED";
 
-export type GrassType = "NATURAL" | "ARTIFICIAL" | "HYBRID";
+export type GrassType = "Standard" | "Synthetic" | "Premium";
 
 export interface TeamRegistrationDTO {
   id: number;

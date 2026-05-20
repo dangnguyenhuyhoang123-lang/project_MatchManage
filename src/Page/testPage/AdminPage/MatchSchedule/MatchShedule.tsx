@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from "react";
 
 import AddMatchModal from "./AddMatchModal";
-import { Modal } from "../../../components/Modal";
-import { AppLayout } from "../../../components/AppLayout";
-import { PhanTrang } from "../../../utils/PhanTrang";
+import { Modal } from "../../../../components/Modal";
+import { AppLayout } from "../../../../components/AppLayout";
+import { PhanTrang } from "../../../../utils/PhanTrang";
 
-import { MatchModel } from "../../../model/Match/MatchModel";
+import { MatchModel } from "../../../../model/Match/MatchModel";
 
-import MatchService from "../../../services/MatchService";
-import LeagueService from "../../../services/LeagueService";
-import RoundService from "../../../services/RoundService";
+import MatchService from "../../../../services/MatchService";
+import LeagueService from "../../../../services/LeagueService";
+import RoundService from "../../../../services/RoundService";
 
 export default function MatchSchedule() {
   const [open, setOpen] = useState(false);
@@ -68,7 +68,9 @@ export default function MatchSchedule() {
     if (selectedLeague) {
       const fetchSeasons = async () => {
         try {
-          const response = await LeagueService.getSeasonsByLeague(Number(selectedLeague));
+          const response = await LeagueService.getSeasonsByLeague(
+            Number(selectedLeague),
+          );
           setSeasons(response);
         } catch (error) {
           console.error("Lỗi khi lấy danh sách mùa giải:", error);
@@ -84,7 +86,11 @@ export default function MatchSchedule() {
     if (selectedSeason) {
       const fetchRounds = async () => {
         try {
-          const response = await RoundService.getAllRoundsNormalized(0, 100, Number(selectedSeason));
+          const response = await RoundService.getAllRoundsNormalized(
+            0,
+            100,
+            Number(selectedSeason),
+          );
           setRounds(response.content || []);
         } catch (error) {
           console.error("Lỗi lấy dữ liệu vòng đấu:", error);
@@ -118,7 +124,7 @@ export default function MatchSchedule() {
           ...filters,
           seasonId: selectedSeason ? selectedSeason : undefined,
           roundId: selectedRound ? selectedRound : undefined,
-        }
+        },
       );
 
       const data = res.data;
@@ -175,7 +181,9 @@ export default function MatchSchedule() {
             >
               <option value="">-- Chọn Giải đấu --</option>
               {leagues.map((league) => (
-                <option key={league.id} value={league.id}>{league.name}</option>
+                <option key={league.id} value={league.id}>
+                  {league.name}
+                </option>
               ))}
             </select>
 
@@ -190,19 +198,25 @@ export default function MatchSchedule() {
             >
               <option value="">-- Chọn Mùa giải --</option>
               {seasons.map((season) => (
-                <option key={season.id} value={season.id}>{season.name || season.year}</option>
+                <option key={season.id} value={season.id}>
+                  {season.name || season.year}
+                </option>
               ))}
             </select>
 
             <select
               className="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold shadow-sm hover:bg-gray-50 outline-none appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               value={selectedRound}
-              onChange={(e) => setSelectedRound(e.target.value ? Number(e.target.value) : "")}
+              onChange={(e) =>
+                setSelectedRound(e.target.value ? Number(e.target.value) : "")
+              }
               disabled={!selectedSeason}
             >
               <option value="">-- Chọn Vòng đấu --</option>
               {rounds.map((round) => (
-                <option key={round.id} value={round.id}>{round.name || `Vòng ${round.roundNumber}`}</option>
+                <option key={round.id} value={round.id}>
+                  {round.name || `Vòng ${round.roundNumber}`}
+                </option>
               ))}
             </select>
           </div>
@@ -213,7 +227,9 @@ export default function MatchSchedule() {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex gap-4 items-center w-full max-w-2xl">
               <div className="flex-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Trạng thái</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">
+                  Trạng thái
+                </label>
                 <select
                   name="status"
                   value={filters.status}
@@ -228,7 +244,9 @@ export default function MatchSchedule() {
               </div>
 
               <div className="flex-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Tìm kiếm</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">
+                  Tìm kiếm
+                </label>
                 <input
                   name="search"
                   value={filters.search}
@@ -238,9 +256,12 @@ export default function MatchSchedule() {
                 />
               </div>
             </div>
-            
+
             <button
-              onClick={() => { setEditingMatch(null); setOpen(true); }}
+              onClick={() => {
+                setEditingMatch(null);
+                setOpen(true);
+              }}
               className="bg-green-700 text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-green-800 transition-colors whitespace-nowrap"
             >
               + Thêm trận đấu
@@ -258,65 +279,85 @@ export default function MatchSchedule() {
               <div className="col-span-1"></div>
             </div>
 
-          {/* ROWS */}
-          {[
-            ...matches,
-            ...Array(Math.max(0, SO_TRAN_MOI_TRANG - matches.length)).fill(
-              null,
-            ),
-          ].map((match, index) =>
-            match ? (
-              <MatchRow 
-                key={match.id ?? index} 
-                match={match} 
-                onEdit={(m) => { setEditingMatch(m); setOpen(true); }} 
-                onDelete={handleDeleteMatch} 
+            {/* ROWS */}
+            {[
+              ...matches,
+              ...Array(Math.max(0, SO_TRAN_MOI_TRANG - matches.length)).fill(
+                null,
+              ),
+            ].map((match, index) =>
+              match ? (
+                <MatchRow
+                  key={match.id ?? index}
+                  match={match}
+                  onEdit={(m) => {
+                    setEditingMatch(m);
+                    setOpen(true);
+                  }}
+                  onDelete={handleDeleteMatch}
+                />
+              ) : (
+                <MatchSkeleton key={index} />
+              ),
+            )}
+
+            {/* PAGINATION */}
+            <div className="flex justify-between items-center pt-6 border-t">
+              <p className="text-sm">
+                Hiển thị{" "}
+                <b>
+                  {tongSoPhanTu === 0
+                    ? "0"
+                    : `${(trangHienTai - 1) * SO_TRAN_MOI_TRANG + 1} - ${Math.min(
+                        trangHienTai * SO_TRAN_MOI_TRANG,
+                        tongSoPhanTu,
+                      )}`}
+                </b>{" "}
+                trong {tongSoPhanTu} trận
+              </p>
+
+              <PhanTrang
+                tongSoTrang={tongSoTrang}
+                trangHienTai={trangHienTai}
+                xuLyTrang={(p) => setTrangHienTai(p)}
               />
-            ) : (
-              <MatchSkeleton key={index} />
-            ),
-          )}
-
-          {/* PAGINATION */}
-          <div className="flex justify-between items-center pt-6 border-t">
-            <p className="text-sm">
-              Hiển thị{" "}
-              <b>
-                {tongSoPhanTu === 0
-                  ? "0"
-                  : `${(trangHienTai - 1) * SO_TRAN_MOI_TRANG + 1} - ${Math.min(
-                      trangHienTai * SO_TRAN_MOI_TRANG,
-                      tongSoPhanTu,
-                    )}`}
-              </b>{" "}
-              trong {tongSoPhanTu} trận
-            </p>
-
-            <PhanTrang
-              tongSoTrang={tongSoTrang}
-              trangHienTai={trangHienTai}
-              xuLyTrang={(p) => setTrangHienTai(p)}
-            />
+            </div>
           </div>
         </div>
-      </div>
 
-      <Modal open={open} onClose={() => { setOpen(false); setEditingMatch(null); }}>
-        {open && (
-          <AddMatchModal
-            onClose={() => { setOpen(false); setEditingMatch(null); }}
-            initialData={editingMatch}
-            onSave={handleSaveMatch}
-          />
-        )}
-      </Modal>
+        <Modal
+          open={open}
+          onClose={() => {
+            setOpen(false);
+            setEditingMatch(null);
+          }}
+        >
+          {open && (
+            <AddMatchModal
+              onClose={() => {
+                setOpen(false);
+                setEditingMatch(null);
+              }}
+              initialData={editingMatch}
+              onSave={handleSaveMatch}
+            />
+          )}
+        </Modal>
       </div>
     </AppLayout>
   );
 }
 
 /* ================= ROW ================= */
-function MatchRow({ match, onEdit, onDelete }: { match: MatchModel; onEdit: (m: MatchModel) => void; onDelete: (id: number) => void }) {
+function MatchRow({
+  match,
+  onEdit,
+  onDelete,
+}: {
+  match: MatchModel;
+  onEdit: (m: MatchModel) => void;
+  onDelete: (id: number) => void;
+}) {
   const date = new Date(match.matchDate);
 
   const isConflict = match.status === "CONFLICT";
@@ -324,13 +365,29 @@ function MatchRow({ match, onEdit, onDelete }: { match: MatchModel; onEdit: (m: 
   const renderStatus = (status: string) => {
     switch (status) {
       case "SCHEDULED":
-        return <span className="px-3 py-1 text-xs rounded-full font-bold bg-blue-100 text-blue-600">Chưa diễn ra</span>;
+        return (
+          <span className="px-3 py-1 text-xs rounded-full font-bold bg-blue-100 text-blue-600">
+            Chưa diễn ra
+          </span>
+        );
       case "FINISHED":
-        return <span className="px-3 py-1 text-xs rounded-full font-bold bg-green-100 text-green-600">Đã kết thúc</span>;
+        return (
+          <span className="px-3 py-1 text-xs rounded-full font-bold bg-green-100 text-green-600">
+            Đã kết thúc
+          </span>
+        );
       case "CONFLICT":
-        return <span className="px-3 py-1 text-xs rounded-full font-bold bg-red-100 text-red-600">Xung đột</span>;
+        return (
+          <span className="px-3 py-1 text-xs rounded-full font-bold bg-red-100 text-red-600">
+            Xung đột
+          </span>
+        );
       default:
-        return <span className="px-3 py-1 text-xs rounded-full font-bold bg-gray-100 text-gray-600">{status}</span>;
+        return (
+          <span className="px-3 py-1 text-xs rounded-full font-bold bg-gray-100 text-gray-600">
+            {status}
+          </span>
+        );
     }
   };
 
@@ -391,17 +448,21 @@ function MatchRow({ match, onEdit, onDelete }: { match: MatchModel; onEdit: (m: 
       </div>
 
       {/* STATUS */}
-      <div className="col-span-2 text-right">
-        {renderStatus(match.status)}
-      </div>
+      <div className="col-span-2 text-right">{renderStatus(match.status)}</div>
 
       {/* ACTION */}
       <div className="col-span-1 flex justify-end gap-1">
-        <button onClick={() => onEdit(match)} className="p-1.5 hover:bg-gray-100 rounded-full">
+        <button
+          onClick={() => onEdit(match)}
+          className="p-1.5 hover:bg-gray-100 rounded-full"
+        >
           <span className="material-symbols-outlined text-sm">edit</span>
         </button>
 
-        <button onClick={() => onDelete(match.id!)} className="p-1.5 hover:bg-red-100 rounded-full text-red-500">
+        <button
+          onClick={() => onDelete(match.id!)}
+          className="p-1.5 hover:bg-red-100 rounded-full text-red-500"
+        >
           <span className="material-symbols-outlined text-sm">delete</span>
         </button>
       </div>

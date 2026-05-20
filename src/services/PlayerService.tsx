@@ -62,7 +62,11 @@ class PlayerService {
     });
   }
 
-  async getAllPlayersNormalized(page: number, size: number, filters?: PlayerFilters) {
+  async getAllPlayersNormalized(
+    page: number,
+    size: number,
+    filters?: PlayerFilters,
+  ) {
     const response = await this.getAllPlayers(page, size, filters);
     const data = response.data;
 
@@ -77,6 +81,24 @@ class PlayerService {
   async getPlayerById(id: number) {
     const response = await axios.post(`${API_BASE_URL}/getPlayer/${id}`, id);
     return normalizePlayer(response.data);
+  }
+
+  getPlayersByTeam(teamId: number, page = 0, size = 10) {
+    return axios.get(`${API_BASE_URL}/getPlayersByTeam/${teamId}`, {
+      params: { page, size },
+    });
+  }
+
+  async getPlayersByTeamNormalized(teamId: number, page = 0, size = 10) {
+    const response = await this.getPlayersByTeam(teamId, page, size);
+    const data = response.data;
+
+    return {
+      ...data,
+      content: Array.isArray(data?.content)
+        ? data.content.map(normalizePlayer)
+        : [],
+    };
   }
 
   async addPlayer(player: Player) {

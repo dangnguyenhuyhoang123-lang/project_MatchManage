@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { RoundModel } from "../../../model/RoundModel";
-import { SeasonModel } from "../../../model/SeasonModel";
-import RoundService from "../../../services/RoundService";
-import SeasonService from "../../../services/SeasonService";
+import { RoundModel } from "../../../../model/RoundModel";
+import { SeasonModel } from "../../../../model/SeasonModel";
+import RoundService from "../../../../services/RoundService";
+import SeasonService from "../../../../services/SeasonService";
 
 interface Props {
   onClose: () => void;
@@ -49,7 +49,7 @@ export default function CreateRoundModal({
         const response = await SeasonService.getAllSeasons(0, 1000);
         const rawSeasons = Array.isArray(response.data)
           ? response.data
-          : response.data?.content ?? [];
+          : (response.data?.content ?? []);
 
         setSeasons(
           rawSeasons.map(
@@ -158,7 +158,10 @@ export default function CreateRoundModal({
           </button>
         </div>
 
-        <form className="grid grid-cols-1 gap-8 lg:grid-cols-12" onSubmit={handleSubmit}>
+        <form
+          className="grid grid-cols-1 gap-8 lg:grid-cols-12"
+          onSubmit={handleSubmit}
+        >
           <div className="space-y-6 lg:col-span-8">
             <div className="rounded-3xl border border-[#bfcaba]/30 bg-white p-8 shadow-[0_12px_48px_-12px_rgba(27,28,26,0.06)]">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -229,12 +232,17 @@ export default function CreateRoundModal({
             <div className="relative overflow-hidden rounded-3xl border border-[#bfcaba]/30 bg-[#f5f3ef] p-8">
               <div className="relative z-10 mb-6 flex items-center gap-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#959efd] text-[#27308a] shadow-inner">
-                  <span className="material-symbols-outlined text-[20px]">info</span>
+                  <span className="material-symbols-outlined text-[20px]">
+                    info
+                  </span>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-[#1b1c1a]">Lưu ý quản lý</h3>
+                  <h3 className="text-lg font-bold text-[#1b1c1a]">
+                    Lưu ý quản lý
+                  </h3>
                   <p className="mt-0.5 text-xs text-[#707a6c]">
-                    Hệ thống sẽ tự động gửi thông báo cho các đội nếu bạn bật tùy chọn bên dưới.
+                    Hệ thống sẽ tự động gửi thông báo cho các đội nếu bạn bật
+                    tùy chọn bên dưới.
                   </p>
                 </div>
               </div>
@@ -253,7 +261,8 @@ export default function CreateRoundModal({
                   </span>
                 </div>
                 <span className="mt-0.5 text-sm font-medium text-[#40493d] transition-colors group-hover:text-[#1b1c1a]">
-                  Gửi email thông báo lịch thi đấu cho các đội trưởng ngay sau khi lưu.
+                  Gửi email thông báo lịch thi đấu cho các đội trưởng ngay sau
+                  khi lưu.
                 </span>
               </label>
             </div>
@@ -266,11 +275,15 @@ export default function CreateRoundModal({
                   sports
                 </span>
               </div>
-              <label htmlFor="max-matches" className="mb-2 text-base font-black text-[#1b1c1a]">
+              <label
+                htmlFor="max-matches"
+                className="mb-2 text-base font-black text-[#1b1c1a]"
+              >
                 Số trận tối đa
               </label>
               <p className="mb-8 px-2 text-xs leading-relaxed text-[#707a6c]">
-                Tổng số trận đấu có thể tổ chức trong vòng này dựa trên sân bãi khả dụng.
+                Tổng số trận đấu có thể tổ chức trong vòng này dựa trên sân bãi
+                khả dụng.
               </p>
 
               <input
@@ -292,7 +305,10 @@ export default function CreateRoundModal({
                 </h4>
                 <p className="text-xs font-medium leading-relaxed text-[#cbffc2]/90">
                   Vòng đấu này dự kiến tổ chức tối đa {round.maxMatches} trận từ{" "}
-                  {round.startDate ? "mốc bắt đầu đã chọn" : "thời điểm bạn cấu hình"}.
+                  {round.startDate
+                    ? "mốc bắt đầu đã chọn"
+                    : "thời điểm bạn cấu hình"}
+                  .
                 </p>
               </div>
             </div>
@@ -313,7 +329,9 @@ export default function CreateRoundModal({
                 onClick={onClose}
                 className="flex w-full items-center justify-center gap-2 rounded-full bg-transparent py-4 font-bold text-[#707a6c] transition-colors hover:bg-[#eae8e4]/50"
               >
-                <span className="material-symbols-outlined text-[20px]">close</span>
+                <span className="material-symbols-outlined text-[20px]">
+                  close
+                </span>
                 Hủy bỏ
               </button>
             </div>

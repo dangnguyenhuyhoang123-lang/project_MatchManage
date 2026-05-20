@@ -13,21 +13,31 @@ import UserProfilePage from "./Page/UserProfilePage";
 
 import { ManagementPage } from "./Page/ManagementPage/MangagementPage";
 import { Header1 } from "./components/Header/Header1";
-import TournamentManagement from "./Page/testPage/LeagueManage/TournamentManagement";
-import MatchSchedule from "./Page/testPage/MatchSchedule/MatchShedule";
-import RoundManagement from "./Page/testPage/RoundManage/RoundManagement";
+
+import MatchSchedule from "./Page/testPage/AdminPage/MatchSchedule/MatchShedule";
+import RoundManagement from "./Page/testPage/AdminPage/RoundManage/RoundManagement";
 import ClubManagement from "./Page/testPage/TeamManage/ClubManagement";
-import PlayerManagement from "./Page/testPage/PlayerManage/PlayerManagement";
-import RegisterFormMatch from "./Page/testPage/RegisterForm/RegisterFormMatch";
+import PlayerManagement from "./Page/testPage/AdminPage/PlayerManage/PlayerManagement";
+import RegisterFormMatch from "./Page/testPage/ClubManagerPage/RegisterForm/RegisterFormMatch";
 import MatchResults from "./Page/testPage/Matchresult/MatchResults";
 import StandingsPage from "./Page/testPage/StadingPage";
 import ReportPage from "./Page/testPage/ReportPage";
+<<<<<<< HEAD
 import AdminRegistrationManager from "./Page/testPage/RegisterForm/AdminRegistrationManager";
 import FeaturePage from "./Page/FeaturePage";
 import NewsPage from "./Page/NewsPage";
 import AboutPage from "./Page/AboutPage";
 import PublicLeaguesPage from "./Page/PublicLeaguesPage";
 
+=======
+import AdminRegistrationManager from "./Page/testPage/AdminPage/AdminRegistrationManager";
+import MatchManagePageClub from "./Page/testPage/ClubManagerPage/MatchManage/MatchManagePageClub";
+import TournamentManagement from "./Page/testPage/AdminPage/LeagueManage/TournamentManagement";
+import ClubDetailPage from "./Page/testPage/ClubManagerPage/InfoClubManage/ClubDetailPage";
+import PlayerRosterPage from "./Page/testPage/ClubManagerPage/InfoClubManage/PlayerRosterPage";
+import ClubStaffPage from "./Page/testPage/ClubManagerPage/InfoClubManage/ClubStaffPage";
+import StadiumDetailPage from "./Page/testPage/ClubManagerPage/InfoClubManage/StadiumDetailPage";
+>>>>>>> origin/main
 function App() {
   const location = useLocation();
 
@@ -60,7 +70,21 @@ function App() {
           path="/manageRegisger"
           element={<AdminRegistrationManager />}
         ></Route>
+<<<<<<< HEAD
 
+=======
+        <Route
+          path="/manageMatchClub"
+          element={<MatchManagePageClub />}
+        ></Route>
+        <Route path="/manageInfoClub" element={<ClubDetailPage />}></Route>
+        <Route path="/managePlayerClub" element={<PlayerRosterPage />}></Route>
+        <Route path="/manageCoachClub" element={<ClubStaffPage />}></Route>
+        <Route
+          path="/manageStadiumClub"
+          element={<StadiumDetailPage />}
+        ></Route>
+>>>>>>> origin/main
         {/* <Route path="/matches/:id" element={<MatchDetail />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/sign-up" element={<SignUpPage />} />

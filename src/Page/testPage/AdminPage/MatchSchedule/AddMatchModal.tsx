@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import SeasonService from "../../../services/SeasonService";
-import RoundService from "../../../services/RoundService";
+import SeasonService from "../../../../services/SeasonService";
+import RoundService from "../../../../services/RoundService";
 
 const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
   const [seasons, setSeasons] = useState<any[]>([]);
@@ -17,16 +17,35 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
 
   useEffect(() => {
     if (initialData) {
-      setSelectedSeason(initialData.season?.id || initialData.seasonId || initialData.league?.id || "");
+      setSelectedSeason(
+        initialData.season?.id ||
+          initialData.seasonId ||
+          initialData.league?.id ||
+          "",
+      );
       setSelectedRound(initialData.round?.id || initialData.roundId || "");
-      setHomeTeam(initialData.homeTeam?.id || initialData.homeTeam?.teamId || initialData.homeTeamId || "");
-      setAwayTeam(initialData.awayTeam?.id || initialData.awayTeam?.teamId || initialData.awayTeamId || "");
+      setHomeTeam(
+        initialData.homeTeam?.id ||
+          initialData.homeTeam?.teamId ||
+          initialData.homeTeamId ||
+          "",
+      );
+      setAwayTeam(
+        initialData.awayTeam?.id ||
+          initialData.awayTeam?.teamId ||
+          initialData.awayTeamId ||
+          "",
+      );
       setStadium(initialData.stadium || "");
-      
+
       if (initialData.matchDate) {
         const d = new Date(initialData.matchDate);
-        setMatchDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
-        setMatchTime(`${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`);
+        setMatchDate(
+          `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
+        );
+        setMatchTime(
+          `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
+        );
       }
     } else {
       setSelectedSeason("");
@@ -55,7 +74,11 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
     if (selectedSeason) {
       const fetchRounds = async () => {
         try {
-          const response = await RoundService.getAllRoundsNormalized(0, 100, Number(selectedSeason));
+          const response = await RoundService.getAllRoundsNormalized(
+            0,
+            100,
+            Number(selectedSeason),
+          );
           setRounds(response.content || []);
         } catch (error) {
           console.error("Lỗi lấy dữ liệu vòng đấu:", error);
@@ -65,7 +88,9 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
 
       const fetchTeams = async () => {
         try {
-          const response = await SeasonService.getTeamsBySeason(Number(selectedSeason));
+          const response = await SeasonService.getTeamsBySeason(
+            Number(selectedSeason),
+          );
           setTeams(response.data?.content || response.data || []);
         } catch (error) {
           console.error("Lỗi lấy dữ liệu đội bóng:", error);
@@ -83,10 +108,11 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
 
   useEffect(() => {
     if (homeTeam) {
-      const team = teams.find((t: any) => 
-         t.id === Number(homeTeam) || 
-         t.teamId === Number(homeTeam) || 
-         t.clubId === Number(homeTeam)
+      const team = teams.find(
+        (t: any) =>
+          t.id === Number(homeTeam) ||
+          t.teamId === Number(homeTeam) ||
+          t.clubId === Number(homeTeam),
       );
       if (team && team.stadiumName) {
         setStadium(team.stadiumName);
@@ -98,12 +124,23 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
     }
   }, [homeTeam, teams]);
 
-  const seasonOptions = seasons.map((s: any) => ({ value: s.id, label: s.name || s.year }));
-  const roundOptions = rounds.map((r: any) => ({ value: r.id, label: r.name || `Vòng ${r.roundNumber}` }));
-  const teamOptions = teams.map((t: any) => ({ value: t.id || t.teamId || t.clubId, label: t.name || t.clubName || t.teamName || "Đội bóng" }));
-  const stadiumOptions = Array.from(new Set(teams.map((t: any) => t.stadium).filter(Boolean))).map(s => ({ value: s, label: s as string }));
+  const seasonOptions = seasons.map((s: any) => ({
+    value: s.id,
+    label: s.name || s.year,
+  }));
+  const roundOptions = rounds.map((r: any) => ({
+    value: r.id,
+    label: r.name || `Vòng ${r.roundNumber}`,
+  }));
+  const teamOptions = teams.map((t: any) => ({
+    value: t.id || t.teamId || t.clubId,
+    label: t.name || t.clubName || t.teamName || "Đội bóng",
+  }));
+  const stadiumOptions = Array.from(
+    new Set(teams.map((t: any) => t.stadium).filter(Boolean)),
+  ).map((s) => ({ value: s, label: s as string }));
   if (stadium && !stadiumOptions.find((o: any) => o.value === stadium)) {
-     stadiumOptions.push({ value: stadium, label: stadium });
+    stadiumOptions.push({ value: stadium, label: stadium });
   }
 
   return (
@@ -153,31 +190,45 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
               <span className="w-1.5 h-8 bg-[#0d631b] rounded-full"></span>
               {initialData ? "Sửa trận đấu" : "Thêm trận đấu mới"}
             </h3>
-            <button type="button" onClick={onClose} className="md:hidden p-2 text-gray-400">
+            <button
+              type="button"
+              onClick={onClose}
+              className="md:hidden p-2 text-gray-400"
+            >
               <span className="material-symbols-outlined">close</span>
             </button>
           </div>
 
-          <form className="space-y-6" onSubmit={(e) => {
-            e.preventDefault();
-            if (!selectedSeason || !selectedRound || !homeTeam || !awayTeam || !matchDate || !matchTime) {
-              alert("Vui lòng điền đầy đủ thông tin bắt buộc!");
-              return;
-            }
-            if (homeTeam === awayTeam) {
-              alert("Đội nhà và đội khách không được trùng nhau!");
-              return;
-            }
-            onSave({
-              seasonId: Number(selectedSeason),
-              roundId: Number(selectedRound),
-              homeTeamId: Number(homeTeam),
-              awayTeamId: Number(awayTeam),
-              stadium: stadium,
-              matchDate: `${matchDate}T${matchTime}:00`,
-              status: initialData?.status || "SCHEDULED",
-            });
-          }}>
+          <form
+            className="space-y-6"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (
+                !selectedSeason ||
+                !selectedRound ||
+                !homeTeam ||
+                !awayTeam ||
+                !matchDate ||
+                !matchTime
+              ) {
+                alert("Vui lòng điền đầy đủ thông tin bắt buộc!");
+                return;
+              }
+              if (homeTeam === awayTeam) {
+                alert("Đội nhà và đội khách không được trùng nhau!");
+                return;
+              }
+              onSave({
+                seasonId: Number(selectedSeason),
+                roundId: Number(selectedRound),
+                homeTeamId: Number(homeTeam),
+                awayTeamId: Number(awayTeam),
+                stadium: stadium,
+                matchDate: `${matchDate}T${matchTime}:00`,
+                status: initialData?.status || "SCHEDULED",
+              });
+            }}
+          >
             {/* Tournament & Round Selection */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <SelectGroup
@@ -186,7 +237,9 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
                 options={seasonOptions}
                 value={selectedSeason}
                 onChange={(e: any) => {
-                  setSelectedSeason(e.target.value ? Number(e.target.value) : "");
+                  setSelectedSeason(
+                    e.target.value ? Number(e.target.value) : "",
+                  );
                   setSelectedRound("");
                   setHomeTeam("");
                   setAwayTeam("");
@@ -198,7 +251,9 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
                 icon="reorder"
                 options={roundOptions}
                 value={selectedRound}
-                onChange={(e: any) => setSelectedRound(e.target.value ? Number(e.target.value) : "")}
+                onChange={(e: any) =>
+                  setSelectedRound(e.target.value ? Number(e.target.value) : "")
+                }
                 disabled={!selectedSeason}
               />
             </div>
@@ -222,7 +277,9 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
                   icon="stadium"
                   options={teamOptions}
                   value={homeTeam}
-                  onChange={(e: any) => setHomeTeam(e.target.value ? Number(e.target.value) : "")}
+                  onChange={(e: any) =>
+                    setHomeTeam(e.target.value ? Number(e.target.value) : "")
+                  }
                   disabled={!selectedSeason}
                 />
                 <TeamSelect
@@ -232,7 +289,9 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
                   icon="flight_takeoff"
                   options={teamOptions}
                   value={awayTeam}
-                  onChange={(e: any) => setAwayTeam(e.target.value ? Number(e.target.value) : "")}
+                  onChange={(e: any) =>
+                    setAwayTeam(e.target.value ? Number(e.target.value) : "")
+                  }
                   disabled={!selectedSeason}
                 />
               </div>
@@ -257,10 +316,10 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
                 value={matchDate}
                 onChange={(e: any) => setMatchDate(e.target.value)}
               />
-              <InputGroup 
-                label="Giờ thi đấu" 
-                icon="schedule" 
-                type="time" 
+              <InputGroup
+                label="Giờ thi đấu"
+                icon="schedule"
+                type="time"
                 value={matchTime}
                 onChange={(e: any) => setMatchTime(e.target.value)}
               />
@@ -303,7 +362,7 @@ function SelectGroup({ label, icon, options, value, onChange, disabled }: any) {
         {label}
       </label>
       <div className="relative">
-        <select 
+        <select
           className="w-full bg-[#efeeea] border-none rounded-xl py-3.5 px-4 appearance-none focus:ring-2 focus:ring-[#0d631b] transition-all font-bold text-sm disabled:opacity-50"
           value={value}
           onChange={onChange}
@@ -311,7 +370,9 @@ function SelectGroup({ label, icon, options, value, onChange, disabled }: any) {
         >
           <option value="">-- Chọn {label.toLowerCase()} --</option>
           {options.map((opt: any) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
           ))}
         </select>
         <span className="material-symbols-outlined absolute right-3 top-3.5 pointer-events-none text-gray-400">
@@ -322,7 +383,16 @@ function SelectGroup({ label, icon, options, value, onChange, disabled }: any) {
   );
 }
 
-function TeamSelect({ label, side, color, icon, options, value, onChange, disabled }: any) {
+function TeamSelect({
+  label,
+  side,
+  color,
+  icon,
+  options,
+  value,
+  onChange,
+  disabled,
+}: any) {
   return (
     <div className={`space-y-2 ${side === "right" ? "text-right" : ""}`}>
       <label className="text-xs font-bold text-gray-400 uppercase tracking-tight">
@@ -337,7 +407,9 @@ function TeamSelect({ label, side, color, icon, options, value, onChange, disabl
         >
           <option value="">-- Chọn đội --</option>
           {options.map((opt: any) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
           ))}
         </select>
         <span

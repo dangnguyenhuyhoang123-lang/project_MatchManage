@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Modal } from "../../../components/Modal";
+import { Modal } from "../../../../components/Modal";
 import CreateRoundModal from "./CreateRoundModal";
-import { AppLayout } from "../../../components/AppLayout";
-import { SeasonModel } from "../../../model/SeasonModel";
-import { RoundModel } from "../../../model/RoundModel";
-import RoundService from "../../../services/RoundService";
-import SeasonService from "../../../services/SeasonService";
-import { PhanTrang } from "../../../utils/PhanTrang";
+import { AppLayout } from "../../../../components/AppLayout";
+import { SeasonModel } from "../../../../model/SeasonModel";
+import { RoundModel } from "../../../../model/RoundModel";
+import RoundService from "../../../../services/RoundService";
+import SeasonService from "../../../../services/SeasonService";
+import { PhanTrang } from "../../../../utils/PhanTrang";
 
 const PAGE_SIZE = 10;
 
@@ -59,7 +59,7 @@ const RoundManagement: React.FC = () => {
         const response = await SeasonService.getAllSeasons(0, 1000);
         const rawSeasons = Array.isArray(response.data)
           ? response.data
-          : response.data?.content ?? [];
+          : (response.data?.content ?? []);
 
         setSeasons(
           rawSeasons.map(
@@ -216,7 +216,8 @@ const RoundManagement: React.FC = () => {
                 <div className="flex items-center gap-3 lg:col-span-4">
                   <div
                     className={`flex h-10 w-10 items-center justify-center rounded font-bold ${
-                      STATUS_CLASSES[round.status] ?? "bg-zinc-100 text-zinc-500"
+                      STATUS_CLASSES[round.status] ??
+                      "bg-zinc-100 text-zinc-500"
                     }`}
                   >
                     {round.roundNumber}
@@ -241,7 +242,8 @@ const RoundManagement: React.FC = () => {
                 <div className="flex justify-center lg:col-span-2">
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-bold ${
-                      STATUS_CLASSES[round.status] ?? "bg-zinc-100 text-zinc-500"
+                      STATUS_CLASSES[round.status] ??
+                      "bg-zinc-100 text-zinc-500"
                     }`}
                   >
                     {getStatusLabel(round.status)}
@@ -256,13 +258,17 @@ const RoundManagement: React.FC = () => {
                     }}
                     className="rounded p-2 hover:bg-gray-100"
                   >
-                    <span className="material-symbols-outlined text-base">edit</span>
+                    <span className="material-symbols-outlined text-base">
+                      edit
+                    </span>
                   </button>
                   <button
                     onClick={() => handleDelete(round)}
                     className="rounded p-2 hover:bg-red-100"
                   >
-                    <span className="material-symbols-outlined text-base">delete</span>
+                    <span className="material-symbols-outlined text-base">
+                      delete
+                    </span>
                   </button>
                 </div>
               </div>
@@ -279,14 +285,16 @@ const RoundManagement: React.FC = () => {
         <div className="rounded-xl bg-gray-100 p-6 lg:col-span-2">
           <h4 className="mb-2 font-bold">Tối ưu lịch</h4>
           <p className="text-sm text-gray-600">
-            API hiện đang đồng bộ số trận tối đa, thời gian bắt đầu/kết thúc và mùa giải cho từng vòng đấu.
+            API hiện đang đồng bộ số trận tối đa, thời gian bắt đầu/kết thúc và
+            mùa giải cho từng vòng đấu.
           </p>
         </div>
 
         <div className="rounded-xl bg-green-700 p-6 text-white">
           <h4 className="font-bold">Theo dõi trạng thái</h4>
           <p className="mt-2 text-sm text-green-50">
-            {quickStats.ongoing} vòng đang diễn ra, {quickStats.scheduled} vòng đã lên lịch.
+            {quickStats.ongoing} vòng đang diễn ra, {quickStats.scheduled} vòng
+            đã lên lịch.
           </p>
         </div>
       </div>

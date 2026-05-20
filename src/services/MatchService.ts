@@ -14,6 +14,7 @@ class MatchService {
         search: filters?.search?.trim() || undefined,
         seasonId: filters?.seasonId || undefined,
         roundId: filters?.roundId || undefined,
+        teamId: filters?.teamId || undefined,
       },
     });
   }
