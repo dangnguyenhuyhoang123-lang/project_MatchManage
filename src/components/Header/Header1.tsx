@@ -120,14 +120,13 @@ export const Header1 = () => {
               </button>
 
               <div
-                className={`absolute right-0 top-[calc(100%+0.75rem)] w-72 origin-top-right transition-all duration-200 ease-out z-50 ${
-                  open
-                    ? "opacity-100 scale-100 translate-y-0"
-                    : "opacity-0 scale-95 -translate-y-2 pointer-events-none"
-                }`}
+                className={`absolute right-0 top-[calc(100%+0.75rem)] w-72 origin-top-right transition-all duration-200 ease-out z-50 ${open
+                  ? "opacity-100 scale-100 translate-y-0"
+                  : "opacity-0 scale-95 -translate-y-2 pointer-events-none"
+                  }`}
               >
                 <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
-                  <div className="px-4 py-4 flex items-center gap-3 bg-gradient-to-r from-green-50 to-white">
+                  <div className="px-4 py-4 flex items-center gap-3 bg-linear-to-r from-green-50 to-white">
                     <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-green-500/15">
                       <img
                         src={user.avatar || pic1}

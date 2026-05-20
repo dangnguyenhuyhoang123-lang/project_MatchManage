@@ -3,7 +3,7 @@ import DashBoardPage from "./Page/testPage/DashBoardPage";
 
 import MatchDetail from "./Page/MatchDetail";
 import HomePage from "./Page/HomePage";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import Header from "./components/Header/Header";
 import LoginPage from "./Page/LoginPage";
 import SignUpPage from "./Page/SignUpPage";
@@ -23,26 +23,44 @@ import MatchResults from "./Page/testPage/Matchresult/MatchResults";
 import StandingsPage from "./Page/testPage/StadingPage";
 import ReportPage from "./Page/testPage/ReportPage";
 import AdminRegistrationManager from "./Page/testPage/RegisterForm/AdminRegistrationManager";
+import FeaturePage from "./Page/FeaturePage";
+import NewsPage from "./Page/NewsPage";
+import AboutPage from "./Page/AboutPage";
+import PublicLeaguesPage from "./Page/PublicLeaguesPage";
 
 function App() {
+  const location = useLocation();
+
+  const hideHeader1Paths = ["/homepage", "/features", "/news", "/about", "/public-leagues"];
+
   return (
     <>
-      <Header1 />
+      {!hideHeader1Paths.includes(location.pathname) && <Header1 />}
+
       <Routes>
         <Route path="/" element={<DashBoardPage />} />
-        <Route path="/league" element={<TournamentManagement />}></Route>
-        <Route path="/rounds" element={<RoundManagement />}></Route>
-        <Route path="/clubs" element={<ClubManagement />}></Route>
-        <Route path="/players" element={<PlayerManagement />}></Route>
-        <Route path="/registrations" element={<RegisterFormMatch />}></Route>
-        <Route path="/matches" element={<MatchSchedule />}></Route>
-        <Route path="/results" element={<MatchResults />}></Route>
-        <Route path="/standings" element={<StandingsPage />}></Route>
-        <Route path="/reports" element={<ReportPage />}></Route>
+        <Route path="/homepage" element={<HomePage />} />
+
+        <Route path="/features" element={<FeaturePage />} />
+        <Route path="/news" element={<NewsPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/public-leagues" element={<PublicLeaguesPage />} />
+
+        <Route path="/league" element={<TournamentManagement />} />
+        <Route path="/rounds" element={<RoundManagement />} />
+        <Route path="/clubs" element={<ClubManagement />} />
+        <Route path="/players" element={<PlayerManagement />} />
+        <Route path="/registrations" element={<RegisterFormMatch />} />
+        <Route path="/matches" element={<MatchSchedule />} />
+        <Route path="/results" element={<MatchResults />} />
+        <Route path="/standings" element={<StandingsPage />} />
+        <Route path="/reports" element={<ReportPage />} />
+
         <Route
           path="/manageRegisger"
           element={<AdminRegistrationManager />}
         ></Route>
+
         {/* <Route path="/matches/:id" element={<MatchDetail />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/sign-up" element={<SignUpPage />} />
