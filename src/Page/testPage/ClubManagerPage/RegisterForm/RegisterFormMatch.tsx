@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import type { GrassType } from "../../../../model/Registration";
-import { AppLayout } from "../../../../components/AppLayout";
+import { AppLayout } from "../../../../layouts/AppLayout";
 import CoachRegistration from "./CoachRegistration";
 import FinalConfirmation from "./FinalConfirmation";
 import PlayerRegistration from "./PlayerRegistration";

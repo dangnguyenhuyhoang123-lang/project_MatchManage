@@ -1,7 +1,7 @@
-import axios from "axios";
+import axiosClient from "./axiosClient";
 import type { Coach } from "../model/CoachModel";
 
-const API_BASE_URL = "http://localhost:8080/api/coaches";
+const API_BASE_URL = "/coaches";
 
 const normalizeCoach = (raw: any): Coach => ({
   id: raw?.id ?? raw?.coachId,
@@ -18,7 +18,7 @@ const normalizeCoach = (raw: any): Coach => ({
 
 class CoachService {
   getAllCoaches(page = 0, size = 10, filters?: any) {
-    return axios.get(`${API_BASE_URL}/getCoaches`, {
+    return axiosClient.get(`${API_BASE_URL}/getCoaches`, {
       params: {
         page,
         size,
@@ -31,7 +31,7 @@ class CoachService {
     });
   }
   getCoachesByTeamId(teamId: number, page = 0, size = 8) {
-    return axios.get(`${API_BASE_URL}/getCoachesByTeam/${teamId}`, {
+    return axiosClient.get(`${API_BASE_URL}/getCoachesByTeam/${teamId}`, {
       params: { page, size },
     });
   }
@@ -49,19 +49,19 @@ class CoachService {
   }
 
   getCoachById(id: number) {
-    return axios.get(`${API_BASE_URL}/getCoach/${id}`);
+    return axiosClient.get(`${API_BASE_URL}/getCoach/${id}`);
   }
 
   addCoach(coach: any) {
-    return axios.post(`${API_BASE_URL}/addCoach`, coach);
+    return axiosClient.post(`${API_BASE_URL}/addCoach`, coach);
   }
 
   updateCoach(id: number, coach: any) {
-    return axios.put(`${API_BASE_URL}/updateCoach/${id}`, coach);
+    return axiosClient.put(`${API_BASE_URL}/updateCoach/${id}`, coach);
   }
 
   deleteCoach(id: number) {
-    return axios.delete(`${API_BASE_URL}/deleteCoach/${id}`);
+    return axiosClient.delete(`${API_BASE_URL}/deleteCoach/${id}`);
   }
 }
 

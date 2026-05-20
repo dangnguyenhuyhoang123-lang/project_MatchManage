@@ -2,7 +2,7 @@ import React from "react";
 import { useState } from "react";
 import { Modal } from "../../../components/Modal";
 
-import { AppLayout } from "../../../components/AppLayout";
+import { AppLayout } from "../../../layouts/AppLayout";
 import { PageHeader } from "../../../components/PageHeader";
 const MatchResults: React.FC = () => {
   const [open, setOpen] = useState(false);

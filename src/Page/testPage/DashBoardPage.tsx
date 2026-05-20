@@ -10,7 +10,7 @@ import { MatchModel } from "../../model/Match/MatchModel";
 import { getTeamDetailPath } from "../../utils/teamRoute";
 import { Sidebar } from "../../utils/SideBar";
 import { Container } from "../../utils/Container";
-import { AppLayout } from "../../components/AppLayout";
+import { AppLayout } from "../../layouts/AppLayout";
 
 export default function DashBoardPage() {
   const [trangHienTai, setTrangHienTai] = useState(1);
@@ -135,7 +135,7 @@ export default function DashBoardPage() {
 
                   <div className="text-center text-gray-500 mb-4">
                     {new Date(match.matchDate).toLocaleString()} -{" "}
-                    {match.league.name}
+                    {match.league?.name ?? "Chưa cập nhật giải đấu"}
                   </div>
                 </div>
               ))}

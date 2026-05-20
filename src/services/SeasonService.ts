@@ -1,11 +1,11 @@
 // src/service/SeasonService.ts
-import axios from "axios";
+import axiosClient from "./axiosClient";
 
-const API_BASE_URL = "http://localhost:8080/api/seasons";
+const API_BASE_URL = "/seasons";
 
 class SeasonService {
   getAllSeasons(page = 0, size = 10, leagueId?: number) {
-    return axios.get(`${API_BASE_URL}/getAllSeasons`, {
+    return axiosClient.get(`${API_BASE_URL}/getAllSeasons`, {
       params: {
         page,
         size,
@@ -15,23 +15,23 @@ class SeasonService {
   }
 
   getSeasonById(id: number) {
-    return axios.get(`${API_BASE_URL}/getSeasonById/${id}`);
+    return axiosClient.get(`${API_BASE_URL}/getSeasonById/${id}`);
   }
 
   getTeamsBySeason(id: number) {
-    return axios.get(`${API_BASE_URL}/getSeasonTeams/${id}`);
+    return axiosClient.get(`${API_BASE_URL}/getSeasonTeams/${id}`);
   }
 
   addSeason(season: any) {
-    return axios.post(`${API_BASE_URL}/addSeason`, season);
+    return axiosClient.post(`${API_BASE_URL}/addSeason`, season);
   }
 
   updateSeason(id: number, season: any) {
-    return axios.put(`${API_BASE_URL}/updateSeason/${id}`, season);
+    return axiosClient.put(`${API_BASE_URL}/updateSeason/${id}`, season);
   }
 
   deleteSeason(id: number) {
-    return axios.delete(`${API_BASE_URL}/deleteSeason/${id}`);
+    return axiosClient.delete(`${API_BASE_URL}/deleteSeason/${id}`);
   }
 }
 

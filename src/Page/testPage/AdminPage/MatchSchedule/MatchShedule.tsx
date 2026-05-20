@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 
 import AddMatchModal from "./AddMatchModal";
 import { Modal } from "../../../../components/Modal";
-import { AppLayout } from "../../../../components/AppLayout";
+import { AppLayout } from "../../../../layouts/AppLayout";
 import { PhanTrang } from "../../../../utils/PhanTrang";
 
 import { MatchModel } from "../../../../model/Match/MatchModel";
@@ -360,7 +360,7 @@ function MatchRow({
 }) {
   const date = new Date(match.matchDate);
 
-  const isConflict = match.status === "CONFLICT";
+  const isConflict = String(match.status) === "CONFLICT";
 
   const renderStatus = (status: string) => {
     switch (status) {

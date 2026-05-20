@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { AppLayout } from "../../../../components/AppLayout";
+import { AppLayout } from "../../../../layouts/AppLayout";
 import TeamService from "../../../../services/TeamService";
 import StadiumService from "../../../../services/StadiumService";
 import type { TeamModel } from "../../../../model/TeamModel";
 import {
-  CURRENT_CLUB_ID,
   extractList,
   fallbackStadiumImage,
   formatNumber,
   getStadiumAddress,
   getStadiumName,
+  useCurrentClubId,
 } from "./clubInfoHelpers";
 
 interface StadiumState {
@@ -18,6 +18,7 @@ interface StadiumState {
 }
 
 const StadiumDetailPage: React.FC = () => {
+  const { currentClubId, authLoading } = useCurrentClubId();
   const [state, setState] = useState<StadiumState>({
     team: null,
     stadium: null,
@@ -29,11 +30,19 @@ const StadiumDetailPage: React.FC = () => {
     let mounted = true;
 
     const loadStadiumInfo = async () => {
+      if (authLoading) return;
+
+      if (!currentClubId) {
+        setLoading(false);
+        setError("Không xác định được câu lạc bộ của người dùng đang đăng nhập.");
+        return;
+      }
+
       try {
         setLoading(true);
         setError("");
 
-        const team = await TeamService.getTeamById(CURRENT_CLUB_ID);
+        const team = await TeamService.getTeamById(currentClubId);
         const stadium = await loadStadium(team);
 
         if (mounted) {
@@ -54,7 +63,7 @@ const StadiumDetailPage: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [authLoading, currentClubId]);
 
   return (
     <AppLayout>
@@ -238,7 +247,9 @@ function MetricBlock({
         <span className="text-4xl font-black tracking-tight text-[#008C2F]">
           {value}
         </span>
-        {suffix && <span className="text-sm font-semibold text-gray-500">{suffix}</span>}
+        {suffix && (
+          <span className="text-sm font-semibold text-gray-500">{suffix}</span>
+        )}
       </div>
     </div>
   );
@@ -261,7 +272,10 @@ function FacilitiesSection({ stadium }: { stadium: any | null }) {
     {
       icon: "grass",
       title: "Mặt sân",
-      description: stadium?.grassType ?? stadium?.surfaceType ?? "Chưa cập nhật loại mặt cỏ.",
+      description:
+        stadium?.grassType ??
+        stadium?.surfaceType ??
+        "Chưa cập nhật loại mặt cỏ.",
       variant: "tertiary",
     },
     {
@@ -275,9 +289,7 @@ function FacilitiesSection({ stadium }: { stadium: any | null }) {
   return (
     <section className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-black text-gray-950">
-          Thông tin hạ tầng
-        </h2>
+        <h2 className="text-2xl font-black text-gray-950">Thông tin hạ tầng</h2>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 xl:gap-6">

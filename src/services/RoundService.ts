@@ -1,7 +1,7 @@
-import axios from "axios";
+import axiosClient from "./axiosClient";
 import { RoundModel } from "../model/RoundModel";
 
-const API_BASE_URL = "http://localhost:8080/api/rounds";
+const API_BASE_URL = "/rounds";
 
 const normalizeRound = (raw: any) =>
   new RoundModel({
@@ -30,7 +30,7 @@ const toPayload = (round: RoundModel) => ({
 
 class RoundService {
   getAllRounds(page = 0, size = 10, seasonId?: number) {
-    return axios.get(`${API_BASE_URL}/getAllRoundBySeason`, {
+    return axiosClient.get(`${API_BASE_URL}/getAllRoundBySeason`, {
       params: {
         page,
         size,
@@ -52,20 +52,20 @@ class RoundService {
   }
 
   async getRoundById(id: number) {
-    const response = await axios.get(`${API_BASE_URL}/getRound/${id}`);
+    const response = await axiosClient.get(`${API_BASE_URL}/getRound/${id}`);
     return normalizeRound(response.data);
   }
 
   async addRound(round: RoundModel) {
-    return axios.post(`${API_BASE_URL}/addRound`, toPayload(round));
+    return axiosClient.post(`${API_BASE_URL}/addRound`, toPayload(round));
   }
 
   async updateRound(id: number, round: RoundModel) {
-    return axios.put(`${API_BASE_URL}/updateRound/${id}`, toPayload(round));
+    return axiosClient.put(`${API_BASE_URL}/updateRound/${id}`, toPayload(round));
   }
 
   deleteRound(id: number) {
-    return axios.delete(`${API_BASE_URL}/deleteRound/${id}`);
+    return axiosClient.delete(`${API_BASE_URL}/deleteRound/${id}`);
   }
 }
 

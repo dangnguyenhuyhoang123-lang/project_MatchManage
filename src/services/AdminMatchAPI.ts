@@ -2,14 +2,13 @@ import { MatchModel } from "../model/Match/MatchModel";
 import type { League } from "../model/LeagueModel";
 import type { SeasonModel } from "../model/SeasonModel";
 import type { TeamModel } from "../model/TeamModel";
-import axios from "axios";
+import axiosClient from "./axiosClient";
 import {
   MatchStatus,
   type MatchStatus as MatchStatusType,
 } from "../model/enum";
-import { getListMatches } from "./MatchAPI";
 
-const API_BASE_URL = "http://localhost:8080/api/matches";
+const API_BASE_URL = "/matches";
 
 export type MatchFormValues = {
   id?: number;
@@ -119,7 +118,7 @@ export const getAdminMatches = async (params?: {
   leagueName?: string;
   season?: string;
 }) => {
-  const response = await axios.get(API_BASE_URL, {
+  const response = await axiosClient.get(API_BASE_URL, {
     params,
   });
 
@@ -177,9 +176,18 @@ const toMatchPayload = (values: MatchFormValues) => {
   return payload;
 };
 
-const normalizeSavedMatch = async (response: Response) => {
+const toNullableNumber = (value: string) => {
+  if (value.trim() === "") {
+    return null;
+  }
+
+  const number = Number(value);
+
+  return Number.isFinite(number) ? number : null;
+};
+
+const normalizeSavedMatch = async (data: any) => {
   try {
-    const data = await response.json();
     return parseMatch(data);
   } catch {
     const refreshed = await getAdminMatches();
@@ -188,20 +196,9 @@ const normalizeSavedMatch = async (response: Response) => {
 };
 
 export async function createAdminMatch(values: MatchFormValues) {
-  const response = await fetch(API_BASE_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include",
-    body: JSON.stringify(toMatchPayload(values)),
-  });
+  const response = await axiosClient.post(API_BASE_URL, toMatchPayload(values));
 
-  if (!response.ok) {
-    throw new Error("Khong the them tran dau.");
-  }
-
-  return normalizeSavedMatch(response);
+  return normalizeSavedMatch(response.data);
 }
 
 export async function updateAdminMatch(values: MatchFormValues) {
@@ -209,31 +206,16 @@ export async function updateAdminMatch(values: MatchFormValues) {
     throw new Error("Khong xac dinh duoc tran dau can sua.");
   }
 
-  const response = await fetch(`${API_BASE_URL}/${values.id}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include",
-    body: JSON.stringify(toMatchPayload(values)),
-  });
+  const response = await axiosClient.put(
+    `${API_BASE_URL}/${values.id}`,
+    toMatchPayload(values),
+  );
 
-  if (!response.ok) {
-    throw new Error("Khong the cap nhat tran dau.");
-  }
-
-  return normalizeSavedMatch(response);
+  return normalizeSavedMatch(response.data);
 }
 
 export async function deleteAdminMatch(matchId: number) {
-  const response = await fetch(`${API_BASE_URL}/${matchId}`, {
-    method: "DELETE",
-    credentials: "include",
-  });
-
-  if (!response.ok) {
-    throw new Error("Khong the xoa tran dau.");
-  }
+  await axiosClient.delete(`${API_BASE_URL}/${matchId}`);
 }
 
 export const createEmptyMatchFormValues = (): MatchFormValues => ({

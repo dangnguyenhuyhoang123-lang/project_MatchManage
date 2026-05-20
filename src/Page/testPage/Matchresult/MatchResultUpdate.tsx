@@ -9,7 +9,11 @@ interface GoalEvent {
   team: "home" | "away";
 }
 
-const MatchResultUpdate: React.FC = ({ onClose }) => {
+interface MatchResultUpdateProps {
+  onClose?: () => void;
+}
+
+const MatchResultUpdate: React.FC<MatchResultUpdateProps> = ({ onClose }) => {
   const [goals, setGoals] = useState<GoalEvent[]>([
     {
       id: "1",

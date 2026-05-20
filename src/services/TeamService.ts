@@ -1,7 +1,7 @@
-import axios from "axios";
+import axiosClient from "./axiosClient";
 import { TeamModel } from "../model/TeamModel";
 
-const API_BASE_URL = "http://localhost:8080/api/teams";
+const API_BASE_URL = "/teams";
 
 type TeamFilters = {
   search?: string;
@@ -39,7 +39,7 @@ const toPayload = (team: TeamModel) => ({
 
 class TeamService {
   getAllTeams(page = 0, size = 10, filters?: TeamFilters) {
-    return axios.get(`${API_BASE_URL}/getAllTeams`, {
+    return axiosClient.get(`${API_BASE_URL}/getAllTeams`, {
       params: {
         page,
         size,
@@ -63,20 +63,20 @@ class TeamService {
   }
 
   async getTeamById(id: number) {
-    const response = await axios.get(`${API_BASE_URL}/getTeam/${id}`);
+    const response = await axiosClient.get(`${API_BASE_URL}/getTeam/${id}`);
     return normalizeTeam(response.data);
   }
 
   async addTeam(team: TeamModel) {
-    return axios.post(`${API_BASE_URL}/addTeam`, toPayload(team));
+    return axiosClient.post(`${API_BASE_URL}/addTeam`, toPayload(team));
   }
 
   async updateTeam(id: number, team: TeamModel) {
-    return axios.put(`${API_BASE_URL}/updateTeam/${id}`, toPayload(team));
+    return axiosClient.put(`${API_BASE_URL}/updateTeam/${id}`, toPayload(team));
   }
 
   deleteTeam(id: number) {
-    return axios.delete(`${API_BASE_URL}/deleteTeam/${id}`);
+    return axiosClient.delete(`${API_BASE_URL}/deleteTeam/${id}`);
   }
 }
 

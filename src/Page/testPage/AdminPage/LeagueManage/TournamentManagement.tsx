@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import CreateTournament from "./CreateTournament";
 
 import { Modal } from "../../../../components/Modal";
-import { AppLayout } from "../../../../components/AppLayout";
+import { AppLayout } from "../../../../layouts/AppLayout";
 import LeagueService from "../../../../services/LeagueService";
 import { PhanTrang } from "../../../../utils/PhanTrang";
 import { League } from "../../../../model/LeagueModel";

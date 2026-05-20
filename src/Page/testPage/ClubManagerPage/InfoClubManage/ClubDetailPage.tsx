@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { AppLayout } from "../../../../components/AppLayout";
+import { AppLayout } from "../../../../layouts/AppLayout";
 import TeamService from "../../../../services/TeamService";
 import StadiumService from "../../../../services/StadiumService";
 import PlayerSeasonService from "../../../../services/PlayerSeasonService";
 import SeasonTeamCoachService from "../../../../services/SeasonTeamCoachService";
 import type { TeamModel } from "../../../../model/TeamModel";
 import {
-  CURRENT_CLUB_ID,
   CURRENT_TEAM_SEASON_ID,
   extractList,
   fallbackClubLogo,
@@ -14,6 +13,7 @@ import {
   getStadiumAddress,
   getStadiumName,
   statusLabel,
+  useCurrentClubId,
 } from "./clubInfoHelpers";
 
 interface ClubOverview {
@@ -33,6 +33,7 @@ const initialOverview: ClubOverview = {
 };
 
 const ClubDetailPage: React.FC = () => {
+  const { currentClubId, authLoading } = useCurrentClubId();
   const [overview, setOverview] = useState<ClubOverview>(initialOverview);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -41,17 +42,27 @@ const ClubDetailPage: React.FC = () => {
     let mounted = true;
 
     const loadClubInfo = async () => {
+      if (authLoading) return;
+
+      if (!currentClubId) {
+        setLoading(false);
+        setError("Không xác định được câu lạc bộ của người dùng đang đăng nhập.");
+        return;
+      }
+
       try {
         setLoading(true);
         setError("");
 
-        const team = await TeamService.getTeamById(CURRENT_CLUB_ID);
+        const team = await TeamService.getTeamById(currentClubId);
         const [playersResponse, coachesResponse, stadium] = await Promise.all([
           PlayerSeasonService.getPlayerSeasonsByTeamSeason(
             CURRENT_TEAM_SEASON_ID,
-          ).catch(() => PlayerSeasonService.getPlayerSeasonsByTeam(CURRENT_CLUB_ID)),
+          ).catch(() =>
+            PlayerSeasonService.getPlayerSeasonsByTeam(currentClubId),
+          ),
           SeasonTeamCoachService.getAllSeasonTeamCoaches(0, 100, {
-            teamId: CURRENT_CLUB_ID,
+            teamId: currentClubId,
           }),
           loadStadium(team),
         ]);
@@ -86,7 +97,7 @@ const ClubDetailPage: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [authLoading, currentClubId]);
 
   const team = overview.team;
 

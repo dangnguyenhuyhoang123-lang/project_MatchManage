@@ -1,11 +1,11 @@
-import axios from "axios";
+import axiosClient from "./axiosClient";
 import type { SeasonTeam } from "../model/SeasonTeam";
 
-const API_BASE_URL = "http://localhost:8080/api/season-teams";
+const API_BASE_URL = "/season-teams";
 
 class SeasonTeamService {
   getAllSeasonTeams(page = 0, size = 10, filters?: any) {
-    return axios.get(API_BASE_URL, {
+    return axiosClient.get(API_BASE_URL, {
       params: {
         page,
         size,
@@ -16,19 +16,19 @@ class SeasonTeamService {
   }
 
   getSeasonTeamById(id: number) {
-    return axios.get(`${API_BASE_URL}/${id}`);
+    return axiosClient.get(`${API_BASE_URL}/${id}`);
   }
 
   addSeasonTeam(data: SeasonTeam) {
-    return axios.post(API_BASE_URL, data);
+    return axiosClient.post(API_BASE_URL, data);
   }
 
   updateSeasonTeam(id: number, data: SeasonTeam) {
-    return axios.put(`${API_BASE_URL}/${id}`, data);
+    return axiosClient.put(`${API_BASE_URL}/${id}`, data);
   }
 
   deleteSeasonTeam(id: number) {
-    return axios.delete(`${API_BASE_URL}/${id}`);
+    return axiosClient.delete(`${API_BASE_URL}/${id}`);
   }
 }
 

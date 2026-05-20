@@ -1,12 +1,10 @@
 import { Award, Compass, Zap, Target } from "lucide-react";
-import { Header_HomePage } from "../components/Header/Header_HomePage";
+
 import { Footer } from "../components/Footer/Footer_HomePage";
 
 const AboutPage = () => {
   return (
-    <div className="min-h-screen bg-[#F8F9FA] font-sans">
-      <Header_HomePage />
-
+    <>
       <div className="pt-12">
         <div className="max-w-360 mx-auto px-6 md:px-12">
           <section className="mb-24 flex flex-col md:flex-row items-center gap-12">
@@ -312,7 +310,7 @@ const AboutPage = () => {
         </div>
       </div>
       <Footer />
-    </div>
+    </>
   );
 };
 

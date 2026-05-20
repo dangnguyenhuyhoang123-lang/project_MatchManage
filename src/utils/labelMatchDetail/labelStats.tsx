@@ -1,4 +1,14 @@
-export const labelStats = (matchStats, safe, StatRow) => {
+type StatRowProps = {
+  left: number;
+  right: number;
+  label: string;
+};
+
+export const labelStats = (
+  matchStats: any,
+  safe: (value: any) => number,
+  StatRow: ComponentType<StatRowProps>,
+) => {
   return (
     <>
       <h2 className="text-center font-bold mb-6">THỐNG KÊ ĐỘI TUYỂN</h2>
@@ -53,3 +63,4 @@ export const labelStats = (matchStats, safe, StatRow) => {
     </>
   );
 };
+import type { ComponentType } from "react";

@@ -1,11 +1,11 @@
 // src/service/StadiumService.ts
-import axios from "axios";
+import axiosClient from "./axiosClient";
 
-const API_BASE_URL = "http://localhost:8080/api/stadiums";
+const API_BASE_URL = "/stadiums";
 
 class StadiumService {
   getAllStadiums(search?: string) {
-    return axios.get(API_BASE_URL, {
+    return axiosClient.get(API_BASE_URL, {
       params: {
         search: search?.trim() || undefined,
       },
@@ -13,19 +13,19 @@ class StadiumService {
   }
 
   getStadiumById(id: number) {
-    return axios.get(`${API_BASE_URL}/${id}`);
+    return axiosClient.get(`${API_BASE_URL}/${id}`);
   }
 
   addStadium(stadium: any) {
-    return axios.post(API_BASE_URL, stadium);
+    return axiosClient.post(API_BASE_URL, stadium);
   }
 
   updateStadium(id: number, stadium: any) {
-    return axios.put(`${API_BASE_URL}/${id}`, stadium);
+    return axiosClient.put(`${API_BASE_URL}/${id}`, stadium);
   }
 
   deleteStadium(id: number) {
-    return axios.delete(`${API_BASE_URL}/${id}`);
+    return axiosClient.delete(`${API_BASE_URL}/${id}`);
   }
 }
 

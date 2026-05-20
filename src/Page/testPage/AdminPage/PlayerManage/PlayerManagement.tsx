@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AddPlayerModal } from "./AddPlayer";
 import { Modal } from "../../../../components/Modal";
-import { AppLayout } from "../../../../components/AppLayout";
+import { AppLayout } from "../../../../layouts/AppLayout";
 import { PhanTrang } from "../../../../utils/PhanTrang";
 import { Player } from "../../../../model/Player";
 import PlayerService from "../../../../services/PlayerService";

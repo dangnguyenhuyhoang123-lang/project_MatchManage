@@ -44,13 +44,13 @@ export async function getListMatches(
   trangHienTai: number,
 ): Promise<KetQuaInterface> {
   //   xac dinh endpoint
-  const url: string = `http://localhost:8080/api/matches?size=3&page=${trangHienTai - 1}&sort=id,desc`;
+  const url: string = `/matches?size=3&page=${trangHienTai - 1}&sort=id,desc`;
 
   return getMatch(url);
 }
 
 export async function getMatchById(matchID: number): Promise<MatchModel> {
-  const url = `http://localhost:8080/api/matches/${matchID}`;
+  const url = `/matches/${matchID}`;
 
   const responseData = await my_request(url);
 
@@ -71,7 +71,7 @@ export async function getMatchById(matchID: number): Promise<MatchModel> {
 }
 
 export async function getStatsMatch(matchID: number): Promise<MatchStats> {
-  const url = `http://localhost:8080/api/matches/${matchID}/stats`;
+  const url = `/matches/${matchID}/stats`;
 
   const responseData = await my_request(url);
 
@@ -83,7 +83,7 @@ export async function getStatsMatch(matchID: number): Promise<MatchStats> {
 export async function getListEventMatch(
   matchID: number,
 ): Promise<MatchEvent[]> {
-  const url = `http://localhost:8080/api/matches/${matchID}/list-event`;
+  const url = `/matches/${matchID}/list-event`;
   const result: MatchEvent[] = [];
 
   const responseData = await my_request(url);
@@ -98,7 +98,7 @@ export async function getListEventMatch(
 export async function getLineupByMatch(
   matchID: number,
 ): Promise<PlayerInLineup[]> {
-  const url = `http://localhost:8080/api/matches/${matchID}/lineup?sort=id,asc&size=40`;
+  const url = `/matches/${matchID}/lineup?sort=id,asc&size=40`;
   const result: PlayerInLineup[] = [];
 
   const response = await my_request(url);

@@ -1,12 +1,10 @@
 import { ChevronDown, Trophy, Briefcase, Medal, Award } from "lucide-react";
-import { Header_HomePage } from "../components/Header/Header_HomePage";
+
 import { Footer } from "../components/Footer/Footer_HomePage";
 
 export const PublicLeaguesPage = () => {
   return (
-    <div className="min-h-screen bg-[#F8F9FA] font-sans">
-      <Header_HomePage />
-
+    <div>
       <div className="pt-12">
         <div className="max-w-360 mx-auto px-6 md:px-12">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-8">

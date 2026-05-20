@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "../../utils/SideBar";
-import { AppLayout } from "../../components/AppLayout";
+import { AppLayout } from "../../layouts/AppLayout";
 import { Container } from "../../utils/Container";
 import StandingService from "../../services/StandingService";
 import LeagueService from "../../services/LeagueService";
@@ -43,7 +43,9 @@ export default function StandingsPage() {
     if (selectedLeague) {
       const fetchSeasons = async () => {
         try {
-          const response = await LeagueService.getSeasonsByLeague(Number(selectedLeague));
+          const response = await LeagueService.getSeasonsByLeague(
+            Number(selectedLeague),
+          );
           setSeasons(response);
         } catch (error) {
           console.error("Lỗi khi lấy danh sách mùa giải:", error);
@@ -59,7 +61,9 @@ export default function StandingsPage() {
     const fetchStandings = async () => {
       setLoading(true);
       try {
-        const response = await StandingService.getAllStandings(selectedSeason ? Number(selectedSeason) : undefined);
+        const response = await StandingService.getAllStandings(
+          selectedSeason ? Number(selectedSeason) : undefined,
+        );
         // Giả sử response.data là mảng dữ liệu xếp hạng
         const data = response.data;
         const formattedData = data.map((item: any, index: number) => ({
@@ -68,15 +72,22 @@ export default function StandingsPage() {
           stadium: item.stadium || "Sân vận động: Chưa rõ",
           played: item.played || item.matchesPlayed || 0,
           stats: `${item.won || 0} - ${item.drawn || 0} - ${item.lost || 0}`,
-          hs: item.goalDifference !== undefined 
-                ? (item.goalDifference > 0 ? `+${item.goalDifference}` : `${item.goalDifference}`)
-                : "0",
+          hs:
+            item.goalDifference !== undefined
+              ? item.goalDifference > 0
+                ? `+${item.goalDifference}`
+                : `${item.goalDifference}`
+              : "0",
           points: item.points || 0,
           last5: item.last5 || ["-", "-", "-", "-", "-"],
-          rankColor: index === 0 ? "border-l-yellow-400" 
-                   : index === 1 ? "border-l-gray-400" 
-                   : index === 2 ? "border-l-orange-400" 
-                   : "border-l-green-500",
+          rankColor:
+            index === 0
+              ? "border-l-yellow-400"
+              : index === 1
+                ? "border-l-gray-400"
+                : index === 2
+                  ? "border-l-orange-400"
+                  : "border-l-green-500",
         }));
         setStandingsData(formattedData);
       } catch (error) {
@@ -117,22 +128,27 @@ export default function StandingsPage() {
           >
             <option value="">-- Chọn Giải đấu --</option>
             {leagues.map((league) => (
-              <option key={league.id} value={league.id}>{league.name}</option>
+              <option key={league.id} value={league.id}>
+                {league.name}
+              </option>
             ))}
           </select>
 
           <select
             className="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold shadow-sm hover:bg-gray-50 outline-none appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             value={selectedSeason}
-            onChange={(e) => setSelectedSeason(e.target.value ? Number(e.target.value) : "")}
+            onChange={(e) =>
+              setSelectedSeason(e.target.value ? Number(e.target.value) : "")
+            }
             disabled={!selectedLeague}
           >
             <option value="">-- Chọn Mùa giải --</option>
             {seasons.map((season) => (
-              <option key={season.id} value={season.id}>{season.name || season.year}</option>
+              <option key={season.id} value={season.id}>
+                {season.name || season.year}
+              </option>
             ))}
           </select>
-
         </div>
       </header>
 
@@ -152,69 +168,74 @@ export default function StandingsPage() {
         {/* Rows */}
         <div className="space-y-3">
           {loading ? (
-            <div className="text-center py-4 text-slate-500">Đang tải dữ liệu...</div>
+            <div className="text-center py-4 text-slate-500">
+              Đang tải dữ liệu...
+            </div>
           ) : standingsData.length === 0 ? (
-            <div className="text-center py-4 text-slate-500">Không có dữ liệu bảng xếp hạng.</div>
+            <div className="text-center py-4 text-slate-500">
+              Không có dữ liệu bảng xếp hạng.
+            </div>
           ) : (
             standingsData.map((team) => (
-            <div
-              key={team.rank}
-              className={`grid grid-cols-12 items-center bg-white p-4 rounded-2xl shadow-sm border-l-4 ${team.rankColor} hover:translate-x-1 transition-transform`}
-            >
-              <div className="col-span-1 flex justify-center">
-                <span
-                  className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm ${team.rank <= 3 ? "bg-amber-50 text-amber-700 border border-amber-200" : "text-slate-400"}`}
-                >
-                  {team.rank}
-                </span>
-              </div>
-
-              <div className="col-span-4 flex items-center gap-4">
-                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-[10px] font-bold text-slate-400 border border-gray-100">
-                  LOGO
-                </div>
-                <div>
-                  <p className="font-bold text-sm text-slate-800">
-                    {team.name}
-                  </p>
-                  <p className="text-[10px] opacity-50 uppercase font-semibold">
-                    {team.stadium}
-                  </p>
-                </div>
-              </div>
-
-              <div className="col-span-1 text-center font-bold">
-                {team.played}
-              </div>
-              <div className="col-span-2 text-center text-sm font-medium text-slate-600">
-                {team.stats}
-              </div>
-              <div className="col-span-1 text-center">
-                <p className="font-bold text-green-600">{team.hs}</p>
-                <p className="text-[9px] opacity-40">(26/14)</p>
-              </div>
-              <div className="col-span-1 text-center font-black text-lg">
-                {team.points}
-              </div>
-
-              <div className="col-span-2 flex justify-center gap-1.5">
-                {team.last5.map((res, i) => (
-                  <div
-                    key={i}
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white shadow-sm ${
-                      res === "W"
-                        ? "bg-green-600"
-                        : res === "D"
-                          ? "bg-indigo-500"
-                          : "bg-red-500"
-                    }`}
+              <div
+                key={team.rank}
+                className={`grid grid-cols-12 items-center bg-white p-4 rounded-2xl shadow-sm border-l-4 ${team.rankColor} hover:translate-x-1 transition-transform`}
+              >
+                <div className="col-span-1 flex justify-center">
+                  <span
+                    className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm ${team.rank <= 3 ? "bg-amber-50 text-amber-700 border border-amber-200" : "text-slate-400"}`}
                   >
-                    {res}
+                    {team.rank}
+                  </span>
+                </div>
+
+                <div className="col-span-4 flex items-center gap-4">
+                  <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-[10px] font-bold text-slate-400 border border-gray-100">
+                    LOGO
                   </div>
-                ))}
+                  <div>
+                    <p className="font-bold text-sm text-slate-800">
+                      {team.name}
+                    </p>
+                    <p className="text-[10px] opacity-50 uppercase font-semibold">
+                      {team.stadium}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="col-span-1 text-center font-bold">
+                  {team.played}
+                </div>
+                <div className="col-span-2 text-center text-sm font-medium text-slate-600">
+                  {team.stats}
+                </div>
+                <div className="col-span-1 text-center">
+                  <p className="font-bold text-green-600">{team.hs}</p>
+                  <p className="text-[9px] opacity-40">(26/14)</p>
+                </div>
+                <div className="col-span-1 text-center font-black text-lg">
+                  {team.points}
+                </div>
+
+                <div className="col-span-2 flex justify-center gap-1.5">
+                  {team.last5.map((res, i) => (
+                    <div
+                      key={i}
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white shadow-sm ${
+                        res === "W"
+                          ? "bg-green-600"
+                          : res === "D"
+                            ? "bg-indigo-500"
+                            : "bg-red-500"
+                      }`}
+                    >
+                      {res}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )))}
+            ))
+          )}
         </div>
 
         {/* Table Footer / Rules */}

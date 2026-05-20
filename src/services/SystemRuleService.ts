@@ -1,11 +1,11 @@
 // src/service/SystemRuleService.ts
-import axios from "axios";
+import axiosClient from "./axiosClient";
 
-const API_BASE_URL = "http://localhost:8080/api/system-rules";
+const API_BASE_URL = "/system-rules";
 
 class SystemRuleService {
   getAllSystemRules(page = 0, size = 10) {
-    return axios.get(API_BASE_URL, {
+    return axiosClient.get(API_BASE_URL, {
       params: {
         page,
         size,
@@ -14,19 +14,19 @@ class SystemRuleService {
   }
 
   getSystemRuleById(id: number) {
-    return axios.get(`${API_BASE_URL}/${id}`);
+    return axiosClient.get(`${API_BASE_URL}/${id}`);
   }
 
   addSystemRule(rule: any) {
-    return axios.post(API_BASE_URL, rule);
+    return axiosClient.post(API_BASE_URL, rule);
   }
 
   updateSystemRule(id: number, rule: any) {
-    return axios.put(`${API_BASE_URL}/${id}`, rule);
+    return axiosClient.put(`${API_BASE_URL}/${id}`, rule);
   }
 
   deleteSystemRule(id: number) {
-    return axios.delete(`${API_BASE_URL}/${id}`);
+    return axiosClient.delete(`${API_BASE_URL}/${id}`);
   }
 }
 

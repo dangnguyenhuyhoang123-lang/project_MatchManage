@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Modal } from "../../../../components/Modal";
 import CreateRoundModal from "./CreateRoundModal";
-import { AppLayout } from "../../../../components/AppLayout";
+import { AppLayout } from "../../../../layouts/AppLayout";
 import { SeasonModel } from "../../../../model/SeasonModel";
 import { RoundModel } from "../../../../model/RoundModel";
 import RoundService from "../../../../services/RoundService";

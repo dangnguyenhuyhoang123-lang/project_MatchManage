@@ -1,8 +1,7 @@
-export async function my_request(endpoint: string) {
-  const response = await fetch(endpoint);
+import axiosClient from "./axiosClient";
 
-  if (!response.ok) {
-    throw new Error(`Khong the truy cap ${endpoint}`);
-  }
-  return response.json();
+export async function my_request<T = any>(url: string): Promise<T> {
+  const response = await axiosClient.get<T>(url);
+
+  return response.data;
 }

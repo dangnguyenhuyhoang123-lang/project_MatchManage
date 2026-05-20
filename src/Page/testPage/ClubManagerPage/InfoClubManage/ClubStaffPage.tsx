@@ -1,15 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { AppLayout } from "../../../../components/AppLayout";
+import { AppLayout } from "../../../../layouts/AppLayout";
 import { PhanTrang } from "../../../../utils/PhanTrang";
 import CoachService from "../../../../services/CoachService";
 import type { Coach } from "../../../../model/CoachModel";
+
 import {
-  CURRENT_CLUB_ID,
   calculateAge,
   fallbackAvatar,
   initials,
   removeVietnameseMark,
   statusLabel,
+  useCurrentClubId,
 } from "./clubInfoHelpers";
 
 interface StaffMember {
@@ -27,6 +28,7 @@ interface StaffMember {
 const PAGE_SIZE = 8;
 
 const ClubStaffPage: React.FC = () => {
+  const { currentClubId, authLoading } = useCurrentClubId();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
@@ -38,12 +40,20 @@ const ClubStaffPage: React.FC = () => {
     let mounted = true;
 
     const loadStaff = async () => {
+      if (authLoading) return;
+
+      if (!currentClubId) {
+        setLoading(false);
+        setError("Không xác định được câu lạc bộ của người dùng đang đăng nhập.");
+        return;
+      }
+
       try {
         setLoading(true);
         setError("");
 
         const data = await CoachService.getCoachesByTeamNormalized(
-          CURRENT_CLUB_ID,
+          currentClubId,
           currentPage - 1,
           PAGE_SIZE,
         );
@@ -53,13 +63,14 @@ const ClubStaffPage: React.FC = () => {
         setStaff(
           (data.content ?? [])
             .map(normalizeStaff)
-            .filter(
-              (member: StaffMember | null): member is StaffMember =>
-                Boolean(member),
+            .filter((member: StaffMember | null): member is StaffMember =>
+              Boolean(member),
             ),
         );
         setTotalPages(Number(data.totalPages ?? 1));
-        setTotalElements(Number(data.totalElements ?? data.content?.length ?? 0));
+        setTotalElements(
+          Number(data.totalElements ?? data.content?.length ?? 0),
+        );
       } catch (err) {
         console.error("Cannot load staff", err);
         if (mounted) {
@@ -75,7 +86,7 @@ const ClubStaffPage: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [currentPage]);
+  }, [authLoading, currentClubId, currentPage]);
 
   const { coachingStaff, medicalStaff } = useMemo(() => {
     const medicalKeywords = ["BAC SI", "Y TE", "PHYSIO", "FITNESS", "MEDICAL"];

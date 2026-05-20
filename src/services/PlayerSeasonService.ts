@@ -1,11 +1,11 @@
-import axios from "axios";
+import axiosClient from "./axiosClient";
 import type { PlayerSeason } from "../model/PlayerSeason";
 
-const API_BASE_URL = "http://localhost:8080/api/player-seasons";
+const API_BASE_URL = "/player-seasons";
 
 class PlayerSeasonService {
   getAllPlayerSeasons(page = 0, size = 10, filters?: any) {
-    return axios.get(`${API_BASE_URL}/getPlayerSeasons`, {
+    return axiosClient.get(`${API_BASE_URL}/getPlayerSeasons`, {
       params: {
         page,
         size,
@@ -18,11 +18,11 @@ class PlayerSeasonService {
   }
 
   getPlayerSeasonById(id: number) {
-    return axios.get(`${API_BASE_URL}/getPlayerSeason/${id}`);
+    return axiosClient.get(`${API_BASE_URL}/getPlayerSeason/${id}`);
   }
 
   getPlayerSeasonsByTeam(teamId: number) {
-    return axios.get(`${API_BASE_URL}/getPlayerSeasonsByTeam/${teamId}`);
+    return axiosClient.get(`${API_BASE_URL}/getPlayerSeasonsByTeam/${teamId}`);
   }
 
   getPlayerSeasonsByTeamSeason(teamSeasonId: number) {
@@ -30,15 +30,15 @@ class PlayerSeasonService {
   }
 
   addPlayerSeason(data: PlayerSeason) {
-    return axios.post(`${API_BASE_URL}/PlayerSeason`, data);
+    return axiosClient.post(`${API_BASE_URL}/PlayerSeason`, data);
   }
 
   updatePlayerSeason(id: number, data: PlayerSeason) {
-    return axios.put(`${API_BASE_URL}/updatePlayerSeason/${id}`, data);
+    return axiosClient.put(`${API_BASE_URL}/updatePlayerSeason/${id}`, data);
   }
 
   deletePlayerSeason(id: number) {
-    return axios.delete(`${API_BASE_URL}/deletePlayerSeason/${id}`);
+    return axiosClient.delete(`${API_BASE_URL}/deletePlayerSeason/${id}`);
   }
 }
 

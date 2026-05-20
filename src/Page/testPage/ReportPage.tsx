@@ -1,6 +1,6 @@
 import React from "react";
 import { Sidebar } from "../../utils/SideBar";
-import { AppLayout } from "../../components/AppLayout";
+import { AppLayout } from "../../layouts/AppLayout";
 import { Container } from "../../utils/Container";
 // --- Interfaces ---
 interface StatCardProps {

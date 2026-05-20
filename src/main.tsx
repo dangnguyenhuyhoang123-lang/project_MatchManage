@@ -1,13 +1,15 @@
 // import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
+import "./services/axiosClient";
 import App from "./App.tsx";
 import { BrowserRouter } from "react-router-dom";
-import { AuthProvider } from "./utils/AuthContext.tsx";
+
+import { StrictMode } from "react";
 createRoot(document.getElementById("root")!).render(
-  <AuthProvider>
+  <StrictMode>
     <BrowserRouter>
       <App />
     </BrowserRouter>
-  </AuthProvider>,
+  </StrictMode>,
 );

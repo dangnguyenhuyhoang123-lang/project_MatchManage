@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Modal } from "../../../components/Modal";
 import MatchResultUpdateModal from "./MatchResultUpdate";
-import { AppLayout } from "../../../components/AppLayout";
+import { AppLayout } from "../../../layouts/AppLayout";
 import { PageHeader } from "../../../components/PageHeader";
 import MatchResultUpdate from "./MatchResultUpdate";
 

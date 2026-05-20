@@ -6,7 +6,7 @@ import type {
   RegistrationSummaryDTO,
 } from "../../../model/Registration";
 import RegistrationService from "../../../services/RegistrationService";
-import { AppLayout } from "../../../components/AppLayout";
+import { AppLayout } from "../../../layouts/AppLayout";
 
 type FilterStatus = "ALL" | RegistrationStatus;
 
@@ -49,9 +49,9 @@ const statusMeta: Record<
 };
 
 const grassLabels: Record<GrassType, string> = {
-  NATURAL: "Tự nhiên",
-  ARTIFICIAL: "Nhân tạo",
-  HYBRID: "Hybrid",
+  Standard: "Tự nhiên",
+  Synthetic: "Nhân tạo",
+  Premium: "Hybrid",
 };
 
 const toSearchText = (value?: string | null) =>
@@ -122,8 +122,7 @@ const calculateAge = (dateValue?: string) => {
   let age = today.getFullYear() - date.getFullYear();
   const hasBirthdayPassed =
     today.getMonth() > date.getMonth() ||
-    (today.getMonth() === date.getMonth() &&
-      today.getDate() >= date.getDate());
+    (today.getMonth() === date.getMonth() && today.getDate() >= date.getDate());
 
   if (!hasBirthdayPassed) {
     age -= 1;
@@ -954,8 +953,8 @@ const RegistrationDetailModal = ({
                           {coach.role}
                         </p>
                         <p className="mt-2 text-xs text-gray-500">
-                          {coach.nationality} • {calculateAge(coach.birthDay)} tuổi
-                          • CCCD: {coach.idCode}
+                          {coach.nationality} • {calculateAge(coach.birthDay)}{" "}
+                          tuổi • CCCD: {coach.idCode}
                         </p>
                         {coach.description && (
                           <p className="mt-2 text-xs text-gray-500">

@@ -1,6 +1,7 @@
 import type { User } from "../utils/AuthContext";
+import axiosClient from "./axiosClient";
 
-const API_BASE_URL = "http://localhost:8080/api/user-account";
+const API_BASE_URL = "/user-account";
 
 export type UpdateProfilePayload = {
   username: string;
@@ -11,52 +12,39 @@ export type UpdateProfilePayload = {
 };
 
 export async function getCurrentUser() {
-  const response = await fetch(`${API_BASE_URL}/me`, {
-    credentials: "include",
-  });
+  const response = await axiosClient.get<User>(`${API_BASE_URL}/me`);
 
-  if (!response.ok) {
-    throw new Error("Khong the tai thong tin nguoi dung.");
-  }
-
-  return (await response.json()) as User;
+  return response.data;
 }
 
 export async function updateCurrentUserProfile(payload: UpdateProfilePayload) {
   const endpoints = [
-    { url: `${API_BASE_URL}/me`, method: "PUT" },
-    { url: `${API_BASE_URL}/profile`, method: "PUT" },
-    { url: `${API_BASE_URL}/me`, method: "PATCH" },
-    { url: `${API_BASE_URL}/profile`, method: "PATCH" },
+    { url: `${API_BASE_URL}/me`, method: "put" },
+    { url: `${API_BASE_URL}/profile`, method: "put" },
+    { url: `${API_BASE_URL}/me`, method: "patch" },
+    { url: `${API_BASE_URL}/profile`, method: "patch" },
   ] as const;
 
   let lastErrorMessage = "Khong the cap nhat thong tin nguoi dung.";
 
   for (const endpoint of endpoints) {
-    const response = await fetch(endpoint.url, {
+    const response = await axiosClient.request<User>({
       method: endpoint.method,
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify(payload),
+      url: endpoint.url,
+      data: payload,
+      validateStatus: () => true,
     });
 
-    if (response.ok) {
-      try {
-        return (await response.json()) as User;
-      } catch {
-        return getCurrentUser();
-      }
+    if (response.status >= 200 && response.status < 300) {
+      return response.data || getCurrentUser();
     }
 
-    try {
-      const errorData = await response.json();
-      lastErrorMessage = errorData.message || lastErrorMessage;
-    } catch {
-      if (response.status !== 404) {
-        lastErrorMessage = response.statusText || lastErrorMessage;
-      }
+    const errorData = response.data as any;
+
+    if (errorData?.message) {
+      lastErrorMessage = errorData.message;
+    } else if (response.status !== 404) {
+      lastErrorMessage = response.statusText || lastErrorMessage;
     }
   }
 

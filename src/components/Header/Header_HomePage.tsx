@@ -1,175 +1,267 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  Bell,
+  ChevronDown,
+  LayoutDashboard,
+  LogOut,
+  Settings,
+  User,
+} from "lucide-react";
 import pic1 from "../../assets/user_icon.svg";
 import { useAuth } from "../../utils/AuthContext";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+
+const navLinks = [
+  { label: "Trang chủ", path: "/" },
+  { label: "Tính năng", path: "/features" },
+  { label: "Giải đấu", path: "/leagues" },
+  { label: "Tin tức", path: "/news" },
+  { label: "Về chúng tôi", path: "/about" },
+];
+
+const roleLabels: Record<string, string> = {
+  ADMIN: "Admin",
+  ROLE_ADMIN: "Admin",
+  CLUB_MANAGER: "Quản lý CLB",
+  ROLE_CLUB_MANAGER: "Quản lý CLB",
+  STAFF: "Nhân viên",
+  ROLE_STAFF: "Nhân viên",
+  USER: "Người dùng",
+  ROLE_USER: "Người dùng",
+};
 
 export const Header_HomePage = () => {
-    const [open, setOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
-    const { user, setUser } = useAuth();
-    const navigate = useNavigate();
-    const location = useLocation();
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const { user, setUser } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-    const getNavLinkClass = (path: string) => {
-        const isActive = location.pathname === path || (path === "/homepage" && location.pathname === "/");
-        return `text-sm font-semibold transition-colors ${isActive ? 'text-[#1a6e38] border-b-2 border-[#1a6e38] pb-1' : 'text-gray-700 hover:text-[#1a6e38]'}`;
-    };
+  const userRoles = useMemo(() => user?.roles ?? [], [user?.roles]);
+  const isAdmin = userRoles.some(
+    (role) => role === "ADMIN" || role === "ROLE_ADMIN",
+  );
+  const isClubManager = userRoles.some(
+    (role) => role === "CLUB_MANAGER" || role === "ROLE_CLUB_MANAGER",
+  );
+  const roleLabel =
+    userRoles.map((role) => roleLabels[role]).find(Boolean) || "Người dùng";
 
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (!dropdownRef.current?.contains(e.target as Node)) {
-                setOpen(false);
-            }
-        };
+  const getNavLinkClass = (path: string) => {
+    const isActive =
+      path === "/"
+        ? location.pathname === "/" || location.pathname === "/homepage"
+        : location.pathname === path;
 
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+    return [
+      "relative text-sm font-semibold transition-colors",
+      isActive ? "text-[#1a6e38]" : "text-gray-700 hover:text-[#1a6e38]",
+    ].join(" ");
+  };
 
-    const handleLogout = () => {
-        localStorage.removeItem("token");
-        setUser(null);
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!dropdownRef.current?.contains(e.target as Node)) {
         setOpen(false);
-        navigate("/login");
+      }
     };
 
-    const roleMap: Record<string, string> = {
-        ROLE_ADMIN: "Admin",
-        ROLE_STAFF: "Staff",
-    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-    const roleLabel =
-        user?.roles?.map((r: string) => roleMap[r]).find(Boolean) || "User";
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setUser(null);
+    setOpen(false);
+    navigate("/login");
+  };
 
-    return (
-        <header className="sticky top-0 z-50 w-full h-20 bg-white shadow-sm px-4 md:px-12 flex items-center justify-between">
-            <div className="flex items-center">
-                <Link to="/homepage" className="text-sm font-semibold text-gray-700 hover:text-[#1a6e38] transition-colors sr-only">Home</Link>
-                <Link to="/homepage" className="text-2xl font-black text-[#1a6e38] tracking-tight">PitchPro</Link>
+  return (
+    <header className="sticky top-0 z-50 flex h-20 w-full items-center justify-between bg-white px-4 shadow-sm md:px-12">
+      <div className="flex items-center">
+        <Link
+          to="/"
+          className="text-2xl font-black tracking-tight text-[#1a6e38] transition-transform hover:scale-[1.02]"
+        >
+          PitchPro
+        </Link>
+      </div>
+
+      <nav className="hidden items-center gap-8 md:flex">
+        {navLinks.map((item) => {
+          const isActive =
+            item.path === "/"
+              ? location.pathname === "/" || location.pathname === "/homepage"
+              : location.pathname === item.path;
+
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={getNavLinkClass(item.path)}
+            >
+              {item.label}
+              {isActive && (
+                <span className="absolute -bottom-2 left-0 h-0.5 w-full rounded-full bg-[#1a6e38]" />
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="flex items-center gap-2 sm:gap-3" ref={dropdownRef}>
+        {!user ? (
+          <>
+            <Link
+              to="/login"
+              className="inline-flex h-10 items-center justify-center px-4 text-sm font-bold text-gray-700 transition-colors hover:text-[#1a6e38] sm:px-6"
+            >
+              Đăng nhập
+            </Link>
+
+            <Link
+              to="/sign-up"
+              className="inline-flex h-10 items-center justify-center rounded-full bg-[#1a6e38] px-4 text-sm font-bold text-white shadow-md transition-colors hover:bg-green-800 sm:px-6"
+            >
+              Đăng ký
+            </Link>
+          </>
+        ) : (
+          <>
+            {(isAdmin || isClubManager) && (
+              <Link
+                to={isAdmin ? "/admin/dashboard" : "/club/dashboard"}
+                className="hidden h-10 items-center justify-center rounded-full bg-[#1a6e38] px-5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-green-800 sm:inline-flex"
+              >
+                {isAdmin ? "Trang quản trị" : "Quản lý CLB"}
+              </Link>
+            )}
+
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+              aria-label="Thông báo"
+            >
+              <Bell size={20} className="text-gray-600" />
+            </button>
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setOpen((prev) => !prev)}
+                className="flex cursor-pointer items-center gap-2 rounded-2xl px-2 py-1.5 transition-colors hover:bg-gray-100 sm:gap-3"
+              >
+                <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full ring-2 ring-green-500/20">
+                  <img
+                    src={user.avatar || pic1}
+                    alt="Avatar"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+
+                <div className="hidden text-right leading-tight md:block">
+                  <p className="text-sm font-semibold text-gray-800">
+                    {user.fullName || user.username}
+                  </p>
+                  <p className="text-xs text-gray-500">{roleLabel}</p>
+                </div>
+
+                <ChevronDown
+                  size={18}
+                  className={`hidden text-gray-400 transition-transform md:block ${
+                    open ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {open && (
+                <div className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-72 origin-top-right">
+                  <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl">
+                    <div className="flex items-center gap-3 bg-gradient-to-r from-green-50 to-white px-4 py-4">
+                      <div className="h-10 w-10 overflow-hidden rounded-full ring-2 ring-green-500/15">
+                        <img
+                          src={user.avatar || pic1}
+                          alt="Avatar"
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-gray-800">
+                          {user.fullName || user.username}
+                        </p>
+                        <p className="text-xs text-gray-500">{roleLabel}</p>
+                      </div>
+                    </div>
+
+                    <div className="py-2">
+                      {(isAdmin || isClubManager) && (
+                        <DropdownLink
+                          to={isAdmin ? "/admin/dashboard" : "/club/dashboard"}
+                          onClick={() => setOpen(false)}
+                          icon={<LayoutDashboard size={18} />}
+                          label={isAdmin ? "Trang quản trị" : "Quản lý CLB"}
+                        />
+                      )}
+
+                      <DropdownLink
+                        to="/profile"
+                        onClick={() => setOpen(false)}
+                        icon={<User size={18} />}
+                        label="Thông tin tài khoản"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => setOpen(false)}
+                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-100"
+                      >
+                        <Settings size={18} />
+                        Cài đặt
+                      </button>
+                    </div>
+
+                    <div className="border-t border-gray-100" />
+
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-red-500 transition-colors hover:bg-red-50"
+                    >
+                      <LogOut size={18} />
+                      Đăng xuất
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-
-            <nav className="hidden md:flex items-center gap-8">
-                <Link to="/features" className={getNavLinkClass("/features")}>Tính năng</Link>
-                <Link to="/public-leagues" className={getNavLinkClass("/public-leagues")}>Giải đấu</Link>
-                <Link to="/news" className={getNavLinkClass("/news")}>Tin tức</Link>
-                <Link to="/about" className={getNavLinkClass("/about")}>Về chúng tôi</Link>
-            </nav>
-
-            <div className="flex items-center gap-2 sm:gap-3" ref={dropdownRef}>
-                {!user ? (
-                    <>
-                        <Link
-                            to="/login"
-                            className="px-4 sm:px-6 h-10 inline-flex items-center justify-center text-sm font-bold text-gray-700 hover:text-[#1a6e38] transition">
-                            Đăng nhập
-                        </Link>
-
-                        <Link
-                            to="/sign-up"
-                            className="px-4 sm:px-6 h-10 inline-flex items-center justify-center rounded-full bg-[#1a6e38] text-white text-sm font-bold hover:bg-green-800 transition shadow-md">
-                            Đăng ký
-                        </Link>
-                    </>
-                ) : (
-                    <>
-                        <button
-                            type="button"
-                            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 transition"
-                            aria-label="Notifications">
-                            <span className="material-symbols-outlined text-[22px] text-gray-600">
-                                notifications
-                            </span>
-                        </button>
-
-                        <button
-                            type="button"
-                            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 transition"
-                            aria-label="Settings">
-                            <span className="material-symbols-outlined text-[22px] text-gray-600">
-                                settings
-                            </span>
-                        </button>
-
-                        <div className="relative">
-                            <button
-                                type="button"
-                                onClick={() => setOpen((prev) => !prev)}
-                                className="flex items-center gap-2 sm:gap-3 cursor-pointer rounded-2xl px-2 py-1.5 hover:bg-gray-100 transition">
-                                <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-green-500/20 shrink-0">
-                                    <img
-                                        src={user.avatar || pic1}
-                                        alt="Avatar"
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
-
-                                <div className="hidden md:block text-right leading-tight">
-                                    <p className="text-sm font-semibold text-gray-800">
-                                        {user.username}
-                                    </p>
-                                    <p className="text-xs text-gray-500">{roleLabel}</p>
-                                </div>
-
-                                <span className="material-symbols-outlined text-gray-400 text-[18px] hidden md:block">
-                                    expand_more
-                                </span>
-                            </button>
-
-                            <div
-                                className={`absolute right-0 top-[calc(100%+0.75rem)] w-72 origin-top-right transition-all duration-200 ease-out z-50 ${open
-                                    ? "opacity-100 scale-100 translate-y-0"
-                                    : "opacity-0 scale-95 -translate-y-2 pointer-events-none"
-                                    }`}>
-                                <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
-                                    <div className="px-4 py-4 flex items-center gap-3 bg-linear-to-r from-green-50 to-white">
-                                        <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-green-500/15">
-                                            <img
-                                                src={user.avatar || pic1}
-                                                alt="Avatar"
-                                                className="w-full h-full object-cover"
-                                            />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="font-semibold text-sm text-gray-800 truncate">
-                                                {user.username}
-                                            </p>
-                                            <p className="text-xs text-gray-500">{roleLabel}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="py-2">
-                                        <Link
-                                            to="/profile"
-                                            onClick={() => setOpen(false)}
-                                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition">
-                                            <span className="text-lg">👤</span>
-                                            Thông tin tài khoản
-                                        </Link>
-
-                                        <button
-                                            type="button"
-                                            onClick={() => setOpen(false)}
-                                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition text-left">
-                                            <span className="text-lg">⚙️</span>
-                                            Cài đặt
-                                        </button>
-                                    </div>
-
-                                    <div className="border-t border-gray-100" />
-
-                                    <button
-                                        type="button"
-                                        onClick={handleLogout}
-                                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-500 hover:bg-red-50 transition text-left">
-                                        <span className="text-lg">🚪</span>
-                                        Đăng xuất
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </>
-                )}
-            </div>
-        </header>
-    );
+          </>
+        )}
+      </div>
+    </header>
+  );
 };
+
+function DropdownLink({
+  to,
+  onClick,
+  icon,
+  label,
+}: {
+  to: string;
+  onClick: () => void;
+  icon: ReactNode;
+  label: string;
+}) {
+  return (
+    <Link
+      to={to}
+      onClick={onClick}
+      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-100"
+    >
+      {icon}
+      {label}
+    </Link>
+  );
+}

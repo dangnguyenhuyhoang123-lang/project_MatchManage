@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { AppLayout } from "../../../../components/AppLayout";
+import { AppLayout } from "../../../../layouts/AppLayout";
 import { PhanTrang } from "../../../../utils/PhanTrang";
 import PlayerService from "../../../../services/PlayerService";
 import type { Player } from "../../../../model/Player";
 import {
-  CURRENT_CLUB_ID,
   calculateAge,
   fallbackAvatar,
   initials,
   positionLabel,
   statusLabel,
+  useCurrentClubId,
 } from "./clubInfoHelpers";
 
 interface RosterPlayer {
@@ -27,6 +27,7 @@ interface RosterPlayer {
 const PAGE_SIZE = 10;
 
 const PlayerRosterPage: React.FC = () => {
+  const { currentClubId, authLoading } = useCurrentClubId();
   const [players, setPlayers] = useState<RosterPlayer[]>([]);
   const [search, setSearch] = useState("");
   const [positionFilter, setPositionFilter] = useState("");
@@ -40,12 +41,20 @@ const PlayerRosterPage: React.FC = () => {
     let mounted = true;
 
     const loadPlayers = async () => {
+      if (authLoading) return;
+
+      if (!currentClubId) {
+        setLoading(false);
+        setError("Không xác định được câu lạc bộ của người dùng đang đăng nhập.");
+        return;
+      }
+
       try {
         setLoading(true);
         setError("");
 
         const data = await PlayerService.getPlayersByTeamNormalized(
-          CURRENT_CLUB_ID,
+          currentClubId,
           currentPage - 1,
           PAGE_SIZE,
         );
@@ -55,13 +64,14 @@ const PlayerRosterPage: React.FC = () => {
         setPlayers(
           (data.content ?? [])
             .map(normalizeRosterPlayer)
-            .filter(
-              (player: RosterPlayer | null): player is RosterPlayer =>
-                Boolean(player),
+            .filter((player: RosterPlayer | null): player is RosterPlayer =>
+              Boolean(player),
             ),
         );
         setTotalPages(Number(data.totalPages ?? 1));
-        setTotalElements(Number(data.totalElements ?? data.content?.length ?? 0));
+        setTotalElements(
+          Number(data.totalElements ?? data.content?.length ?? 0),
+        );
       } catch (err) {
         console.error("Cannot load players by team", err);
         if (mounted) {
@@ -77,7 +87,7 @@ const PlayerRosterPage: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [currentPage]);
+  }, [authLoading, currentClubId, currentPage]);
 
   const filteredPlayers = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -141,7 +151,9 @@ function normalizeRosterPlayer(player: Player): RosterPlayer | null {
       ? String(player.shirtNumber).padStart(2, "0")
       : "--",
     name: player.name || "Cầu thủ chưa cập nhật",
-    secondaryInfo: player.idCode ? `Mã định danh: ${player.idCode}` : "Chưa có mã định danh",
+    secondaryInfo: player.idCode
+      ? `Mã định danh: ${player.idCode}`
+      : "Chưa có mã định danh",
     position: positionLabel(player.position || player.detailPosition),
     age: calculateAge(player.dateOfBirth),
     nationality: player.nationality || "Việt Nam",

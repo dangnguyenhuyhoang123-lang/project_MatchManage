@@ -1,12 +1,10 @@
 import { Calendar, User, LayoutGrid, List } from "lucide-react";
-import { Header_HomePage } from "../components/Header/Header_HomePage";
+
 import { Footer } from "../components/Footer/Footer_HomePage";
 
 export const NewsPage = () => {
   return (
-    <div className="min-h-screen bg-[#F8F9FA] font-sans">
-      <Header_HomePage />
-
+    <>
       <div className="pt-12">
         <div className="max-w-360 mx-auto px-6 md:px-12">
           <section className="mb-16">
@@ -426,7 +424,7 @@ export const NewsPage = () => {
         </div>
       </div>
       <Footer />
-    </div>
+    </>
   );
 };
 

@@ -1,11 +1,11 @@
 // src/service/StandingService.ts
-import axios from "axios";
+import axiosClient from "./axiosClient";
 
-const API_BASE_URL = "http://localhost:8080/api/standings";
+const API_BASE_URL = "/standings";
 
 class StandingService {
   getAllStandings(seasonId?: number) {
-    return axios.get(`${API_BASE_URL}/getStandingBySeason`, {
+    return axiosClient.get(`${API_BASE_URL}/getStandingBySeason`, {
       params: {
         seasonId: seasonId || undefined,
       },
@@ -13,7 +13,7 @@ class StandingService {
   }
 
   getStandingById(id: number) {
-    return axios.get(`${API_BASE_URL}/getStanding/${id}`);
+    return axiosClient.get(`${API_BASE_URL}/getStanding/${id}`);
   }
 }
 

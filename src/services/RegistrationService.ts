@@ -1,4 +1,4 @@
-import axios from "axios";
+import axiosClient from "./axiosClient";
 import type {
   FullRegistrationDTO,
   MessageResponse,
@@ -7,11 +7,11 @@ import type {
   RegistrationSummaryDTO,
 } from "../model/Registration";
 
-const API_BASE_URL = "http://localhost:8080/api/registrations";
+const API_BASE_URL = "/registrations";
 
 class RegistrationService {
   getAllRegistrations(status?: RegistrationStatus | "Tất cả") {
-    return axios.get<RegistrationSummaryDTO[]>(
+    return axiosClient.get<RegistrationSummaryDTO[]>(
       `${API_BASE_URL}/getRegistrations`,
       {
         params: {
@@ -23,25 +23,25 @@ class RegistrationService {
   }
 
   getRegistrationById(id: number) {
-    return axios.get<RegistrationDetailDTO>(`${API_BASE_URL}/${id}`, {
+    return axiosClient.get<RegistrationDetailDTO>(`${API_BASE_URL}/${id}`, {
       withCredentials: true,
     });
   }
 
   submitRegistration(data: FullRegistrationDTO) {
-    return axios.post<RegistrationSummaryDTO>(`${API_BASE_URL}/submit`, data, {
+    return axiosClient.post<RegistrationSummaryDTO>(`${API_BASE_URL}/submit`, data, {
       withCredentials: true,
     });
   }
 
   approveRegistration(id: number) {
-    return axios.post<MessageResponse>(`${API_BASE_URL}/${id}/approve`, null, {
+    return axiosClient.post<MessageResponse>(`${API_BASE_URL}/${id}/approve`, null, {
       withCredentials: true,
     });
   }
 
   rejectRegistration(id: number, note?: string) {
-    return axios.post<MessageResponse>(`${API_BASE_URL}/${id}/reject`, null, {
+    return axiosClient.post<MessageResponse>(`${API_BASE_URL}/${id}/reject`, null, {
       params: {
         note: note?.trim() || undefined,
       },

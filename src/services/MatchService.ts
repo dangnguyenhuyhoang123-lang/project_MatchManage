@@ -1,11 +1,11 @@
 // src/service/MatchService.ts
-import axios from "axios";
+import axiosClient from "./axiosClient";
 
-const API_BASE_URL = "http://localhost:8080/api/matches";
+const API_BASE_URL = "/matches";
 
 class MatchService {
   getAllMatches(page: number, size: number, filters?: any) {
-    return axios.get(`${API_BASE_URL}/getAllMatches`, {
+    return axiosClient.get(`${API_BASE_URL}/getAllMatches`, {
       params: {
         page,
         size,
@@ -20,15 +20,15 @@ class MatchService {
   }
 
   addMatch(match: any) {
-    return axios.post(`${API_BASE_URL}/addMatch`, match);
+    return axiosClient.post(`${API_BASE_URL}/addMatch`, match);
   }
 
   updateMatch(id: number, match: any) {
-    return axios.put(`${API_BASE_URL}/updateMatch/${id}`, match);
+    return axiosClient.put(`${API_BASE_URL}/updateMatch/${id}`, match);
   }
 
   deleteMatch(id: number) {
-    return axios.delete(`${API_BASE_URL}/deleteMatch/${id}`);
+    return axiosClient.delete(`${API_BASE_URL}/deleteMatch/${id}`);
   }
 }
 

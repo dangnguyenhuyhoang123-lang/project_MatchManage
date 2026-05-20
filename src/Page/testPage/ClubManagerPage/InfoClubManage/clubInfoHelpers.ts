@@ -1,5 +1,15 @@
-export const CURRENT_CLUB_ID = 1;
+import { useAuth } from "../../../../utils/AuthContext";
+
 export const CURRENT_TEAM_SEASON_ID = 60;
+
+export function useCurrentClubId() {
+  const { user, loading } = useAuth();
+
+  return {
+    currentClubId: user?.teamId,
+    authLoading: loading,
+  };
+}
 
 export const fallbackClubLogo =
   "https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=240&h=240&fit=crop";

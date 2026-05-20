@@ -10,7 +10,7 @@ import {
   Contact2,
   Shield,
 } from "lucide-react";
-import { Header_HomePage } from "../components/Header/Header_HomePage";
+
 import { Footer } from "../components/Footer/Footer_HomePage";
 
 const HomePage = () => {
@@ -35,8 +35,7 @@ const HomePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] font-sans">
-      <Header_HomePage />
+    <div>
       <section className="relative max-w-360 mx-auto px-6 md:px-12 pt-16 pb-24 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
         <motion.div
           initial={{ opacity: 0, x: -50 }}

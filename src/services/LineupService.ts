@@ -1,31 +1,31 @@
-import axios from "axios";
+import axiosClient from "./axiosClient";
 import type { MatchLineupSubmitDTO, TeamLineupResponse } from "../model/Lineup";
 
-const API_BASE_URL = "http://localhost:8080/api/lineups";
+const API_BASE_URL = "/lineups";
 
 class LineupService {
   getLineupsByMatch(matchId: number) {
-    return axios.get<TeamLineupResponse[]>(`${API_BASE_URL}/match/${matchId}`);
+    return axiosClient.get<TeamLineupResponse[]>(`${API_BASE_URL}/match/${matchId}`);
   }
 
   getLineupByMatchAndTeam(matchId: number, teamId: number) {
-    return axios.get<TeamLineupResponse>(
+    return axiosClient.get<TeamLineupResponse>(
       `${API_BASE_URL}/match/${matchId}/team/${teamId}`,
     );
   }
 
   getLineupByTactics(tacticsId: number) {
-    return axios.get<TeamLineupResponse>(
+    return axiosClient.get<TeamLineupResponse>(
       `${API_BASE_URL}/tactics/${tacticsId}`,
     );
   }
 
   submitLineup(data: MatchLineupSubmitDTO) {
-    return axios.post<TeamLineupResponse>(`${API_BASE_URL}/submit`, data);
+    return axiosClient.post<TeamLineupResponse>(`${API_BASE_URL}/submit`, data);
   }
 
   deleteLineup(matchId: number, teamId: number) {
-    return axios.delete(`${API_BASE_URL}/match/${matchId}/team/${teamId}`);
+    return axiosClient.delete(`${API_BASE_URL}/match/${matchId}/team/${teamId}`);
   }
 }
 

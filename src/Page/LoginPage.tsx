@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../utils/AuthContext";
+import UserService from "../services/UserService";
 
 const LoginPage = () => {
   const [userName, setUserName] = useState("");
@@ -18,24 +19,23 @@ const LoginPage = () => {
     setErrors({ username: "", password: "" });
 
     try {
-      const response = await fetch(
-        "http://localhost:8080/api/user-account/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            username: userName,
-            password: passWord,
-          }),
-        },
-      );
+      const response = await UserService.login(userName, passWord);
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const loginData = response.data;
 
+      if (loginData?.id) {
+        setUser(loginData);
+      } else {
+        const userResponse = await UserService.getCurrentUser();
+        setUser(userResponse.data);
+      }
+
+      // alert("Đăng ký thành công");
+      navigate("/");
+    } catch (err) {
+      const errorData = (err as any)?.response?.data;
+
+      if (errorData?.field && errorData?.message) {
         setErrors((prev) => ({
           ...prev,
           [errorData.field]: errorData.message,
@@ -43,17 +43,11 @@ const LoginPage = () => {
 
         return;
       }
-      const meRes = await fetch("http://localhost:8080/api/user-account/me", {
-        credentials: "include",
-      });
 
-      const user = await meRes.json();
-
-      setUser(user);
-
-      // alert("Đăng ký thành công");
-      navigate("/");
-    } catch (err) {
+      setErrors((prev) => ({
+        ...prev,
+        password: errorData?.message || "Dang nhap that bai.",
+      }));
       console.error(err);
     }
   };

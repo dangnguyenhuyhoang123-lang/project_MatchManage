@@ -1,10 +1,10 @@
-import axios from "axios";
+import axiosClient from "./axiosClient";
 
-const API_BASE_URL = "http://localhost:8080/api/season-team-coaches";
+const API_BASE_URL = "/season-team-coaches";
 
 class SeasonTeamCoachService {
   getAllSeasonTeamCoaches(page = 0, size = 10, filters?: any) {
-    return axios.get(`${API_BASE_URL}/getAssignments`, {
+    return axiosClient.get(`${API_BASE_URL}/getAssignments`, {
       params: {
         page,
         size,
@@ -16,19 +16,19 @@ class SeasonTeamCoachService {
   }
 
   getSeasonTeamCoachById(id: number) {
-    return axios.get(`${API_BASE_URL}/getAssignment/${id}`);
+    return axiosClient.get(`${API_BASE_URL}/getAssignment/${id}`);
   }
 
   addSeasonTeamCoach(data: any) {
-    return axios.post(`${API_BASE_URL}/addAssignment`, data);
+    return axiosClient.post(`${API_BASE_URL}/addAssignment`, data);
   }
 
   updateSeasonTeamCoach(id: number, data: any) {
-    return axios.put(`${API_BASE_URL}/updateAssignment/${id}`, data);
+    return axiosClient.put(`${API_BASE_URL}/updateAssignment/${id}`, data);
   }
 
   deleteSeasonTeamCoach(id: number) {
-    return axios.delete(`${API_BASE_URL}/deleteAssignment/${id}`);
+    return axiosClient.delete(`${API_BASE_URL}/deleteAssignment/${id}`);
   }
 }
 

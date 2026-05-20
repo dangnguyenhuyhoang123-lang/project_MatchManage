@@ -20,9 +20,9 @@ const roleLabels: Record<string, string> = {
 };
 
 const grassLabels = {
-  NATURAL: "Tự nhiên",
-  ARTIFICIAL: "Nhân tạo",
-  HYBRID: "Hybrid",
+  Standard: "Tự nhiên",
+  Synthetic: "Nhân tạo",
+  Premium: "Hybrid",
 };
 
 const getPlayerShirtNumber = (player: SelectedPlayer) =>

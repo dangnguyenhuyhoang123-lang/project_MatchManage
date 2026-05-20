@@ -1,7 +1,7 @@
-import axios from "axios";
+import axiosClient from "./axiosClient";
 import { League } from "../model/LeagueModel";
 
-const API_BASE_URL = "http://localhost:8080/api/leagues";
+const API_BASE_URL = "/leagues";
 
 type SeasonResponse = {
   id?: number;
@@ -34,7 +34,7 @@ const toPayload = (league: League) => ({
 
 class LeagueService {
   getAllLeagues(page = 0, size = 10, search?: string) {
-    return axios.get(`${API_BASE_URL}/getAllLeagues`, {
+    return axiosClient.get(`${API_BASE_URL}/getAllLeagues`, {
       params: {
         page,
         size,
@@ -56,27 +56,27 @@ class LeagueService {
   }
 
   async getLeagueById(id: number) {
-    const response = await axios.get(`${API_BASE_URL}/getLeague/${id}`);
+    const response = await axiosClient.get(`${API_BASE_URL}/getLeague/${id}`);
     return normalizeLeague(response.data);
   }
 
   async getSeasonsByLeague(id: number): Promise<SeasonResponse[]> {
-    const response = await axios.get(
+    const response = await axiosClient.get(
       `${API_BASE_URL}/getLeagueSeasons/${id}/seasons`,
     );
     return Array.isArray(response.data) ? response.data : [];
   }
 
   async addLeague(league: League) {
-    return axios.post(`${API_BASE_URL}/addLeague`, toPayload(league));
+    return axiosClient.post(`${API_BASE_URL}/addLeague`, toPayload(league));
   }
 
   async updateLeague(id: number, league: League) {
-    return axios.put(`${API_BASE_URL}/updateLeague/${id}`, toPayload(league));
+    return axiosClient.put(`${API_BASE_URL}/updateLeague/${id}`, toPayload(league));
   }
 
   deleteLeague(id: number) {
-    return axios.delete(`${API_BASE_URL}/deleteLeague/${id}`);
+    return axiosClient.delete(`${API_BASE_URL}/deleteLeague/${id}`);
   }
 }
 

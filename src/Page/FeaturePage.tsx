@@ -8,14 +8,12 @@ import {
   Users,
   CheckCircle2,
 } from "lucide-react";
-import { Header_HomePage } from "../components/Header/Header_HomePage";
+
 import { Footer } from "../components/Footer/Footer_HomePage";
 
 const FeaturePage = () => {
   return (
-    <div className="min-h-screen bg-[#F8F9FA] font-sans">
-      <Header_HomePage />
-
+    <div>
       <div className="pt-12">
         <div className="max-w-360 mx-auto px-6 md:px-12">
           <section className="mb-16 text-center max-w-4xl mx-auto">

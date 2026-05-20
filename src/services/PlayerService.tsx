@@ -1,7 +1,7 @@
-import axios from "axios";
 import { Player } from "../model/Player";
+import axiosClient from "./axiosClient";
 
-const API_BASE_URL = "http://localhost:8080/api/player";
+const API_BASE_URL = "/player";
 
 type PlayerFilters = {
   position?: string;
@@ -45,7 +45,7 @@ const toPayload = (player: Player) => ({
 
 class PlayerService {
   getAllPlayers(page: number, size: number, filters?: PlayerFilters) {
-    return axios.get(`${API_BASE_URL}/getAllPlayers`, {
+    return axiosClient.get(`${API_BASE_URL}/getAllPlayers`, {
       params: {
         page,
         size,
@@ -79,12 +79,12 @@ class PlayerService {
   }
 
   async getPlayerById(id: number) {
-    const response = await axios.post(`${API_BASE_URL}/getPlayer/${id}`, id);
+    const response = await axiosClient.get(`${API_BASE_URL}/getPlayer/${id}`);
     return normalizePlayer(response.data);
   }
 
   getPlayersByTeam(teamId: number, page = 0, size = 10) {
-    return axios.get(`${API_BASE_URL}/getPlayersByTeam/${teamId}`, {
+    return axiosClient.get(`${API_BASE_URL}/getPlayersByTeam/${teamId}`, {
       params: { page, size },
     });
   }
@@ -102,15 +102,18 @@ class PlayerService {
   }
 
   async addPlayer(player: Player) {
-    return axios.post(`${API_BASE_URL}/addPlayer`, toPayload(player));
+    return axiosClient.post(`${API_BASE_URL}/addPlayer`, toPayload(player));
   }
 
   async updatePlayer(id: number, player: Player) {
-    return axios.put(`${API_BASE_URL}/updatePlayer/${id}`, toPayload(player));
+    return axiosClient.put(
+      `${API_BASE_URL}/updatePlayer/${id}`,
+      toPayload(player),
+    );
   }
 
   deletePlayer(id: number) {
-    return axios.delete(`${API_BASE_URL}/deletePlayer/${id}`);
+    return axiosClient.delete(`${API_BASE_URL}/deletePlayer/${id}`);
   }
 }
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { AppLayout } from "../../../../components/AppLayout";
+import { AppLayout } from "../../../../layouts/AppLayout";
 import { Modal } from "../../../../components/Modal";
 import { MatchStatus } from "../../../../model/enum";
 import MatchService from "../../../../services/MatchService";

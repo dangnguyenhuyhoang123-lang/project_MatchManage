@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Modal } from "../../../components/Modal";
 import AddClubModal from "./AddClubModal";
-import { AppLayout } from "../../../components/AppLayout";
+import { AppLayout } from "../../../layouts/AppLayout";
 import { TeamModel } from "../../../model/TeamModel";
 import TeamService from "../../../services/TeamService";
 import { PhanTrang } from "../../../utils/PhanTrang";
@@ -42,8 +42,10 @@ const ClubManagement: React.FC = () => {
   const [tongSoTrang, setTongSoTrang] = useState(0);
   const [tongSoPhanTu, setTongSoPhanTu] = useState(0);
 
-  const [draftFilters, setDraftFilters] = useState<FilterState>(DEFAULT_FILTERS);
-  const [appliedFilters, setAppliedFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [draftFilters, setDraftFilters] =
+    useState<FilterState>(DEFAULT_FILTERS);
+  const [appliedFilters, setAppliedFilters] =
+    useState<FilterState>(DEFAULT_FILTERS);
 
   const hasLocalFilters = useMemo(
     () =>
@@ -70,7 +72,8 @@ const ClubManagement: React.FC = () => {
         filters.region === "Tất cả khu vực" || team.region === filters.region;
 
       const matchesStatus =
-        filters.status === "Tất cả trạng thái" || team.status === filters.status;
+        filters.status === "Tất cả trạng thái" ||
+        team.status === filters.status;
 
       return matchesSearch && matchesCity && matchesRegion && matchesStatus;
     });
@@ -80,8 +83,15 @@ const ClubManagement: React.FC = () => {
     setIsLoading(true);
 
     try {
-      if (filters.region !== "Tất cả khu vực" || filters.status !== "Tất cả trạng thái") {
-        const baseResponse = await TeamService.getAllTeamsNormalized(0, 1, filters);
+      if (
+        filters.region !== "Tất cả khu vực" ||
+        filters.status !== "Tất cả trạng thái"
+      ) {
+        const baseResponse = await TeamService.getAllTeamsNormalized(
+          0,
+          1,
+          filters,
+        );
         const totalElements = baseResponse.totalElements ?? 0;
         const fetchSize = Math.max(totalElements, 1);
         const fullResponse = await TeamService.getAllTeamsNormalized(
@@ -90,7 +100,10 @@ const ClubManagement: React.FC = () => {
           filters,
         );
 
-        const clientFiltered = filterTeamsOnClient(fullResponse.content ?? [], filters);
+        const clientFiltered = filterTeamsOnClient(
+          fullResponse.content ?? [],
+          filters,
+        );
         const totalPages = Math.ceil(clientFiltered.length / PAGE_SIZE);
         const safePage =
           totalPages === 0 ? 1 : Math.min(page, Math.max(totalPages, 1));
@@ -103,7 +116,11 @@ const ClubManagement: React.FC = () => {
         return;
       }
 
-      const data = await TeamService.getAllTeamsNormalized(page - 1, PAGE_SIZE, filters);
+      const data = await TeamService.getAllTeamsNormalized(
+        page - 1,
+        PAGE_SIZE,
+        filters,
+      );
       setTeams(data.content ?? []);
       setTongSoTrang(data.totalPages ?? 0);
       setTongSoPhanTu(data.totalElements ?? 0);
@@ -297,7 +314,9 @@ const ClubManagement: React.FC = () => {
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-50 text-[#0d631b] transition-transform group-hover:scale-110">
               <span className="material-symbols-outlined">add</span>
             </div>
-            <h4 className="font-bold font-['Be_Vietnam_Pro']">Tạo Câu Lạc Bộ Mới</h4>
+            <h4 className="font-bold font-['Be_Vietnam_Pro']">
+              Tạo Câu Lạc Bộ Mới
+            </h4>
             <p className="mt-2 max-w-[220px] text-xs text-gray-400">
               Khởi tạo đội bóng mới trực tiếp từ trang quản lý.
             </p>
@@ -308,7 +327,9 @@ const ClubManagement: React.FC = () => {
       <div className="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-4">
         <div className="lg:col-span-2 flex items-center gap-6 rounded-2xl border border-green-100/50 bg-green-50/50 p-6">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#0d631b] text-white">
-            <span className="material-symbols-outlined text-3xl">analytics</span>
+            <span className="material-symbols-outlined text-3xl">
+              analytics
+            </span>
           </div>
           <div>
             <h4 className="text-xs font-black uppercase tracking-widest text-green-800/60">
@@ -506,7 +527,9 @@ const StatCard = ({
         </span>
       </div>
     ) : (
-      <span className="text-2xl font-black font-['Be_Vietnam_Pro']">{value}</span>
+      <span className="text-2xl font-black font-['Be_Vietnam_Pro']">
+        {value}
+      </span>
     )}
     <p className="mt-1 text-xs font-medium text-gray-400">{sub}</p>
   </div>
