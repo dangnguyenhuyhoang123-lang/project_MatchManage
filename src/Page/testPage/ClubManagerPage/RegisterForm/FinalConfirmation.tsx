@@ -2,8 +2,8 @@ import React, { useMemo, useState } from "react";
 import type {
   FullRegistrationDTO,
   RegistrationSummaryDTO,
-} from "../../../model/Registration";
-import RegistrationService from "../../../services/RegistrationService";
+} from "../../../../model/Registration";
+import RegistrationService from "../../../../services/RegistrationService";
 import type { RegistrationDraft, SelectedPlayer } from "./RegisterFormMatch";
 
 type Props = {
@@ -98,9 +98,7 @@ const FinalConfirmation: React.FC<Props> = ({ setStep, draft }) => {
     };
   }, [allPlayers, draft]);
 
-  const completionPercent = Math.round(
-    ((5 - missingItems.length) / 5) * 100,
-  );
+  const completionPercent = Math.round(((5 - missingItems.length) / 5) * 100);
 
   const handleSubmit = async () => {
     if (!payload || !canSubmit) {
@@ -493,7 +491,9 @@ const SummaryCard = ({
 }) => (
   <div className="rounded-[1.5rem] border border-gray-100 bg-white p-5 shadow-sm">
     <div className="flex items-center gap-4">
-      <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tone}`}>
+      <div
+        className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tone}`}
+      >
         <span className="material-symbols-outlined">{icon}</span>
       </div>
       <div className="min-w-0">

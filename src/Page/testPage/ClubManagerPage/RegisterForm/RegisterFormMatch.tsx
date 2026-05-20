@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import type { GrassType } from "../../../model/Registration";
-import { AppLayout } from "../../../components/AppLayout";
+import type { GrassType } from "../../../../model/Registration";
+import { AppLayout } from "../../../../components/AppLayout";
 import CoachRegistration from "./CoachRegistration";
 import FinalConfirmation from "./FinalConfirmation";
 import PlayerRegistration from "./PlayerRegistration";
@@ -73,7 +73,7 @@ const defaultDraft: RegistrationDraft = {
     clubName: "Becamex Bình Dương",
     address: "123 Pitch Flow Avenue, Sport District, HCMC",
     capacity: 65000,
-    grass: "NATURAL",
+    grass: "Standard",
     image:
       "https://images.unsplash.com/photo-1577223625816-7546f13df25d?q=80&w=1600&auto=format&fit=crop",
   },

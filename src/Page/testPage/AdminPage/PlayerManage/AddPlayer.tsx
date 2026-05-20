@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Player } from "../../../model/Player";
-import PlayerService from "../../../services/PlayerService";
-import TeamService from "../../../services/TeamService";
+import { Player } from "../../../../model/Player";
+import PlayerService from "../../../../services/PlayerService";
+import TeamService from "../../../../services/TeamService";
 
 type TeamOption = {
   id: number;
@@ -52,7 +52,7 @@ export const AddPlayerModal: React.FC<Props> = ({
         const response = await TeamService.getAllTeams(0, 1000);
         const rawTeams = Array.isArray(response.data)
           ? response.data
-          : response.data?.content ?? [];
+          : (response.data?.content ?? []);
 
         setTeamOptions(
           rawTeams
@@ -60,7 +60,9 @@ export const AddPlayerModal: React.FC<Props> = ({
               id: Number(team.id),
               name: team.name,
             }))
-            .filter((team: TeamOption) => Number.isFinite(team.id) && team.name),
+            .filter(
+              (team: TeamOption) => Number.isFinite(team.id) && team.name,
+            ),
         );
       } catch (error) {
         console.error("Lỗi khi tải danh sách đội:", error);
@@ -157,7 +159,10 @@ export const AddPlayerModal: React.FC<Props> = ({
               <div className="flex flex-col items-center rounded-2xl border bg-white p-8 text-center shadow-sm">
                 <div className="h-40 w-40 overflow-hidden rounded-full border-4 border-white bg-[#f5f3ef] shadow-md">
                   <img
-                    src={player.avatar || "https://via.placeholder.com/300x300?text=Player"}
+                    src={
+                      player.avatar ||
+                      "https://via.placeholder.com/300x300?text=Player"
+                    }
                     className="h-full w-full object-cover"
                     alt={player.name || "player"}
                   />
@@ -175,7 +180,9 @@ export const AddPlayerModal: React.FC<Props> = ({
                   <StatItem label="Cân nặng" value={`${player.weight} kg`} />
                   <StatItem
                     label="Số áo"
-                    value={player.shirtNumber ? String(player.shirtNumber) : "--"}
+                    value={
+                      player.shirtNumber ? String(player.shirtNumber) : "--"
+                    }
                   />
                 </div>
               </div>
@@ -441,7 +448,8 @@ const RangeSlider = ({
         {label}
       </label>
       <span className="text-2xl font-black text-[#0d631b] font-['Be_Vietnam_Pro']">
-        {value} <span className="text-xs font-normal text-[#40493d]">{unit}</span>
+        {value}{" "}
+        <span className="text-xs font-normal text-[#40493d]">{unit}</span>
       </span>
     </div>
     <input

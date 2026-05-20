@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import CreateTournament from "./CreateTournament";
-import { Modal } from "../../../components/Modal";
-import { AppLayout } from "../../../components/AppLayout";
-import { League } from "../../../model/LeagueModel";
-import LeagueService from "../../../services/LeagueService";
-import { PhanTrang } from "../../../utils/PhanTrang";
 
+import { Modal } from "../../../../components/Modal";
+import { AppLayout } from "../../../../components/AppLayout";
+import LeagueService from "../../../../services/LeagueService";
+import { PhanTrang } from "../../../../utils/PhanTrang";
+import { League } from "../../../../model/LeagueModel";
 type FilterState = {
   search: string;
   scale: string;
@@ -58,8 +58,12 @@ const StatCard: React.FC<{
       {title}
     </h3>
     <div className="flex items-end gap-2">
-      <span className="font-headline text-4xl font-bold leading-none">{value}</span>
-      <span className={`${colorClass} mb-1 flex items-center text-sm font-bold`}>
+      <span className="font-headline text-4xl font-bold leading-none">
+        {value}
+      </span>
+      <span
+        className={`${colorClass} mb-1 flex items-center text-sm font-bold`}
+      >
         <span className="material-symbols-outlined text-xs">trending_up</span>
         {trend}
       </span>
@@ -78,8 +82,10 @@ const TournamentManagement: React.FC = () => {
   const [tongSoTrang, setTongSoTrang] = useState(0);
   const [tongSoPhanTu, setTongSoPhanTu] = useState(0);
 
-  const [draftFilters, setDraftFilters] = useState<FilterState>(DEFAULT_FILTERS);
-  const [appliedFilters, setAppliedFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [draftFilters, setDraftFilters] =
+    useState<FilterState>(DEFAULT_FILTERS);
+  const [appliedFilters, setAppliedFilters] =
+    useState<FilterState>(DEFAULT_FILTERS);
 
   const hasClientFilters = useMemo(
     () =>
@@ -104,7 +110,8 @@ const TournamentManagement: React.FC = () => {
         filters.scale === "Tất cả quy mô" || league.scale === filters.scale;
 
       const matchesStatus =
-        filters.status === "Tất cả trạng thái" || league.status === filters.status;
+        filters.status === "Tất cả trạng thái" ||
+        league.status === filters.status;
 
       return matchesSearch && matchesScale && matchesStatus;
     });
@@ -140,8 +147,15 @@ const TournamentManagement: React.FC = () => {
     setIsLoading(true);
 
     try {
-      if (filters.scale !== "Tất cả quy mô" || filters.status !== "Tất cả trạng thái") {
-        const baseResponse = await LeagueService.getAllLeaguesNormalized(0, 1, filters.search);
+      if (
+        filters.scale !== "Tất cả quy mô" ||
+        filters.status !== "Tất cả trạng thái"
+      ) {
+        const baseResponse = await LeagueService.getAllLeaguesNormalized(
+          0,
+          1,
+          filters.search,
+        );
         const totalElements = baseResponse.totalElements ?? 0;
         const fetchSize = Math.max(totalElements, 1);
         const fullResponse = await LeagueService.getAllLeaguesNormalized(
@@ -226,8 +240,7 @@ const TournamentManagement: React.FC = () => {
   );
 
   const seasonCount = useMemo(
-    () =>
-      items.reduce((sum, item) => sum + item.seasons.length, 0),
+    () => items.reduce((sum, item) => sum + item.seasons.length, 0),
     [items],
   );
 
@@ -435,11 +448,15 @@ const TournamentRow: React.FC<{
               className="h-full w-full object-cover"
             />
           ) : (
-            <span className="material-symbols-outlined text-green-700">emoji_events</span>
+            <span className="material-symbols-outlined text-green-700">
+              emoji_events
+            </span>
           )}
         </div>
         <div>
-          <h4 className="font-headline font-bold text-stone-900">{league.name}</h4>
+          <h4 className="font-headline font-bold text-stone-900">
+            {league.name}
+          </h4>
           <p className="text-xs text-stone-400">ID: {league.id}</p>
           <p className="text-xs text-stone-400">{league.scale}</p>
         </div>

@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AddPlayerModal } from "./AddPlayer";
-import { Modal } from "../../../components/Modal";
-import { AppLayout } from "../../../components/AppLayout";
-import { PhanTrang } from "../../../utils/PhanTrang";
-import { Player } from "../../../model/Player";
-import PlayerService from "../../../services/PlayerService";
-import TeamService from "../../../services/TeamService";
+import { Modal } from "../../../../components/Modal";
+import { AppLayout } from "../../../../components/AppLayout";
+import { PhanTrang } from "../../../../utils/PhanTrang";
+import { Player } from "../../../../model/Player";
+import PlayerService from "../../../../services/PlayerService";
+import TeamService from "../../../../services/TeamService";
 
 type FilterState = {
   position: string;
@@ -55,8 +55,10 @@ const PlayerManagement: React.FC = () => {
   const [tongSoTrang, setTongSoTrang] = useState(0);
   const [tongSoPhanTu, setTongSoPhanTu] = useState(0);
 
-  const [draftFilters, setDraftFilters] = useState<FilterState>(DEFAULT_FILTERS);
-  const [appliedFilters, setAppliedFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [draftFilters, setDraftFilters] =
+    useState<FilterState>(DEFAULT_FILTERS);
+  const [appliedFilters, setAppliedFilters] =
+    useState<FilterState>(DEFAULT_FILTERS);
 
   const hasLocalFilters = useMemo(
     () =>
@@ -71,7 +73,7 @@ const PlayerManagement: React.FC = () => {
         const response = await TeamService.getAllTeams(0, 1000);
         const rawTeams = Array.isArray(response.data)
           ? response.data
-          : response.data?.content ?? [];
+          : (response.data?.content ?? []);
 
         setTeamOptions(
           rawTeams
@@ -462,7 +464,9 @@ const PlayerRow = ({
           <span className="material-symbols-outlined text-sm opacity-40">
             shield
           </span>
-          <span className="text-sm font-semibold">{getPlayerTeamName(player)}</span>
+          <span className="text-sm font-semibold">
+            {getPlayerTeamName(player)}
+          </span>
         </div>
       </div>
 

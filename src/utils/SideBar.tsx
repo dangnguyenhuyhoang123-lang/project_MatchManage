@@ -15,6 +15,11 @@ export const Sidebar = () => {
     { label: "Bảng xếp hạng", path: "/standings" },
     { label: "Báo cáo", path: "/reports" },
     { label: "Quản lý đăng ký thi đấu", path: "/manageRegisger" },
+    { label: "Quản lý trận đấu clb", path: "/manageMatchClub" },
+    { label: "Quản lý thông tin chung clb", path: "/manageInfoClub" },
+    { label: "Quản lý thông tin cầu thủ clb", path: "/managePlayerClub" },
+    { label: "Quản lý thông tin ban huấn luyện", path: "/manageCoachClub" },
+    { label: "Quản lý thông tin sân vận động", path: "/manageStadiumClub" },
   ];
 
   return (

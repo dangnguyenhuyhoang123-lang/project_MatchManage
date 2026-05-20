@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Modal } from "../../../components/Modal";
-import type { SeasonTeamCoach } from "../../../model/SeasonTeamCoach";
-import SeasonTeamCoachService from "../../../services/SeasonTeamCoachService";
+import { Modal } from "../../../../components/Modal";
+import type { SeasonTeamCoach } from "../../../../model/SeasonTeamCoach";
+import SeasonTeamCoachService from "../../../../services/SeasonTeamCoachService";
 import type { SelectedCoach } from "./RegisterFormMatch";
 
 type Props = {

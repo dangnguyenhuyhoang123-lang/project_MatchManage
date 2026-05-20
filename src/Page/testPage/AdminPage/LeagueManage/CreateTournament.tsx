@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { League } from "../../../model/LeagueModel";
-import LeagueService from "../../../services/LeagueService";
+import { League } from "../../../../model/LeagueModel";
+import LeagueService from "../../../../services/LeagueService";
 
 interface Props {
   onClose: () => void;
@@ -165,11 +165,7 @@ export default function CreateTournament({
             disabled={isSubmitting}
             className="rounded-full bg-green-700 px-6 py-2 text-white disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {isSubmitting
-              ? "Đang lưu..."
-              : isEditMode
-                ? "Cập nhật"
-                : "Lưu"}
+            {isSubmitting ? "Đang lưu..." : isEditMode ? "Cập nhật" : "Lưu"}
           </button>
         </div>
       </form>

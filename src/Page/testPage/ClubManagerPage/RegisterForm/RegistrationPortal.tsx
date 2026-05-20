@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { PhanTrang } from "../../../utils/PhanTrang";
-import SeasonService from "../../../services/SeasonService";
+import { PhanTrang } from "../../../../utils/PhanTrang";
+import SeasonService from "../../../../services/SeasonService";
 import type { SelectedSeason } from "./RegisterFormMatch";
 
 // --- Sub-components ---
@@ -43,7 +43,9 @@ const SeasonCard = ({
       </h3>
 
       <div className="flex items-center gap-2 text-gray-500 text-sm mb-3">
-        <span className="material-symbols-outlined text-base">calendar_month</span>
+        <span className="material-symbols-outlined text-base">
+          calendar_month
+        </span>
         <span>
           {season.startDate} đến {season.endDate}
         </span>
@@ -95,7 +97,9 @@ const RegistrationPortal: React.FC<Props> = ({
 
   const filteredSeasons = useMemo(() => {
     return seasons.filter((season) =>
-      (season.name || season.year || "").toLowerCase().includes(search.toLowerCase().trim()),
+      (season.name || season.year || "")
+        .toLowerCase()
+        .includes(search.toLowerCase().trim()),
     );
   }, [search, seasons]);
 
