@@ -22,33 +22,37 @@ import RegisterFormMatch from "./Page/testPage/ClubManagerPage/RegisterForm/Regi
 import MatchResults from "./Page/testPage/Matchresult/MatchResults";
 import StandingsPage from "./Page/testPage/StadingPage";
 import ReportPage from "./Page/testPage/ReportPage";
-<<<<<<< HEAD
-import AdminRegistrationManager from "./Page/testPage/RegisterForm/AdminRegistrationManager";
+
+import AdminRegistrationManager from "./Page/testPage/AdminPage/AdminRegistrationManager";
 import FeaturePage from "./Page/FeaturePage";
 import NewsPage from "./Page/NewsPage";
 import AboutPage from "./Page/AboutPage";
 import PublicLeaguesPage from "./Page/PublicLeaguesPage";
 
-=======
-import AdminRegistrationManager from "./Page/testPage/AdminPage/AdminRegistrationManager";
 import MatchManagePageClub from "./Page/testPage/ClubManagerPage/MatchManage/MatchManagePageClub";
 import TournamentManagement from "./Page/testPage/AdminPage/LeagueManage/TournamentManagement";
 import ClubDetailPage from "./Page/testPage/ClubManagerPage/InfoClubManage/ClubDetailPage";
 import PlayerRosterPage from "./Page/testPage/ClubManagerPage/InfoClubManage/PlayerRosterPage";
 import ClubStaffPage from "./Page/testPage/ClubManagerPage/InfoClubManage/ClubStaffPage";
 import StadiumDetailPage from "./Page/testPage/ClubManagerPage/InfoClubManage/StadiumDetailPage";
->>>>>>> origin/main
 function App() {
   const location = useLocation();
 
-  const hideHeader1Paths = ["/homepage", "/features", "/news", "/about", "/public-leagues"];
+  const hideHeader1Paths = [
+    "/homepage",
+    "/features",
+    "/news",
+    "/about",
+    "/public-leagues",
+  ];
 
   return (
     <>
       {!hideHeader1Paths.includes(location.pathname) && <Header1 />}
 
       <Routes>
-        <Route path="/" element={<DashBoardPage />} />
+        <Route path="/" element={<HomePage />} />
+        <Route path="/dashBoard" element={<DashBoardPage />} />
         <Route path="/homepage" element={<HomePage />} />
 
         <Route path="/features" element={<FeaturePage />} />
@@ -70,9 +74,7 @@ function App() {
           path="/manageRegisger"
           element={<AdminRegistrationManager />}
         ></Route>
-<<<<<<< HEAD
 
-=======
         <Route
           path="/manageMatchClub"
           element={<MatchManagePageClub />}
@@ -84,7 +86,6 @@ function App() {
           path="/manageStadiumClub"
           element={<StadiumDetailPage />}
         ></Route>
->>>>>>> origin/main
         {/* <Route path="/matches/:id" element={<MatchDetail />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/sign-up" element={<SignUpPage />} />

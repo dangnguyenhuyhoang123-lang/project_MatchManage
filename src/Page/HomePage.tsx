@@ -41,7 +41,8 @@ const HomePage = () => {
         <motion.div
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6 }} >
+          transition={{ duration: 0.6 }}
+        >
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-100 text-green-700 text-xs font-bold mb-6 tracking-wide shadow-sm">
             <Shield size={14} />
             NỀN TẢNG QUẢN LÝ BÓNG ĐÁ THẾ HỆ MỚI
@@ -74,12 +75,14 @@ const HomePage = () => {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="relative px-4" >
+          className="relative px-4"
+        >
           <div className="rounded-[2.5rem] overflow-hidden shadow-2xl shadow-green-900/10 relative border-8 border-white">
             <img
               src="https://images.unsplash.com/photo-1518605368461-1ee125ac3dbf?q=80&w=1200&auto=format&fit=crop"
               alt="Stadium"
-              className="w-full h-auto object-cover aspect-4/3" />
+              className="w-full h-auto object-cover aspect-4/3"
+            />
 
             <div className="absolute bottom-6 left-6 right-6 bg-white/80 backdrop-blur-md p-5 rounded-2xl shadow-lg border border-white/60">
               <div className="flex justify-between items-center mb-3">
@@ -109,7 +112,8 @@ const HomePage = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <motion.div
             whileHover={{ y: -5 }}
-            className="bg-white rounded-4xl p-10 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]" >
+            className="bg-white rounded-4xl p-10 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+          >
             <h3 className="text-[3rem] font-black text-[#1a6e38] mb-3 leading-none">
               50+
             </h3>
@@ -120,7 +124,8 @@ const HomePage = () => {
 
           <motion.div
             whileHover={{ y: -5 }}
-            className="bg-white rounded-4xl p-10 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]" >
+            className="bg-white rounded-4xl p-10 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+          >
             <h3 className="text-[3rem] font-black text-[#1a6e38] mb-3 leading-none">
               1000+
             </h3>
@@ -131,7 +136,8 @@ const HomePage = () => {
 
           <motion.div
             whileHover={{ y: -5 }}
-            className="bg-white rounded-4xl p-10 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]" >
+            className="bg-white rounded-4xl p-10 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+          >
             <h3 className="text-[3rem] font-black text-[#1a6e38] mb-3 leading-none">
               25000+
             </h3>
@@ -155,7 +161,8 @@ const HomePage = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
           <motion.div
             whileHover={{ scale: 1.02 }}
-            className="bg-white p-10 rounded-4xl shadow-sm border border-gray-100 relative overflow-hidden group" >
+            className="bg-white p-10 rounded-4xl shadow-sm border border-gray-100 relative overflow-hidden group"
+          >
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-bl-full -z-10 transition-transform group-hover:scale-110" />
             <div className="w-14 h-14 bg-green-100 text-[#1a6e38] rounded-2xl flex items-center justify-center mb-8 relative z-10">
               <CalendarDays size={28} />
@@ -171,7 +178,8 @@ const HomePage = () => {
 
           <motion.div
             whileHover={{ scale: 1.02 }}
-            className="bg-white p-10 rounded-4xl shadow-sm border border-gray-100 relative overflow-hidden group" >
+            className="bg-white p-10 rounded-4xl shadow-sm border border-gray-100 relative overflow-hidden group"
+          >
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10 transition-transform group-hover:scale-110" />
             <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-8 relative z-10">
               <BarChart2 size={28} />
@@ -187,7 +195,8 @@ const HomePage = () => {
 
           <motion.div
             whileHover={{ scale: 1.02 }}
-            className="bg-white p-10 rounded-4xl shadow-sm border border-gray-100 relative overflow-hidden group" >
+            className="bg-white p-10 rounded-4xl shadow-sm border border-gray-100 relative overflow-hidden group"
+          >
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-bl-full -z-10 transition-transform group-hover:scale-110" />
             <div className="w-14 h-14 bg-[#e8f5ed] text-[#1a6e38] rounded-2xl flex items-center justify-center mb-8 relative z-10">
               <Contact2 size={28} />
@@ -217,11 +226,13 @@ const HomePage = () => {
 
             <Link
               to="/matches"
-              className="text-sm font-semibold text-gray-600 hover:text-[#1a6e38] flex items-center gap-2 group" >
+              className="text-sm font-semibold text-gray-600 hover:text-[#1a6e38] flex items-center gap-2 group"
+            >
               Xem tất cả lịch thi đấu
               <ArrowRight
                 size={16}
-                className="group-hover:translate-x-1 transition-transform" />
+                className="group-hover:translate-x-1 transition-transform"
+              />
             </Link>
           </div>
 
@@ -231,12 +242,14 @@ const HomePage = () => {
                 <div
                   key={match.id}
                   className="bg-white rounded-4xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-row items-center justify-between hover:shadow-lg transition-shadow cursor-pointer"
-                  onClick={() => navigate(`/matches/${match.id}`)} >
+                  onClick={() => navigate(`/matches/${match.id}`)}
+                >
                   <div className="flex flex-col items-center w-1/3">
                     <img
                       src={match.homeTeam?.logo || "/default.png"}
                       alt={match.homeTeam?.name}
-                      className="w-20 h-20 object-contain mb-4 drop-shadow-md" />
+                      className="w-20 h-20 object-contain mb-4 drop-shadow-md"
+                    />
                     <span className="font-bold text-gray-900 text-center">
                       {match.homeTeam?.name || "Home Team"}
                     </span>
@@ -258,7 +271,8 @@ const HomePage = () => {
                     <img
                       src={match.awayTeam?.logo || "/default.png"}
                       alt={match.awayTeam?.name}
-                      className="w-20 h-20 object-contain mb-4 drop-shadow-md" />
+                      className="w-20 h-20 object-contain mb-4 drop-shadow-md"
+                    />
                     <span className="font-bold text-gray-900 text-center">
                       {match.awayTeam?.name || "Away Team"}
                     </span>
