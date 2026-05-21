@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AddPlayerModal } from "./AddPlayer";
 import { Modal } from "../../../../components/Modal";
+import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import { AppLayout } from "../../../../layouts/AppLayout";
 import { PhanTrang } from "../../../../utils/PhanTrang";
 import { Player } from "../../../../model/Player";
@@ -339,9 +340,11 @@ const PlayerManagement: React.FC = () => {
           </div>
 
           {isLoading ? (
-            Array.from({ length: PAGE_SIZE }).map((_, index) => (
-              <SkeletonRow key={`loading-${index}`} />
-            ))
+            <LoadingSpinner
+              message="Đang tải danh sách cầu thủ"
+              description="Danh sách cầu thủ đang được lấy từ backend cùng bộ lọc và phân trang hiện tại."
+              fullHeight
+            />
           ) : displayedPlayers.length > 0 ? (
             displayedPlayers.map((player) => (
               <PlayerRow
@@ -392,23 +395,6 @@ const PlayerManagement: React.FC = () => {
 const EmptyState = () => (
   <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-12 text-center text-gray-500">
     Không có cầu thủ phù hợp với bộ lọc hiện tại.
-  </div>
-);
-
-const SkeletonRow = () => (
-  <div className="grid h-[72px] grid-cols-12 items-center rounded-xl bg-white/50 px-6 animate-pulse">
-    <div className="col-span-4 flex items-center gap-4">
-      <div className="h-12 w-12 rounded-full bg-gray-200"></div>
-      <div className="h-4 w-32 rounded bg-gray-200"></div>
-    </div>
-    <div className="col-span-1 mx-auto h-4 w-6 rounded bg-gray-200"></div>
-    <div className="col-span-2 h-4 w-24 rounded bg-gray-200"></div>
-    <div className="col-span-2 h-4 w-20 rounded bg-gray-200"></div>
-    <div className="col-span-2 mx-auto h-6 w-16 rounded-full bg-gray-200"></div>
-    <div className="col-span-1 flex justify-end gap-2">
-      <div className="h-6 w-6 rounded-full bg-gray-200"></div>
-      <div className="h-6 w-6 rounded-full bg-gray-200"></div>
-    </div>
   </div>
 );
 

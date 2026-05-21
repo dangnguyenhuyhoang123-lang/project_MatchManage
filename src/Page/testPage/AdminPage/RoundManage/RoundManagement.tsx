@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Modal } from "../../../../components/Modal";
+import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import CreateRoundModal from "./CreateRoundModal";
 import { AppLayout } from "../../../../layouts/AppLayout";
 import { SeasonModel } from "../../../../model/SeasonModel";
@@ -202,9 +203,11 @@ const RoundManagement: React.FC = () => {
         </div>
 
         {isLoading ? (
-          Array.from({ length: PAGE_SIZE }).map((_, index) => (
-            <SkeletonRow key={`round-loading-${index}`} />
-          ))
+          <LoadingSpinner
+            message="Đang tải danh sách vòng đấu"
+            description="Hệ thống đang đồng bộ vòng đấu theo mùa giải bạn đang chọn."
+            fullHeight
+          />
         ) : rounds.length > 0 ? (
           rounds.map((round) => {
             const start = formatDateTime(round.startDate);
@@ -334,20 +337,5 @@ const RoundManagement: React.FC = () => {
     </AppLayout>
   );
 };
-
-const SkeletonRow = () => (
-  <div className="grid grid-cols-1 gap-4 rounded-xl bg-white p-5 shadow-sm animate-pulse lg:grid-cols-12 lg:gap-0">
-    <div className="lg:col-span-4 flex items-center gap-3">
-      <div className="h-10 w-10 rounded bg-gray-200"></div>
-      <div className="space-y-2">
-        <div className="h-4 w-32 rounded bg-gray-200"></div>
-        <div className="h-3 w-20 rounded bg-gray-200"></div>
-      </div>
-    </div>
-    <div className="lg:col-span-2 h-4 w-24 rounded bg-gray-200"></div>
-    <div className="lg:col-span-2 mx-auto h-4 w-24 rounded bg-gray-200"></div>
-    <div className="lg:col-span-2 mx-auto h-6 w-24 rounded-full bg-gray-200"></div>
-  </div>
-);
 
 export default RoundManagement;

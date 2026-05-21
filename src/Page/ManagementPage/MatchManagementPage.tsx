@@ -4,7 +4,7 @@ import type { MatchModel } from "../../model/Match/MatchModel";
 import { MatchStatus } from "../../model/enum";
 import { ListMatchManage } from "../../utils/labelManage/ManageMatch/ListMatchhManage";
 import { MatchForm } from "../../utils/labelManage/ManageMatch/MatchForm";
-import { useAuth } from "../../utils/AuthContext";
+import { useAuth } from "../../utils/useAuth";
 import {
   createAdminMatch,
   createEmptyMatchFormValues,

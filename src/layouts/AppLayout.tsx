@@ -2,7 +2,7 @@ import { createContext, useContext, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Container } from "../utils/Container";
 import { Sidebar } from "../utils/SideBar";
-import { useAuth } from "../utils/AuthContext";
+import { useAuth } from "../utils/useAuth";
 import LoadingSpinner from "../components/Spinner/LoadingSpinner";
 export type AppWorkspace = "public" | "admin" | "club";
 

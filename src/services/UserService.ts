@@ -1,4 +1,5 @@
 import axiosClient from "./axiosClient";
+import CurrentUser from "../utils/CurrentUser";
 
 const API_BASE_URL = "/user-account";
 
@@ -23,7 +24,7 @@ class UserService {
     });
 
     if (response.data) {
-      localStorage.setItem("user", JSON.stringify(response.data));
+      CurrentUser.setUser(response.data);
     }
 
     return response;
@@ -34,7 +35,7 @@ class UserService {
   }
 
   logout() {
-    localStorage.removeItem("user");
+    CurrentUser.clear();
   }
 }
 

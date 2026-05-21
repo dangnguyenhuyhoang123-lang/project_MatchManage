@@ -26,7 +26,9 @@ class PlayerSeasonService {
   }
 
   getPlayerSeasonsByTeamSeason(teamSeasonId: number) {
-    return this.getAllPlayerSeasons(0, 300, { teamSeasonId });
+    return axiosClient.get(
+      `${API_BASE_URL}/getPlayerSeasonsByTeamSeason/${teamSeasonId}`,
+    );
   }
 
   addPlayerSeason(data: PlayerSeason) {

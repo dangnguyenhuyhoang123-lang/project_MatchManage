@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import CreateTournament from "./CreateTournament";
 
 import { Modal } from "../../../../components/Modal";
+import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import { AppLayout } from "../../../../layouts/AppLayout";
 import LeagueService from "../../../../services/LeagueService";
 import { PhanTrang } from "../../../../utils/PhanTrang";
@@ -335,9 +336,11 @@ const TournamentManagement: React.FC = () => {
         </div>
 
         {isLoading ? (
-          Array.from({ length: PAGE_SIZE }).map((_, index) => (
-            <SkeletonRow key={`league-loading-${index}`} />
-          ))
+          <LoadingSpinner
+            message="Đang tải danh sách giải đấu"
+            description="Các giải đấu và mùa giải liên quan đang được đồng bộ từ hệ thống."
+            fullHeight
+          />
         ) : items.length > 0 ? (
           items.map((item) => (
             <TournamentRow
@@ -498,21 +501,6 @@ const TournamentRow: React.FC<{
     </div>
   );
 };
-
-const SkeletonRow = () => (
-  <div className="grid grid-cols-12 items-center rounded-2xl border border-stone-100/50 bg-white px-6 py-4 shadow-sm animate-pulse">
-    <div className="col-span-4 flex items-center gap-4">
-      <div className="h-12 w-12 rounded-xl bg-gray-200" />
-      <div className="space-y-2">
-        <div className="h-4 w-40 rounded bg-gray-200" />
-        <div className="h-3 w-20 rounded bg-gray-200" />
-      </div>
-    </div>
-    <div className="col-span-2 h-4 w-20 rounded bg-gray-200" />
-    <div className="col-span-2 h-4 w-28 rounded bg-gray-200" />
-    <div className="col-span-2 h-6 w-24 rounded-full bg-gray-200" />
-  </div>
-);
 
 const EmptyState = () => (
   <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-12 text-center text-gray-500">

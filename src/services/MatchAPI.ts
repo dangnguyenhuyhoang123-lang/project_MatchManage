@@ -1,4 +1,5 @@
 import { MatchModel } from "../model/Match/MatchModel";
+import axiosClient from "./axiosClient";
 import { my_request } from "./Request";
 import { MatchStats } from "../model/MatchStats";
 import type { MatchEvent } from "../model/MatchEvents";
@@ -9,44 +10,41 @@ interface KetQuaInterface {
   tongSoTrang: number;
   tongSoTran: number;
 }
-async function getMatch(url: string): Promise<KetQuaInterface> {
-  const result: MatchModel[] = [];
-
-  const response = await my_request(url);
-
-  const tongSoTrang = response.totalPages;
-  const tongSoTran = response.totalElements;
-
-  // nếu API trả JSON array
-  const responseData = response.content;
-
-  for (const item of responseData) {
-    const matchModel = new MatchModel({
-      id: item.id,
-      status: item.status,
-      homeScore: item.homeScore,
-      awayScore: item.awayScore,
-      matchDate: new Date(item.matchDate),
-
-      league: item.league,
-      season: item.season,
-      homeTeam: item.homeTeam,
-      awayTeam: item.awayTeam,
-    });
-
-    result.push(matchModel);
-  }
-
-  return { ketQua: result, tongSoTran: tongSoTran, tongSoTrang: tongSoTrang };
-}
 
 export async function getListMatches(
   trangHienTai: number,
 ): Promise<KetQuaInterface> {
-  //   xac dinh endpoint
-  const url: string = `/matches?size=3&page=${trangHienTai - 1}&sort=id,desc`;
+  const response = await axiosClient.get("/matches/getAllMatches", {
+    params: {
+      page: Math.max(trangHienTai - 1, 0),
+      size: 3,
+    },
+  });
 
-  return getMatch(url);
+  const result: MatchModel[] = [];
+  const responseData = response.data?.content ?? [];
+
+  for (const item of responseData) {
+    result.push(
+      new MatchModel({
+        id: item.id,
+        status: item.status,
+        homeScore: item.homeScore,
+        awayScore: item.awayScore,
+        matchDate: new Date(item.matchDate),
+        league: item.league,
+        season: item.season,
+        homeTeam: item.homeTeam,
+        awayTeam: item.awayTeam,
+      }),
+    );
+  }
+
+  return {
+    ketQua: result,
+    tongSoTran: response.data?.totalElements ?? result.length,
+    tongSoTrang: response.data?.totalPages ?? 0,
+  };
 }
 
 export async function getMatchById(matchID: number): Promise<MatchModel> {
@@ -60,7 +58,6 @@ export async function getMatchById(matchID: number): Promise<MatchModel> {
     homeScore: responseData.homeScore,
     awayScore: responseData.awayScore,
     matchDate: new Date(responseData.matchDate),
-
     league: responseData.league,
     season: responseData.season,
     homeTeam: responseData.homeTeam,

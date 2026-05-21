@@ -1,7 +1,4 @@
-import { useState, useEffect } from "react";
-import { getAdminMatches } from "../../../services/AdminMatchAPI";
-import LoadingSpinner from "../../../components/Spinner/LoadingSpinner";
-import { PhanTrang } from "../../PhanTrang";
+import { useState } from "react";
 export const ListMatchManage = ({
   matches,
   options,

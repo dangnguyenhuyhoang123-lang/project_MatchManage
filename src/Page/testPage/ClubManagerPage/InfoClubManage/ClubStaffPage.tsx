@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "../../../../layouts/AppLayout";
+import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import { PhanTrang } from "../../../../utils/PhanTrang";
 import CoachService from "../../../../services/CoachService";
 import type { Coach } from "../../../../model/CoachModel";
@@ -203,9 +204,11 @@ function CoachingStaffGrid({
 }) {
   if (loading) {
     return (
-      <section className="rounded-2xl bg-white p-8 text-center text-sm font-bold text-gray-500">
-        Đang tải ban huấn luyện...
-      </section>
+      <LoadingSpinner
+        message="Đang tải ban huấn luyện"
+        description="Thông tin thành viên ban huấn luyện đang được đồng bộ từ backend."
+        fullHeight
+      />
     );
   }
 
@@ -345,9 +348,11 @@ function MedicalPerformanceSection({
         </div>
 
         {loading ? (
-          <div className="rounded-2xl bg-white p-6 text-center text-sm font-bold text-gray-500">
-            Đang tải dữ liệu y tế...
-          </div>
+          <LoadingSpinner
+            message="Đang tải dữ liệu y tế"
+            description="Nhân sự y tế và thể lực đang được tải để hiển thị đầy đủ trên trang."
+            fullHeight
+          />
         ) : staff.length === 0 ? (
           <div className="rounded-2xl bg-white p-6 text-sm font-bold text-gray-500">
             Chưa có nhân sự y tế hoặc thể lực trong trang hiện tại.

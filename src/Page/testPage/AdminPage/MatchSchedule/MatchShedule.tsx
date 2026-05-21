@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 
 import AddMatchModal from "./AddMatchModal";
 import { Modal } from "../../../../components/Modal";
+import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import { AppLayout } from "../../../../layouts/AppLayout";
 import { PhanTrang } from "../../../../utils/PhanTrang";
 
@@ -15,6 +16,7 @@ export default function MatchSchedule() {
   const [open, setOpen] = useState(false);
   const [matches, setMatches] = useState<MatchModel[]>([]);
   const [editingMatch, setEditingMatch] = useState<MatchModel | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSaveMatch = async (payload: any) => {
     try {
@@ -116,6 +118,7 @@ export default function MatchSchedule() {
 
   /* ================= FETCH ================= */
   const fetchMatches = async (page = 1) => {
+    setIsLoading(true);
     try {
       const res = await MatchService.getAllMatches(
         page - 1,
@@ -135,6 +138,8 @@ export default function MatchSchedule() {
       setTrangHienTai(data.number + 1);
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -280,13 +285,14 @@ export default function MatchSchedule() {
             </div>
 
             {/* ROWS */}
-            {[
-              ...matches,
-              ...Array(Math.max(0, SO_TRAN_MOI_TRANG - matches.length)).fill(
-                null,
-              ),
-            ].map((match, index) =>
-              match ? (
+            {isLoading ? (
+              <LoadingSpinner
+                message="Đang tải lịch thi đấu"
+                description="Danh sách trận đấu đang được đồng bộ theo giải đấu, mùa giải và vòng đấu bạn đang chọn."
+                fullHeight
+              />
+            ) : matches.length > 0 ? (
+              matches.map((match, index) => (
                 <MatchRow
                   key={match.id ?? index}
                   match={match}
@@ -296,9 +302,11 @@ export default function MatchSchedule() {
                   }}
                   onDelete={handleDeleteMatch}
                 />
-              ) : (
-                <MatchSkeleton key={index} />
-              ),
+              ))
+            ) : (
+              <div className="rounded-xl border border-dashed border-gray-200 bg-white px-6 py-12 text-center text-gray-500">
+                Chưa có trận đấu phù hợp với bộ lọc hiện tại.
+              </div>
             )}
 
             {/* PAGINATION */}
@@ -470,11 +478,3 @@ function MatchRow({
   );
 }
 
-/* ================= SKELETON ================= */
-function MatchSkeleton() {
-  return (
-    <div className="grid grid-cols-12 p-5 bg-white/50 rounded-xl animate-pulse">
-      <div className="col-span-12 h-4 bg-gray-200 rounded"></div>
-    </div>
-  );
-}

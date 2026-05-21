@@ -11,6 +11,10 @@ class LineupService {
   getLineupByMatchAndTeam(matchId: number, teamId: number) {
     return axiosClient.get<TeamLineupResponse>(
       `${API_BASE_URL}/match/${matchId}/team/${teamId}`,
+      {
+        validateStatus: (status) =>
+          (status >= 200 && status < 300) || status === 404,
+      },
     );
   }
 

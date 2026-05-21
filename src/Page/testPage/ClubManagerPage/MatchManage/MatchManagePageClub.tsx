@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "../../../../layouts/AppLayout";
 import { Modal } from "../../../../components/Modal";
+import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import { MatchStatus } from "../../../../model/enum";
 import MatchService from "../../../../services/MatchService";
 import MatchLineupModal, {
@@ -135,9 +136,11 @@ const MatchManagePageClub: React.FC = () => {
         )}
 
         {loading ? (
-          <div className="rounded-sm border border-gray-100 bg-white p-8 text-center text-sm font-bold text-gray-500">
-            Đang tải danh sách trận đấu...
-          </div>
+          <LoadingSpinner
+            message="Đang tải danh sách trận đấu"
+            description="Hệ thống đang lấy các trận của câu lạc bộ hiện tại để bạn cập nhật đội hình nhanh hơn."
+            fullHeight
+          />
         ) : filteredMatches.length === 0 ? (
           <EmptyState label={statusConfig[statusFilter].label} />
         ) : (

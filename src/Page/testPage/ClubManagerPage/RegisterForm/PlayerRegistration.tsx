@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import PlayerService from "../../../../services/PlayerService";
 import { Modal } from "../../../../components/Modal";
 import type { SelectedPlayer } from "./RegisterFormMatch";
@@ -23,28 +24,35 @@ const PlayerRegistration: React.FC<Props> = ({
     useState<SelectedPlayer[]>(initialMainPlayers);
   const [subPlayers, setSubPlayers] =
     useState<SelectedPlayer[]>(initialSubPlayers);
-
   const [availablePlayers, setAvailablePlayers] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [addMode, setAddMode] = useState<"main" | "sub" | null>(null);
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<number[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     const fetchTeamPlayers = async () => {
+      setIsLoading(true);
+      setErrorMessage("");
+
       try {
-        // Mặc định lấy dữ liệu cầu thủ của Becamex Bình Dương (teamId = 1)
         const response = await PlayerService.getAllPlayersNormalized(0, 100, {
           teamId: 1,
         });
-        // Đề phòng backend chưa lọc, chúng ta lọc lại trên frontend
         const filtered = (response.content || []).filter(
           (p: any) => p.teamId === 1 || p.teamId === "1" || !p.teamId,
         );
         setAvailablePlayers(filtered);
       } catch (error) {
         console.error("Lỗi lấy cầu thủ của đội bóng:", error);
+        setAvailablePlayers([]);
+        setErrorMessage("Không thể tải danh sách cầu thủ thuộc biên chế câu lạc bộ.");
+      } finally {
+        setIsLoading(false);
       }
     };
+
     fetchTeamPlayers();
   }, []);
 
@@ -109,16 +117,15 @@ const PlayerRegistration: React.FC<Props> = ({
 
   return (
     <>
-      {/* Warning Banner */}
-      <div className="bg-[#fff9c4]/40 border border-[#fbc02d]/30 p-5 rounded-xl mb-8 flex items-start gap-4">
-        <span className="material-symbols-outlined text-[#f57f17] text-2xl">
+      <div className="mb-8 flex items-start gap-4 rounded-xl border border-[#fbc02d]/30 bg-[#fff9c4]/40 p-5">
+        <span className="material-symbols-outlined text-2xl text-[#f57f17]">
           warning
         </span>
         <div>
-          <h3 className="font-bold text-[#f57f17] text-sm">
+          <h3 className="text-sm font-bold text-[#f57f17]">
             Cần bổ sung cầu thủ
           </h3>
-          <p className="text-[#f57f17]/80 text-xs mt-1">
+          <p className="mt-1 text-xs text-[#f57f17]/80">
             Danh sách hiện có{" "}
             <span className="font-bold">{totalSelected}/18</span> cầu thủ.
             {totalSelected < 14 && (
@@ -129,19 +136,18 @@ const PlayerRegistration: React.FC<Props> = ({
       </div>
 
       <div className="grid grid-cols-12 gap-8 pb-24">
-        {/* Main List Section */}
         <div className="col-span-12 xl:col-span-7">
-          <div className="flex justify-between items-center mb-6">
+          <div className="mb-6 flex items-center justify-between">
             <h3 className="text-xl font-bold text-gray-900">
               Đội hình Chính thức{" "}
-              <span className="font-normal text-sm text-gray-400 ml-2">
+              <span className="ml-2 text-sm font-normal text-gray-400">
                 ({mainPlayers.length}/11 cầu thủ)
               </span>
             </h3>
             <button
               onClick={() => openAddModal("main")}
               disabled={mainPlayers.length >= 11}
-              className="flex items-center gap-2 px-4 py-2 bg-white text-[#0d631b] text-xs font-bold rounded-full shadow-sm border border-gray-100 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 rounded-full border border-gray-100 bg-white px-4 py-2 text-xs font-bold text-[#0d631b] shadow-sm transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-sm">
                 person_add
@@ -154,7 +160,7 @@ const PlayerRegistration: React.FC<Props> = ({
             {mainPlayers.map((player) => (
               <div
                 key={player.id}
-                className="flex items-center justify-between bg-white p-4 rounded-xl border border-gray-100 transition-all hover:scale-[1.01]"
+                className="flex items-center justify-between rounded-xl border border-gray-100 bg-white p-4 transition-all hover:scale-[1.01]"
               >
                 <div className="flex items-center gap-4">
                   <img
@@ -163,14 +169,12 @@ const PlayerRegistration: React.FC<Props> = ({
                       `https://placehold.co/100x100?text=${player.position || "Player"}`
                     }
                     alt={player.name}
-                    className="w-12 h-12 rounded-lg bg-gray-100 object-cover"
+                    className="h-12 w-12 rounded-lg bg-gray-100 object-cover"
                   />
                   <div>
                     <h4 className="font-bold text-gray-900">{player.name}</h4>
-                    <div className="flex items-center gap-3 mt-1">
-                      <span
-                        className={`text-[10px] px-2 py-0.5 font-bold rounded bg-blue-100 text-blue-700`}
-                      >
+                    <div className="mt-1 flex items-center gap-3">
+                      <span className="rounded bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700">
                         {player.position || "Cầu thủ"}
                       </span>
                       <span className="text-[11px] text-gray-400">
@@ -185,7 +189,7 @@ const PlayerRegistration: React.FC<Props> = ({
                   </span>
                   <button
                     onClick={() => removeMainPlayer(player.id)}
-                    className="material-symbols-outlined text-gray-300 hover:text-red-500 transition-colors"
+                    className="material-symbols-outlined text-gray-300 transition-colors hover:text-red-500"
                   >
                     delete
                   </button>
@@ -196,9 +200,9 @@ const PlayerRegistration: React.FC<Props> = ({
             {mainPlayers.length < 11 && (
               <div
                 onClick={() => openAddModal("main")}
-                className="border-2 border-dashed border-gray-200 p-8 rounded-xl flex flex-col items-center justify-center text-gray-400 hover:bg-white hover:border-[#0d631b]/30 cursor-pointer transition-all"
+                className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 p-8 text-gray-400 transition-all hover:border-[#0d631b]/30 hover:bg-white"
               >
-                <span className="material-symbols-outlined text-3xl mb-1">
+                <span className="material-symbols-outlined mb-1 text-3xl">
                   add_circle
                 </span>
                 <p className="text-xs font-bold">
@@ -209,21 +213,19 @@ const PlayerRegistration: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Validation & Subs Section */}
-        <div className="col-span-12 xl:col-span-5 space-y-6">
-          {/* ĐỘI HÌNH DỰ BỊ */}
+        <div className="col-span-12 space-y-6 xl:col-span-5">
           <section>
-            <div className="flex items-center justify-between mb-4">
+            <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-gray-900">
                 Đội hình Dự bị{" "}
-                <span className="font-normal text-sm text-gray-400 ml-2">
+                <span className="ml-2 text-sm font-normal text-gray-400">
                   ({subPlayers.length}/7 cầu thủ)
                 </span>
               </h3>
               <button
                 onClick={() => openAddModal("sub")}
                 disabled={subPlayers.length >= 7}
-                className="flex items-center gap-2 px-3 py-1.5 bg-white text-[#0d631b] text-xs font-bold rounded-full shadow-sm border border-gray-100 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 rounded-full border border-gray-100 bg-white px-3 py-1.5 text-xs font-bold text-[#0d631b] shadow-sm transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <span className="material-symbols-outlined text-sm">
                   person_add
@@ -232,25 +234,25 @@ const PlayerRegistration: React.FC<Props> = ({
               </button>
             </div>
 
-            <div className="bg-[#f5f3ef] p-4 rounded-2xl border border-gray-200 space-y-3 min-h-[150px]">
+            <div className="min-h-[150px] space-y-3 rounded-2xl border border-gray-200 bg-[#f5f3ef] p-4">
               {subPlayers.map((player) => (
                 <div
                   key={player.id}
-                  className="flex items-center gap-3 bg-white/80 p-3 rounded-lg shadow-sm border border-white relative group"
+                  className="group relative flex items-center gap-3 rounded-lg border border-white bg-white/80 p-3 shadow-sm"
                 >
                   <img
                     src={
                       player.avatar ||
                       `https://placehold.co/100x100?text=${player.position || "Player"}`
                     }
-                    className="w-10 h-10 rounded-full bg-gray-100 object-cover"
+                    className="h-10 w-10 rounded-full bg-gray-100 object-cover"
                     alt="avatar"
                   />
                   <div className="flex-1">
                     <p className="text-sm font-bold text-gray-800">
                       {player.name}
                     </p>
-                    <p className="text-[10px] text-[#4c56af] font-bold uppercase">
+                    <p className="text-[10px] font-bold uppercase text-[#4c56af]">
                       {player.position || "Cầu thủ"} •{" "}
                       {calculateAge(player.dateOfBirth)} tuổi
                     </p>
@@ -258,7 +260,7 @@ const PlayerRegistration: React.FC<Props> = ({
 
                   <button
                     onClick={() => removeSubPlayer(player.id)}
-                    className="text-gray-300 hover:text-red-500 transition-colors"
+                    className="text-gray-300 transition-colors hover:text-red-500"
                   >
                     <span className="material-symbols-outlined text-lg">
                       delete
@@ -270,7 +272,7 @@ const PlayerRegistration: React.FC<Props> = ({
               {subPlayers.length < 7 && (
                 <div
                   onClick={() => openAddModal("sub")}
-                  className="p-3 border border-dashed border-gray-300 rounded-lg flex items-center justify-center gap-2 text-gray-400 text-[11px] italic bg-white/20 hover:bg-white cursor-pointer transition-all"
+                  className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-white/20 p-3 text-[11px] italic text-gray-400 transition-all hover:bg-white"
                 >
                   <span className="material-symbols-outlined text-sm">
                     info
@@ -281,9 +283,8 @@ const PlayerRegistration: React.FC<Props> = ({
             </div>
           </section>
 
-          {/* CARD VALIDATION */}
-          <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-            <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+            <h3 className="mb-6 flex items-center gap-2 font-bold text-gray-900">
               <span className="material-symbols-outlined text-[#0d631b]">
                 fact_check
               </span>{" "}
@@ -293,7 +294,9 @@ const PlayerRegistration: React.FC<Props> = ({
             <ul className="space-y-5">
               <li className="flex items-start gap-3">
                 <span
-                  className={`material-symbols-outlined ${totalSelected >= 14 ? "text-[#0d631b]" : "text-red-500"}`}
+                  className={`material-symbols-outlined ${
+                    totalSelected >= 14 ? "text-[#0d631b]" : "text-red-500"
+                  }`}
                 >
                   {totalSelected >= 14 ? "check_circle" : "cancel"}
                 </span>
@@ -316,17 +319,16 @@ const PlayerRegistration: React.FC<Props> = ({
               </li>
             </ul>
 
-            {/* progress */}
-            <div className="mt-8 pt-6 border-t border-gray-100">
-              <div className="flex justify-between mb-2">
-                <span className="text-[10px] font-black text-gray-400 uppercase">
+            <div className="mt-8 border-t border-gray-100 pt-6">
+              <div className="mb-2 flex justify-between">
+                <span className="text-[10px] font-black uppercase text-gray-400">
                   Độ sẵn sàng
                 </span>
                 <span className="text-xs font-black text-[#0d631b]">
                   {Math.min(Math.round((totalSelected / 18) * 100), 100)}%
                 </span>
               </div>
-              <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
                 <div
                   className="h-full bg-[#0d631b] transition-all"
                   style={{
@@ -339,12 +341,10 @@ const PlayerRegistration: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* ACTION FOOTER */}
-      <div className="fixed bottom-10 left-64 right-0 flex justify-center px-10 pointer-events-none z-40">
-        <div className="bg-white/90 backdrop-blur-xl border border-gray-100 rounded-full p-4 flex items-center justify-between shadow-2xl w-full max-w-4xl pointer-events-auto">
-          {/* INFO */}
+      <div className="pointer-events-none fixed bottom-10 left-64 right-0 z-40 flex justify-center px-10">
+        <div className="pointer-events-auto flex w-full max-w-4xl items-center justify-between rounded-full border border-gray-100 bg-white/90 p-4 shadow-2xl backdrop-blur-xl">
           <div className="flex items-center gap-4 pl-4">
-            <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-50">
               <span className="material-symbols-outlined text-green-700">
                 groups
               </span>
@@ -353,17 +353,16 @@ const PlayerRegistration: React.FC<Props> = ({
               <p className="text-sm font-bold text-gray-900">
                 {totalSelected}/18 cầu thủ
               </p>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
                 Danh sách hiện tại
               </p>
             </div>
           </div>
 
-          {/* ACTION */}
           <div className="flex gap-3">
             <button
               onClick={() => setStep(2)}
-              className="px-8 py-3 rounded-full text-gray-500 hover:bg-gray-50 font-bold text-sm transition-all"
+              className="rounded-full px-8 py-3 text-sm font-bold text-gray-500 transition-all hover:bg-gray-50"
             >
               Quay lại
             </button>
@@ -371,7 +370,7 @@ const PlayerRegistration: React.FC<Props> = ({
             <button
               onClick={() => setStep(4)}
               disabled={totalSelected < 14}
-              className="px-10 py-3 rounded-full bg-green-700 text-white font-bold shadow-lg shadow-green-700/20 hover:scale-105 active:scale-95 transition-all text-sm disabled:opacity-50"
+              className="rounded-full bg-green-700 px-10 py-3 text-sm font-bold text-white shadow-lg shadow-green-700/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
             >
               Tiếp tục
             </button>
@@ -379,10 +378,9 @@ const PlayerRegistration: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Modal Chọn Cầu Thủ */}
       <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <div className="p-6 md:p-8 max-w-2xl w-full bg-white rounded-3xl max-h-[85vh] flex flex-col">
-          <div className="flex justify-between items-center mb-6">
+        <div className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-3xl bg-white p-6 md:p-8">
+          <div className="mb-6 flex items-center justify-between">
             <h2 className="text-2xl font-black text-gray-900">
               Chọn cầu thủ {addMode === "main" ? "Chính thức" : "Dự bị"}
             </h2>
@@ -394,13 +392,23 @@ const PlayerRegistration: React.FC<Props> = ({
             </button>
           </div>
 
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="mb-4 text-sm text-gray-500">
             Danh sách cầu thủ thuộc biên chế đội bóng (chưa được chọn)
           </p>
 
-          <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-            {unselectedAvailablePlayers.length === 0 ? (
-              <div className="text-center py-10 text-gray-400 font-bold">
+          <div className="flex-1 space-y-2 overflow-y-auto pr-2">
+            {isLoading ? (
+              <LoadingSpinner
+                message="Đang tải danh sách cầu thủ"
+                description="Dữ liệu cầu thủ thuộc câu lạc bộ đang được đồng bộ để bạn chọn nhanh cho hồ sơ đăng ký."
+                fullHeight
+              />
+            ) : errorMessage ? (
+              <div className="rounded-xl border border-red-100 bg-red-50 p-5 text-sm font-bold text-red-600">
+                {errorMessage}
+              </div>
+            ) : unselectedAvailablePlayers.length === 0 ? (
+              <div className="py-10 text-center font-bold text-gray-400">
                 Không còn cầu thủ nào để chọn
               </div>
             ) : (
@@ -408,21 +416,21 @@ const PlayerRegistration: React.FC<Props> = ({
                 <div
                   key={player.id}
                   onClick={() => toggleSelectPlayer(player.id)}
-                  className={`flex items-center gap-4 p-3 rounded-xl border cursor-pointer transition-all ${
+                  className={`flex cursor-pointer items-center gap-4 rounded-xl border p-3 transition-all ${
                     selectedPlayerIds.includes(player.id)
                       ? "border-green-500 bg-green-50"
                       : "border-gray-100 hover:border-green-300"
                   }`}
                 >
                   <div
-                    className={`w-5 h-5 rounded-md flex items-center justify-center border ${
+                    className={`flex h-5 w-5 items-center justify-center rounded-md border ${
                       selectedPlayerIds.includes(player.id)
-                        ? "bg-green-500 border-green-500"
+                        ? "border-green-500 bg-green-500"
                         : "border-gray-300 bg-white"
                     }`}
                   >
                     {selectedPlayerIds.includes(player.id) && (
-                      <span className="material-symbols-outlined text-white text-xs font-bold">
+                      <span className="material-symbols-outlined text-xs font-bold text-white">
                         check
                       </span>
                     )}
@@ -434,11 +442,11 @@ const PlayerRegistration: React.FC<Props> = ({
                       `https://placehold.co/100x100?text=${player.position || "Player"}`
                     }
                     alt={player.name}
-                    className="w-10 h-10 rounded-full bg-white object-cover border border-gray-100"
+                    className="h-10 w-10 rounded-full border border-gray-100 bg-white object-cover"
                   />
 
                   <div className="flex-1">
-                    <h4 className="font-bold text-gray-900 text-sm">
+                    <h4 className="text-sm font-bold text-gray-900">
                       {player.name}
                     </h4>
                     <p className="text-xs text-gray-500">
@@ -451,17 +459,17 @@ const PlayerRegistration: React.FC<Props> = ({
             )}
           </div>
 
-          <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end gap-3">
+          <div className="mt-6 flex justify-end gap-3 border-t border-gray-100 pt-4">
             <button
               onClick={() => setIsModalOpen(false)}
-              className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-50"
+              className="rounded-xl px-5 py-2.5 font-bold text-gray-500 hover:bg-gray-50"
             >
               Hủy
             </button>
             <button
               onClick={handleConfirmSelection}
               disabled={selectedPlayerIds.length === 0}
-              className="px-6 py-2.5 rounded-xl font-bold bg-green-700 text-white shadow-md hover:bg-green-800 disabled:opacity-50 transition-all"
+              className="rounded-xl bg-green-700 px-6 py-2.5 font-bold text-white shadow-md transition-all hover:bg-green-800 disabled:opacity-50"
             >
               Xác nhận chọn ({selectedPlayerIds.length})
             </button>

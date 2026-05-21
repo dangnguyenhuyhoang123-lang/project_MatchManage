@@ -10,7 +10,7 @@ import {
   User,
 } from "lucide-react";
 import pic1 from "../../assets/user_icon.svg";
-import { useAuth } from "../../utils/AuthContext";
+import { useAuth } from "../../utils/useAuth";
 
 const navLinks = [
   { label: "Trang chủ", path: "/" },

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import pic1 from "../../assets/user_icon.svg";
-import { useAuth } from "../../utils/AuthContext";
+import { useAuth } from "../../utils/useAuth";
 import { Link, useNavigate } from "react-router-dom";
 
 export const Header1 = () => {

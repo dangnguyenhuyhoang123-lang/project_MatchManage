@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   GrassType,
   RegistrationDetailDTO,
   RegistrationStatus,
   RegistrationSummaryDTO,
 } from "../../../model/Registration";
+import LoadingSpinner from "../../../components/Spinner/LoadingSpinner";
 import RegistrationService from "../../../services/RegistrationService";
 import { AppLayout } from "../../../layouts/AppLayout";
 
@@ -17,10 +18,10 @@ type Filters = {
 };
 
 const filterTabs: Array<{ value: FilterStatus; label: string }> = [
-  { value: "ALL", label: "Tất cả" },
-  { value: "PENDING", label: "Chờ duyệt" },
+  { value: "ALL", label: "Táº¥t cáº£" },
+  { value: "PENDING", label: "Chá» duyá»‡t" },
   { value: "APPROVED", label: "Đã duyệt" },
-  { value: "REJECTED", label: "Từ chối" },
+  { value: "REJECTED", label: "Tá»« chá»‘i" },
 ];
 
 const statusMeta: Record<
@@ -32,7 +33,7 @@ const statusMeta: Record<
   }
 > = {
   PENDING: {
-    label: "Chờ duyệt",
+    label: "Chá» duyá»‡t",
     badgeClass: "bg-indigo-50 text-indigo-700",
     dotClass: "bg-indigo-500",
   },
@@ -42,7 +43,7 @@ const statusMeta: Record<
     dotClass: "bg-green-600",
   },
   REJECTED: {
-    label: "Từ chối",
+    label: "Tá»« chá»‘i",
     badgeClass: "bg-red-50 text-red-600",
     dotClass: "bg-red-500",
   },
@@ -267,7 +268,7 @@ const AdminRegistrationManager: React.FC = () => {
       await RegistrationService.approveRegistration(id);
       await loadRegistrations();
     } catch (error) {
-      console.error("Lỗi khi duyệt hồ sơ:", error);
+      console.error("Lá»—i khi duyá»‡t há»“ sÆ¡:", error);
       alert("Không thể duyệt hồ sơ đăng ký.");
     } finally {
       setProcessingId(null);
@@ -287,7 +288,7 @@ const AdminRegistrationManager: React.FC = () => {
       await RegistrationService.rejectRegistration(id, note);
       await loadRegistrations();
     } catch (error) {
-      console.error("Lỗi khi từ chối hồ sơ:", error);
+      console.error("Lá»—i khi tá»« chá»‘i há»“ sÆ¡:", error);
       alert("Không thể từ chối hồ sơ đăng ký.");
     } finally {
       setProcessingId(null);
@@ -306,7 +307,7 @@ const AdminRegistrationManager: React.FC = () => {
       );
       setSelectedRegistrationDetail(response.data);
     } catch (error) {
-      console.error("Lỗi khi tải chi tiết hồ sơ:", error);
+      console.error("Lá»—i khi táº£i chi tiáº¿t há»“ sÆ¡:", error);
       setDetailErrorMessage("Không thể tải chi tiết phiếu đăng ký.");
     } finally {
       setIsDetailLoading(false);
@@ -336,8 +337,8 @@ const AdminRegistrationManager: React.FC = () => {
       "Tên đội",
       "Giải đấu",
       "Trạng thái",
-      "Số cầu thủ",
-      "Số BHL",
+      "Sá»‘ cáº§u thá»§",
+      "Sá»‘ BHL",
       "Ngày gửi",
     ];
     const csvBody = rows.map((row) =>
@@ -405,7 +406,7 @@ const AdminRegistrationManager: React.FC = () => {
           />
 
           <StatCard
-            label="Chờ duyệt"
+            label="Chá» duyá»‡t"
             value={stats.pending}
             icon="schedule"
             valueClassName="text-indigo-700"
@@ -515,9 +516,11 @@ const AdminRegistrationManager: React.FC = () => {
           </div>
 
           {isLoading ? (
-            <div className="rounded-none border border-gray-100 bg-white p-8 text-center font-bold text-gray-400">
-              Đang tải danh sách đăng ký...
-            </div>
+            <LoadingSpinner
+              message="Đang tải danh sách đăng ký"
+              description="Hệ thống đang đồng bộ hồ sơ từ backend để bạn có thể duyệt và theo dõi nhanh hơn."
+              fullHeight
+            />
           ) : errorMessage ? (
             <div className="rounded-none border border-red-100 bg-red-50 p-8 text-center font-bold text-red-600">
               {errorMessage}
@@ -667,7 +670,7 @@ const RegistrationRow = ({
 
       <div className="md:col-span-2 flex md:justify-end gap-2">
         <IconButton
-          label="Xem chi tiết"
+          label="Xem chi tiáº¿t"
           icon="visibility"
           className="bg-[#f5f3ef] hover:bg-gray-200 text-gray-700"
           disabled={isProcessing}
@@ -677,7 +680,7 @@ const RegistrationRow = ({
         {isPending && (
           <>
             <IconButton
-              label="Chấp nhận"
+              label="Cháº¥p nháº­n"
               icon="check"
               className="bg-[#008C2F] hover:bg-green-800 text-white disabled:opacity-50"
               disabled={isProcessing}
@@ -685,7 +688,7 @@ const RegistrationRow = ({
             />
 
             <IconButton
-              label="Từ chối"
+              label="Tá»« chá»‘i"
               icon="close"
               className="bg-red-50 hover:bg-red-100 text-red-500 disabled:opacity-50"
               disabled={isProcessing}
@@ -767,9 +770,11 @@ const RegistrationDetailModal = ({
 
       <div className="p-6">
         {isLoading ? (
-          <div className="rounded-2xl bg-white p-10 text-center font-bold text-gray-400">
-            Đang tải chi tiết phiếu đăng ký...
-          </div>
+          <LoadingSpinner
+            message="Đang tải chi tiết phiếu đăng ký"
+            description="Vui lòng chờ trong giây lát để hệ thống lấy đầy đủ thông tin đội bóng, cầu thủ và ban huấn luyện."
+            fullHeight
+          />
         ) : errorMessage ? (
           <div className="rounded-2xl border border-red-100 bg-red-50 p-8 text-center font-bold text-red-600">
             {errorMessage}
@@ -797,7 +802,7 @@ const RegistrationDetailModal = ({
                     </h4>
                     <p className="mt-1 text-sm text-gray-500">
                       {detail.city || "Chưa cập nhật thành phố"} •{" "}
-                      {detail.region || "Chưa cập nhật khu vực"}
+                      {detail.region || "ChÆ°a cáº­p nháº­t khu vá»±c"}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <StatusBadge status={detail.status} />
@@ -813,7 +818,7 @@ const RegistrationDetailModal = ({
                     label="Năm thành lập"
                     value={detail.establishedYear ?? "--"}
                   />
-                  <InfoCard label="Chủ sở hữu" value={detail.owner || "--"} />
+                  <InfoCard label="Chá»§ sá»Ÿ há»¯u" value={detail.owner || "--"} />
                   <InfoCard
                     label="Ngày gửi"
                     value={formatSubmittedAt(detail.submittedAt).date}
@@ -839,7 +844,7 @@ const RegistrationDetailModal = ({
                       Danh sách cầu thủ
                     </h4>
                     <p className="text-sm text-gray-500">
-                      {detail.players.length} cầu thủ trong hồ sơ
+                      {detail.players.length} cáº§u thá»§ trong há»“ sÆ¡
                     </p>
                   </div>
                   <span className="material-symbols-outlined text-green-700">
@@ -865,7 +870,7 @@ const RegistrationDetailModal = ({
                           </p>
                         </div>
                         <div className="md:col-span-2 text-sm font-bold text-gray-700">
-                          Số {player.shirtNumber}
+                          Sá»‘ {player.shirtNumber}
                         </div>
                         <div className="md:col-span-2 text-sm text-gray-600">
                           {player.position}
@@ -875,7 +880,7 @@ const RegistrationDetailModal = ({
                             {player.nationality}
                           </span>
                           <span className="rounded-full bg-[#f5f3ef] px-3 py-1 text-xs font-bold text-gray-600">
-                            {calculateAge(player.dateOfBirth)} tuổi
+                            {calculateAge(player.dateOfBirth)} tuá»•i
                           </span>
                           <span
                             className={`rounded-full px-3 py-1 text-xs font-bold ${
@@ -914,11 +919,11 @@ const RegistrationDetailModal = ({
                   <InfoCard label="Tên sân" value={detail.stadiumName} />
                   <InfoCard label="Địa chỉ" value={detail.stadiumAddress} />
                   <InfoCard
-                    label="Sức chứa"
-                    value={`${detail.stadiumCapacity.toLocaleString("vi-VN")} người`}
+                    label="Sá»©c chá»©a"
+                    value={`${detail.stadiumCapacity.toLocaleString("vi-VN")} ngÆ°á»i`}
                   />
                   <InfoCard
-                    label="Mặt cỏ"
+                    label="Máº·t cá»"
                     value={grassLabels[detail.stadiumGrass]}
                   />
                 </div>
@@ -928,7 +933,7 @@ const RegistrationDetailModal = ({
                 <div className="mb-5 flex items-center justify-between">
                   <div>
                     <h4 className="text-xl font-black text-gray-900 font-['Be_Vietnam_Pro']">
-                      Ban huấn luyện
+                      Ban huáº¥n luyá»‡n
                     </h4>
                     <p className="text-sm text-gray-500">
                       {detail.coaches.length} thành viên trong hồ sơ
@@ -953,8 +958,8 @@ const RegistrationDetailModal = ({
                           {coach.role}
                         </p>
                         <p className="mt-2 text-xs text-gray-500">
-                          {coach.nationality} • {calculateAge(coach.birthDay)}{" "}
-                          tuổi • CCCD: {coach.idCode}
+                          {coach.nationality} â€¢ {calculateAge(coach.birthDay)}{" "}
+                          tuá»•i â€¢ CCCD: {coach.idCode}
                         </p>
                         {coach.description && (
                           <p className="mt-2 text-xs text-gray-500">

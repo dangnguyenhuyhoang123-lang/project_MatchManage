@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useAuth } from "../../utils/AuthContext";
+import { useAuth } from "../../utils/useAuth";
 import pic1 from "../../assets/user_icon.svg";
 
 const Header = () => {

@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
+import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import { MatchStatus } from "../../../../model/enum";
 import type { TeamLineupResponse } from "../../../../model/Lineup";
 import type { PlayerSeason } from "../../../../model/PlayerSeason";
 import LineupService from "../../../../services/LineupService";
 import PlayerSeasonService from "../../../../services/PlayerSeasonService";
-
 type PositionGroup = "GK" | "DF" | "MF" | "FW";
 type PlayerFilter = "ALL" | PositionGroup;
 
@@ -161,16 +161,27 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
         setError("");
         setNotice("");
 
+        const normalizedTeamSeasonId = Number(teamSeasonId);
+
+        if (
+          !Number.isFinite(normalizedTeamSeasonId) ||
+          normalizedTeamSeasonId <= 0
+        ) {
+          throw new Error("Invalid teamSeasonId");
+        }
         const [registeredPlayers, lineupData] = await Promise.all([
-          PlayerSeasonService.getPlayerSeasonsByTeam(teamId),
+          PlayerSeasonService.getPlayerSeasonsByTeamSeason(
+            normalizedTeamSeasonId,
+          ),
           loadLineup(match.id, teamId),
         ]);
 
         if (!mounted) return;
-
-        console.log(registeredPlayers);
         setPlayers(
           extractPlayerSeasons(registeredPlayers)
+            .filter((playerSeason) =>
+              hasTeamSeasonId(playerSeason, normalizedTeamSeasonId),
+            )
             .map(normalizeRegisteredPlayer)
             .filter((player: SlotPlayer | null): player is SlotPlayer =>
               Boolean(player),
@@ -248,8 +259,12 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
   const assignPlayer = (player: SlotPlayer) => {
     if (isReadOnly || player.status !== "available") return;
 
+    const exactSelectedSlot = selectedSlotKey
+      ? (FORMATIONS[formation].find((item) => item.key === selectedSlotKey) ??
+        null)
+      : null;
     const targetSlot =
-      selectedSlot ??
+      exactSelectedSlot ??
       slots.find(
         (item) => !slotMap[item.key] && item.position === player.position,
       );
@@ -275,6 +290,7 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
       next[targetSlot.key] = player;
       return next;
     });
+    setSelectedSlotKey(targetSlot.key);
   };
 
   const removePlayer = (slotKey: string) => {
@@ -373,9 +389,11 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
       />
 
       {loading ? (
-        <div className="rounded-[2rem] border border-gray-100 bg-white p-10 text-center text-sm font-bold text-gray-500">
-          Đang tải dữ liệu đội hình...
-        </div>
+        <LoadingSpinner
+          message="Đang tải dữ liệu đội hình"
+          description="Danh sách cầu thủ đăng ký và đội hình đã lưu đang được đồng bộ từ backend."
+          fullHeight
+        />
       ) : (
         <div className="grid grid-cols-1 gap-8 xl:grid-cols-12">
           <section className="xl:col-span-8">
@@ -739,7 +757,7 @@ function AvailablePlayersPanel({
         </div>
 
         <span className="rounded-full bg-[#008C2F]/10 px-3 py-1 text-xs font-black text-[#008C2F]">
-          {allCount} Tổng
+          {allCount} Tá»•ng
         </span>
       </div>
 
@@ -755,7 +773,7 @@ function AvailablePlayersPanel({
                 : "bg-gray-200 text-gray-500 hover:bg-gray-300"
             }`}
           >
-            {item === "ALL" ? "TẤT CẢ" : item}
+            {item === "ALL" ? "Táº¤T Cáº¢" : item}
           </button>
         ))}
       </div>
@@ -787,7 +805,7 @@ function AvailablePlayersPanel({
           label="Thi đấu được"
           className="bg-emerald-100 text-emerald-700"
         />
-        <StatusLegend label="Chấn thương" className="bg-red-100 text-red-600" />
+        <StatusLegend label="Cháº¥n thÆ°Æ¡ng" className="bg-red-100 text-red-600" />
         <StatusLegend label="Thẻ đỏ" className="bg-gray-200 text-gray-600" />
       </div>
     </section>
@@ -892,6 +910,7 @@ async function loadLineup(matchId: number, teamId: number) {
       matchId,
       teamId,
     );
+    if (response.status === 404) return null;
     return response.data;
   } catch (err: any) {
     if (err?.response?.status === 404) return null;
@@ -955,31 +974,58 @@ function normalizeRegisteredPlayer(
 
 function normalizePosition(value: string): PositionGroup {
   const normalized = removeVietnameseMark(value).toUpperCase();
-  console.log(normalized);
-  if (
-    normalized.includes("GK") ||
-    normalized.includes("GOAL") ||
-    normalized.includes("THU MON")
-  ) {
+  const compact = normalized.replace(/[^A-Z0-9]/g, "");
+
+  if (matchesPosition(compact, ["GK", "GOALKEEPER", "THUMON"])) {
     return "GK";
   }
+
   if (
-    normalized.includes("DF") ||
-    normalized.includes("DEF") ||
-    normalized.includes("BACK") ||
-    normalized.includes("HAU VE")
+    matchesPosition(compact, [
+      "DF",
+      "DEF",
+      "DEFENDER",
+      "BACK",
+      "HAUVE",
+      "CB",
+      "LCB",
+      "RCB",
+      "LB",
+      "RB",
+      "SW",
+      "SWEEPER",
+      "CENTERBACK",
+      "CENTREBACK",
+      "FULLBACK",
+    ])
   ) {
     return "DF";
   }
+
   if (
-    normalized.includes("FW") ||
-    normalized.includes("ST") ||
-    normalized.includes("TIEN DAO") ||
-    normalized.includes("FORWARD")
+    matchesPosition(compact, [
+      "FW",
+      "ST",
+      "CF",
+      "SS",
+      "RW",
+      "LW",
+      "RF",
+      "LF",
+      "FORWARD",
+      "TIENDAO",
+      "WINGER",
+      "STRIKER",
+    ])
   ) {
     return "FW";
   }
+
   return "MF";
+}
+
+function matchesPosition(value: string, candidates: string[]) {
+  return candidates.some((candidate) => value.includes(candidate));
 }
 
 function normalizePlayerStatus(value: string): PlayerStatusKey {
@@ -1035,7 +1081,7 @@ function getStatusLabel(status: MatchStatus) {
 }
 
 function formatDateTime(value: string) {
-  if (!value) return "Chưa cập nhật";
+  if (!value) return "ChÆ°a cáº­p nháº­t";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
 

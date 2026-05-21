@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "../../../../layouts/AppLayout";
+import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import { PhanTrang } from "../../../../utils/PhanTrang";
 import PlayerService from "../../../../services/PlayerService";
 import type { Player } from "../../../../model/Player";
@@ -239,9 +240,11 @@ function PlayerTable({
 }) {
   if (loading) {
     return (
-      <section className="rounded-2xl bg-white p-8 text-center text-sm font-bold text-gray-500">
-        Đang tải danh sách cầu thủ...
-      </section>
+      <LoadingSpinner
+        message="Đang tải danh sách cầu thủ"
+        description="Danh sách cầu thủ của câu lạc bộ đang được tải theo trang hiện tại."
+        fullHeight
+      />
     );
   }
 

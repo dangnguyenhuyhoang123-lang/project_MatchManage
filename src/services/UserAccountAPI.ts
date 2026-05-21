@@ -1,4 +1,4 @@
-import type { User } from "../utils/AuthContext";
+import type { AuthUser } from "../types/AuthUser";
 import axiosClient from "./axiosClient";
 
 const API_BASE_URL = "/user-account";
@@ -12,7 +12,7 @@ export type UpdateProfilePayload = {
 };
 
 export async function getCurrentUser() {
-  const response = await axiosClient.get<User>(`${API_BASE_URL}/me`);
+  const response = await axiosClient.get<AuthUser>(`${API_BASE_URL}/me`);
 
   return response.data;
 }
@@ -28,7 +28,7 @@ export async function updateCurrentUserProfile(payload: UpdateProfilePayload) {
   let lastErrorMessage = "Khong the cap nhat thong tin nguoi dung.";
 
   for (const endpoint of endpoints) {
-    const response = await axiosClient.request<User>({
+    const response = await axiosClient.request<AuthUser>({
       method: endpoint.method,
       url: endpoint.url,
       data: payload,

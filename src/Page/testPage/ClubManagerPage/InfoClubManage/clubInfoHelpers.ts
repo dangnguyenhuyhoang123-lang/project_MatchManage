@@ -1,4 +1,4 @@
-import { useAuth } from "../../../../utils/AuthContext";
+import { useAuth } from "../../../../utils/useAuth";
 
 export const CURRENT_TEAM_SEASON_ID = 60;
 

@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
+import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import { PhanTrang } from "../../../../utils/PhanTrang";
 import SeasonService from "../../../../services/SeasonService";
 import type { SelectedSeason } from "./RegisterFormMatch";
 
-// --- Sub-components ---
 const SeasonCard = ({
   season,
   isSelected,
@@ -15,14 +15,14 @@ const SeasonCard = ({
 }) => (
   <div
     onClick={onSelect}
-    className={`group relative bg-white rounded-2xl p-6 flex flex-col gap-4 border-2 transition-all cursor-pointer hover:-translate-y-1 ${
+    className={`group relative flex cursor-pointer flex-col gap-4 rounded-2xl border-2 bg-white p-6 transition-all hover:-translate-y-1 ${
       isSelected
         ? "border-green-600 ring-4 ring-green-600/5 shadow-xl"
         : "border-transparent shadow-sm hover:shadow-lg"
     }`}
   >
-    <div className="flex justify-between items-start">
-      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-3 text-green-700">
+    <div className="flex items-start justify-between">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-green-50 to-emerald-100 p-3 text-green-700">
         <span className="material-symbols-outlined text-3xl">emoji_events</span>
       </div>
       <span
@@ -38,11 +38,11 @@ const SeasonCard = ({
     </div>
 
     <div>
-      <h3 className="text-xl font-bold text-gray-900 mb-1">
+      <h3 className="mb-1 text-xl font-bold text-gray-900">
         {season.name || season.year}
       </h3>
 
-      <div className="flex items-center gap-2 text-gray-500 text-sm mb-3">
+      <div className="mb-3 flex items-center gap-2 text-sm text-gray-500">
         <span className="material-symbols-outlined text-base">
           calendar_month
         </span>
@@ -52,7 +52,7 @@ const SeasonCard = ({
       </div>
 
       <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-wider">
-        <span className="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full">
+        <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-indigo-700">
           {season.leagueName || "Giải đấu"}
         </span>
       </div>
@@ -60,7 +60,6 @@ const SeasonCard = ({
   </div>
 );
 
-// --- Main Component ---
 type Props = {
   setStep: (step: number) => void;
   selectedSeason: SelectedSeason | null;
@@ -77,7 +76,6 @@ const RegistrationPortal: React.FC<Props> = ({
   );
   const [search, setSearch] = useState("");
   const [trangHienTai, setTrangHienTai] = useState(1);
-
   const [seasons, setSeasons] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -129,7 +127,6 @@ const RegistrationPortal: React.FC<Props> = ({
 
   return (
     <div className="pb-24">
-      {/* Search */}
       <div className="mb-6">
         <div className="relative max-w-md">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -140,19 +137,20 @@ const RegistrationPortal: React.FC<Props> = ({
             placeholder="Tìm kiếm mùa giải..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-full text-sm focus:ring-2 focus:ring-[#0d631b]/20 outline-none shadow-sm"
+            className="w-full rounded-full border border-gray-200 bg-white py-3 pl-10 pr-4 text-sm shadow-sm outline-none focus:ring-2 focus:ring-[#0d631b]/20"
           />
         </div>
       </div>
 
       {loading ? (
-        <div className="text-center py-10 text-gray-500 font-bold">
-          Đang tải danh sách mùa giải...
-        </div>
+        <LoadingSpinner
+          message="Đang tải danh sách mùa giải"
+          description="Mùa giải đang được đồng bộ để bạn chọn hồ sơ đăng ký phù hợp."
+          fullHeight
+        />
       ) : (
         <>
-          {/* Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
             {dsSeasonTheoTrang.map((season) => (
               <SeasonCard
                 key={season.id}
@@ -173,14 +171,12 @@ const RegistrationPortal: React.FC<Props> = ({
             ))}
           </div>
 
-          {/* Empty state */}
           {filteredSeasons.length === 0 && (
-            <div className="text-center text-gray-400 py-10 font-bold">
+            <div className="py-10 text-center font-bold text-gray-400">
               Không tìm thấy mùa giải nào
             </div>
           )}
 
-          {/* Pagination */}
           {filteredSeasons.length > 0 && (
             <div className="mt-8 flex justify-center">
               <PhanTrang
@@ -193,11 +189,10 @@ const RegistrationPortal: React.FC<Props> = ({
         </>
       )}
 
-      {/* Footer */}
-      <div className="fixed bottom-10 left-64 right-0 flex justify-center px-10 pointer-events-none z-50">
-        <div className="bg-white/90 backdrop-blur-xl border border-gray-100 rounded-full p-4 flex items-center justify-between shadow-2xl w-full max-w-4xl pointer-events-auto">
+      <div className="pointer-events-none fixed bottom-10 left-64 right-0 z-50 flex justify-center px-10">
+        <div className="pointer-events-auto flex w-full max-w-4xl items-center justify-between rounded-full border border-gray-100 bg-white/90 p-4 shadow-2xl backdrop-blur-xl">
           <div className="flex items-center gap-4 pl-4">
-            <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-50">
               <span className="material-symbols-outlined text-green-700">
                 emoji_events
               </span>
@@ -208,19 +203,19 @@ const RegistrationPortal: React.FC<Props> = ({
                   selectedSeasonData?.year ||
                   "Chưa chọn Mùa giải"}
               </p>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
                 Đã chọn để đăng ký
               </p>
             </div>
           </div>
 
           <div className="flex gap-3">
-            <button className="px-8 py-3 rounded-full text-gray-500 hover:bg-gray-50 font-bold text-sm transition-all">
+            <button className="rounded-full px-8 py-3 text-sm font-bold text-gray-500 transition-all hover:bg-gray-50">
               Hủy bỏ
             </button>
 
             <button
-              className="px-10 py-3 rounded-full bg-green-700 text-white font-bold shadow-lg shadow-green-700/20 hover:scale-105 active:scale-95 transition-all text-sm disabled:opacity-50"
+              className="rounded-full bg-green-700 px-10 py-3 text-sm font-bold text-white shadow-lg shadow-green-700/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
               disabled={!selectedSeasonId}
               onClick={() => {
                 setStep(2);

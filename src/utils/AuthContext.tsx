@@ -1,39 +1,21 @@
 import {
-  createContext,
-  useContext,
   useEffect,
   useState,
   type ReactNode,
 } from "react";
 import { getCurrentUser } from "../services/UserAccountAPI";
 import UserService from "../services/UserService";
-
-export type User = {
-  id?: number;
-  username: string;
-  roles: string[];
-  fullName?: string;
-  displayName?: string;
-  email?: string;
-  phone?: string;
-  avatar?: string;
-  teamId?: number;
-};
-
-type AuthType = {
-  user: User | null;
-  setUser: (u: User | null) => void;
-  loading: boolean;
-  logout: () => void;
-  hasRole: (role: string) => boolean;
-  hasAnyRole: (roles: string[]) => boolean;
-};
-
-const AuthContext = createContext<AuthType | null>(null);
+import CurrentUser from "./CurrentUser";
+import { AuthContext, type User } from "./AuthContextCore";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUserState] = useState<User | null>(() => CurrentUser.getUser());
   const [loading, setLoading] = useState(true);
+
+  const setUser = (nextUser: User | null) => {
+    CurrentUser.setUser(nextUser);
+    setUserState(nextUser);
+  };
 
   useEffect(() => {
     getCurrentUser()
@@ -69,14 +51,4 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-
-  return context;
 };
