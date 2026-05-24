@@ -23,6 +23,7 @@ import MatchResults from "./Page/testPage/Matchresult/MatchResults";
 import StandingsPage from "./Page/testPage/StadingPage";
 import ReportPage from "./Page/testPage/ReportPage";
 import AdminRegistrationManager from "./Page/testPage/AdminPage/AdminRegistrationManager";
+import SystemSettingsPage from "./Page/testPage/AdminPage/SystemSettingsPage";
 
 import RegisterFormMatch from "./Page/testPage/ClubManagerPage/RegisterForm/RegisterFormMatch";
 import MatchManagePageClub from "./Page/testPage/ClubManagerPage/MatchManage/MatchManagePageClub";
@@ -115,6 +116,7 @@ const AppRoutes = () => {
               path="/admin/registrations"
               element={<AdminRegistrationManager />}
             />
+            <Route path="/admin/settings" element={<SystemSettingsPage />} />
           </Route>
 
           <Route element={<ClubManagerLayout />}>

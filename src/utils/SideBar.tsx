@@ -73,6 +73,12 @@ const adminMenu: MenuItem[] = [
     icon: "analytics",
     aliases: ["/reports"],
   },
+  {
+    label: "Cài đặt hệ thống",
+    path: "/admin/settings",
+    icon: "settings",
+    aliases: ["/settings"],
+  },
 ];
 
 const clubMenu: MenuItem[] = [
@@ -137,7 +143,7 @@ export const Sidebar = ({ workspace }: SidebarProps) => {
   const menuItems = isClubArea ? clubMenu : adminMenu;
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-gray-100 bg-[#f5f3ef] p-5 md:flex">
+    <aside className="sticky top-0 hidden w-64 shrink-0 flex-col self-start border-r border-gray-100 bg-[#f5f3ef] p-5 md:flex">
       <Link
         to={isClubArea ? "/club/dashboard" : "/admin/dashboard"}
         className="mb-7 block"
@@ -150,7 +156,7 @@ export const Sidebar = ({ workspace }: SidebarProps) => {
         </p>
       </Link>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto pr-1 text-sm">
+      <nav className="space-y-1 pr-1 text-sm">
         {menuItems.map((item) => {
           const isActive =
             location.pathname === item.path ||
@@ -162,11 +168,10 @@ export const Sidebar = ({ workspace }: SidebarProps) => {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 rounded-xl px-4 py-3 font-semibold transition-colors ${
-                isActive
-                  ? "bg-white text-[#008C2F] shadow-sm"
-                  : "text-gray-600 hover:bg-white/70 hover:text-[#008C2F]"
-              }`}
+              className={`flex items-center gap-3 rounded-xl px-4 py-3 font-semibold transition-colors ${isActive
+                ? "bg-white text-[#008C2F] shadow-sm"
+                : "text-gray-600 hover:bg-white/70 hover:text-[#008C2F]"
+                }`}
             >
               <span className="material-symbols-outlined text-[20px]">
                 {item.icon}
