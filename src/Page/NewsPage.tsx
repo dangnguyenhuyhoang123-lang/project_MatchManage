@@ -1,431 +1,446 @@
-import { Calendar, User, LayoutGrid, List } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Calendar,
+  ExternalLink,
+  LayoutGrid,
+  List,
+  RefreshCw,
+  User,
+} from "lucide-react";
 
 import { Footer } from "../components/Footer/Footer_HomePage";
+import LoadingSpinner from "../components/Spinner/LoadingSpinner";
+import NewsService, { type NewsArticle } from "../services/NewsService";
+
+const fallbackImage =
+  "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80";
+
+function formatDate(value?: string | null) {
+  if (!value) return "Chưa cập nhật";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Chưa cập nhật";
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
+function getArticleImage(article: NewsArticle) {
+  return article.imageUrl?.trim() || fallbackImage;
+}
+
+function getArticleUrl(article: NewsArticle) {
+  return article.sourceUrl?.trim() || "#";
+}
 
 export const NewsPage = () => {
+  const [articles, setArticles] = useState<NewsArticle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("Tất cả");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [visibleCount, setVisibleCount] = useState(8);
+
+  const loadNews = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const data = await NewsService.getLatestVffNewsNormalized(20);
+      setArticles(data);
+    } catch (err) {
+      console.error("Cannot load news articles", err);
+      setError("Không thể tải danh sách tin tức từ hệ thống.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadNews();
+  }, []);
+
+  const categories = useMemo(() => {
+    const values = articles
+      .map((article) => article.category?.trim())
+      .filter((category): category is string => Boolean(category));
+
+    return ["Tất cả", ...Array.from(new Set(values))];
+  }, [articles]);
+
+  const filteredArticles = useMemo(() => {
+    if (selectedCategory === "Tất cả") return articles;
+
+    return articles.filter((article) => article.category === selectedCategory);
+  }, [articles, selectedCategory]);
+
+  const featuredArticles = filteredArticles.slice(0, 3);
+  const mainFeatured = featuredArticles[0];
+  const sideFeatured = featuredArticles.slice(1, 3);
+  const latestArticles = filteredArticles.slice(3, visibleCount + 3);
+  const trendingArticles = articles.slice(0, 5);
+  const canLoadMore = filteredArticles.length > visibleCount + 3;
+
   return (
     <>
       <div className="pt-12">
-        <div className="max-w-360 mx-auto px-6 md:px-12">
-          <section className="mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-8">
-              Tin nổi bật
-            </h2>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto lg:h-125">
-              <div className="lg:col-span-2 relative rounded-3xl overflow-hidden group cursor-pointer h-100 lg:h-full">
-                <div
-                  className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-500 group-hover:scale-105"
-                  style={{
-                    backgroundImage:
-                      'url("https://images.unsplash.com/photo-1511886929837-354d827aae26?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80")',
-                  }}
-                />
-
-                <div className="absolute inset-0 bg-linear-to-t from-slate-900/90 via-slate-900/40 to-transparent" />
-
-                <div className="absolute bottom-0 left-0 right-0 p-8 flex flex-col justify-end">
-                  <span className="inline-block bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full mb-4 w-fit">
-                    PHÂN TÍCH CHUYÊN MÔN
-                  </span>
-
-                  <h3 className="text-white text-3xl md:text-4xl font-extrabold leading-tight mb-3">
-                    Chiến thuật "High-Pressing" đã định hình lại cục diện
-                    Premier League mùa này như thế nào?
-                  </h3>
-
-                  <p className="text-gray-200 mb-6 text-sm md:text-base max-w-2xl line-clamp-2">
-                    Sự trỗi dậy của các khối đội hình linh hoạt và tốc độ chuyển
-                    trạng thái chóng mặt đang tạo ra những cuộc cách mạng trên
-                    sân cỏ châu Âu.
-                  </p>
-
-                  <div className="flex items-center gap-6 text-gray-300 text-sm font-medium">
-                    <div className="flex items-center gap-2">
-                      <Calendar size={16} />
-                      <span>15 tháng 5, 2024</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <User size={16} />
-                      <span>Nguyễn Minh Anh</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-6 lg:h-full">
-                <div className="flex-1 relative rounded-3xl overflow-hidden group cursor-pointer min-h-62.5">
-                  <div
-                    className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-500 group-hover:scale-105"
-                    style={{
-                      backgroundImage:
-                        'url("https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80")',
-                    }}
-                  />
-
-                  <div className="absolute inset-0 bg-linear-to-t from-slate-900/90 via-slate-900/20 to-transparent" />
-
-                  <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <span className="inline-block bg-indigo-500 text-white text-[10px] font-bold px-2 py-1 rounded-full mb-3 w-fit">
-                      CHUYỂN NHƯỢNG
-                    </span>
-
-                    <h3 className="text-white text-xl font-bold leading-snug">
-                      Siêu bom tấn 150 triệu Euro sắp nổ ra tại Madrid?
-                    </h3>
-                  </div>
-                </div>
-
-                <div className="flex-1 relative rounded-3xl overflow-hidden group cursor-pointer min-h-62.5">
-                  <div
-                    className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-500 group-hover:scale-105"
-                    style={{
-                      backgroundImage:
-                        'url("https://images.unsplash.com/photo-1543351611-58f69d7c1781?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80")',
-                    }}
-                  />
-
-                  <div className="absolute inset-0 bg-linear-to-t from-slate-900/90 via-slate-900/20 to-transparent" />
-
-                  <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <span className="inline-block bg-green-700 text-white text-[10px] font-bold px-2 py-1 rounded-full mb-3 w-fit">
-                      CÂU LẠC BỘ
-                    </span>
-
-                    <h3 className="text-white text-xl font-bold leading-snug">
-                      Hành trình tái thiết: Kế hoạch 5 năm của Gã khổng lồ nước
-                      Đức
-                    </h3>
-                  </div>
-                </div>
-              </div>
+        <div className="mx-auto max-w-[1440px] px-6 md:px-12">
+          <section className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="mb-2 text-sm font-black uppercase tracking-widest text-green-700">
+                VFF News
+              </p>
+              <h1 className="text-4xl font-black tracking-tight text-gray-950 md:text-5xl">
+                Tin tức bóng đá
+              </h1>
             </div>
+
+            <button
+              type="button"
+              onClick={loadNews}
+              className="inline-flex w-fit items-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 shadow-sm transition hover:border-green-200 hover:text-green-700"
+            >
+              <RefreshCw size={16} />
+              Làm mới
+            </button>
           </section>
 
-          <section className="mb-24 flex flex-col xl:flex-row gap-10">
-            <div className="xl:w-2/3">
-              <div className="flex items-center justify-between mb-8 pb-4 border-b-2 border-gray-200">
-                <h2 className="text-2xl font-bold text-gray-900 relative">
-                  Tin mới cập nhật
-                  <span className="absolute -bottom-4.5 left-0 w-16 h-1 bg-[#1a6e38]" />
+          {loading ? (
+            <LoadingSpinner
+              message="Đang tải tin tức"
+              description="Hệ thống đang đồng bộ các bài viết mới nhất từ nguồn tin VFF."
+              fullHeight
+            />
+          ) : error ? (
+            <section className="mb-24 rounded-3xl border border-red-100 bg-red-50 p-8 text-red-600">
+              <h2 className="mb-2 text-xl font-black">Không tải được tin tức</h2>
+              <p className="text-sm font-semibold">{error}</p>
+            </section>
+          ) : articles.length === 0 ? (
+            <section className="mb-24 rounded-3xl border border-gray-100 bg-white p-8 text-center text-sm font-bold text-gray-500">
+              Chưa có bài viết nào được đồng bộ.
+            </section>
+          ) : (
+            <>
+              <section className="mb-16">
+                <h2 className="mb-8 text-3xl font-bold text-gray-900">
+                  Tin nổi bật
                 </h2>
 
-                <div className="flex items-center gap-3 text-gray-400">
-                  <button className="p-1 hover:text-gray-800 transition-colors text-gray-800">
-                    <LayoutGrid size={20} />
-                  </button>
+                <div className="grid h-auto grid-cols-1 gap-6 lg:h-125 lg:grid-cols-3">
+                  {mainFeatured && <FeaturedHero article={mainFeatured} />}
 
-                  <button className="p-1 hover:text-gray-800 transition-colors">
-                    <List size={20} />
-                  </button>
+                  <div className="flex flex-col gap-6 lg:h-full">
+                    {sideFeatured.map((article) => (
+                      <SmallFeaturedCard key={article.id} article={article} />
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </section>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-                <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-gray-100/50 flex flex-col">
-                  <div className="h-48 bg-blue-100 overflow-hidden relative">
-                    <div
-                      className="absolute inset-0 bg-cover bg-center"
-                      style={{
-                        backgroundImage:
-                          'url("https://images.unsplash.com/photo-1434626881859-194d67b2b86f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80")',
-                      }}
-                    />
+              <section className="mb-24 flex flex-col gap-10 xl:flex-row">
+                <div className="xl:w-2/3">
+                  <div className="mb-8 flex items-center justify-between border-b-2 border-gray-200 pb-4">
+                    <h2 className="relative text-2xl font-bold text-gray-900">
+                      Tin mới cập nhật
+                      <span className="absolute -bottom-4.5 left-0 h-1 w-16 bg-[#1a6e38]" />
+                    </h2>
+
+                    <div className="flex items-center gap-3 text-gray-400">
+                      <button
+                        type="button"
+                        onClick={() => setViewMode("grid")}
+                        className={`p-1 transition-colors hover:text-gray-800 ${
+                          viewMode === "grid" ? "text-gray-800" : ""
+                        }`}
+                        aria-label="Xem dạng lưới"
+                      >
+                        <LayoutGrid size={20} />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setViewMode("list")}
+                        className={`p-1 transition-colors hover:text-gray-800 ${
+                          viewMode === "list" ? "text-gray-800" : ""
+                        }`}
+                        aria-label="Xem dạng danh sách"
+                      >
+                        <List size={20} />
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="p-6 flex flex-col grow">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-xs font-bold text-blue-600 tracking-wider">
-                        KẾT QUẢ TRẬN ĐẤU
-                      </span>
-                      <span className="text-xs text-gray-400">2 giờ trước</span>
-                    </div>
+                  <div
+                    className={
+                      viewMode === "grid"
+                        ? "mb-10 grid grid-cols-1 gap-8 md:grid-cols-2"
+                        : "mb-10 space-y-5"
+                    }
+                  >
+                    {latestArticles.map((article) => (
+                      <NewsCard
+                        key={article.id}
+                        article={article}
+                        compact={viewMode === "list"}
+                      />
+                    ))}
+                  </div>
 
-                    <h3 className="text-lg font-bold text-gray-900 mb-3 leading-snug">
-                      Ngược dòng ngoạn mục, Arsenal khẳng định bản lĩnh ứng viên
-                      vô địch
+                  {latestArticles.length === 0 && (
+                    <div className="mb-10 rounded-2xl bg-white p-8 text-center text-sm font-bold text-gray-500">
+                      Không có tin tức trong danh mục này.
+                    </div>
+                  )}
+
+                  {canLoadMore && (
+                    <div className="flex justify-center">
+                      <button
+                        type="button"
+                        onClick={() => setVisibleCount((count) => count + 4)}
+                        className="rounded-full bg-gray-100 px-8 py-3 text-sm font-semibold text-gray-800 transition-colors hover:bg-gray-200"
+                      >
+                        Xem thêm tin tức
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <aside className="flex flex-col gap-8 xl:w-1/3">
+                  <section className="rounded-3xl border border-gray-100 bg-white p-8">
+                    <h3 className="mb-6 text-xl font-bold text-gray-900">
+                      Danh mục
                     </h3>
 
-                    <p className="text-sm text-gray-500 mb-6 line-clamp-2">
-                      Sau bàn thua sớm, Pháo thủ đã có màn trình diễn bùng nổ
-                      trong hiệp 2 để giữ vững ngôi đầu bảng.
-                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      {categories.map((category) => {
+                        const isActive = selectedCategory === category;
 
-                    <div className="mt-auto flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
-                        <img
-                          src="https://i.pravatar.cc/150?img=11"
-                          alt="Avatar"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-
-                      <span className="text-xs font-semibold text-gray-700">
-                        Lê Hoàng Nam
-                      </span>
+                        return (
+                          <button
+                            key={category}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCategory(category);
+                              setVisibleCount(8);
+                            }}
+                            className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                              isActive
+                                ? "bg-gray-800 text-white"
+                                : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+                            }`}
+                          >
+                            {category}
+                          </button>
+                        );
+                      })}
                     </div>
-                  </div>
-                </div>
+                  </section>
 
-                <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-gray-100/50 flex flex-col">
-                  <div className="h-48 bg-blue-100 overflow-hidden relative">
-                    <div
-                      className="absolute inset-0 bg-cover bg-center"
-                      style={{
-                        backgroundImage:
-                          'url("https://images.unsplash.com/photo-1508344928928-7165b67de128?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80")',
-                      }}
-                    />
-                  </div>
-
-                  <div className="p-6 flex flex-col grow">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-xs font-bold text-indigo-600 tracking-wider">
-                        PHỎNG VẤN ĐỘC QUYỀN
-                      </span>
-                      <span className="text-xs text-gray-400">5 giờ trước</span>
-                    </div>
-
-                    <h3 className="text-lg font-bold text-gray-900 mb-3 leading-snug">
-                      Mbappé: "Thành công tại Champions League là nỗi ám ảnh lớn
-                      nhất của tôi"
+                  <section className="rounded-3xl border border-gray-100 bg-white p-8">
+                    <h3 className="mb-6 text-xl font-bold text-gray-900">
+                      Xu hướng
                     </h3>
 
-                    <p className="text-sm text-gray-500 mb-6 line-clamp-2">
-                      Ngôi sao người Pháp chia sẻ về những dự định tương lai và
-                      áp lực khi thi đấu tại CLB hàng đầu châu Âu.
-                    </p>
-
-                    <div className="mt-auto flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
-                        <img
-                          src="https://i.pravatar.cc/150?img=5"
-                          alt="Avatar"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-
-                      <span className="text-xs font-semibold text-gray-700">
-                        Trần Thu Hà
-                      </span>
+                    <div className="space-y-6">
+                      {trendingArticles.map((article, index) => (
+                        <a
+                          key={article.id}
+                          href={getArticleUrl(article)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex gap-4"
+                        >
+                          <span className="text-4xl font-black leading-none text-gray-200">
+                            {String(index + 1).padStart(2, "0")}
+                          </span>
+                          <div>
+                            <h4 className="mb-1 font-bold leading-snug text-gray-800 transition-colors hover:text-green-700">
+                              {article.title}
+                            </h4>
+                            <span className="text-xs text-gray-400">
+                              {formatDate(article.publishedAt)}
+                            </span>
+                          </div>
+                        </a>
+                      ))}
                     </div>
-                  </div>
-                </div>
+                  </section>
 
-                <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-gray-100/50 flex flex-col">
-                  <div className="h-48 bg-blue-100 overflow-hidden relative">
-                    <div
-                      className="absolute inset-0 bg-cover bg-center"
-                      style={{
-                        backgroundImage:
-                          'url("https://images.unsplash.com/photo-1518605368461-1e1e38ce71ea?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80")',
-                      }}
-                    />
-                  </div>
+                  <section className="relative overflow-hidden rounded-3xl bg-green-700 p-8 text-white">
+                    <div className="relative z-10">
+                      <h3 className="mb-4 text-2xl font-bold">
+                        Đừng bỏ lỡ nhịp đập bóng đá!
+                      </h3>
 
-                  <div className="p-6 flex flex-col grow">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-xs font-bold text-amber-600 tracking-wider">
-                        CHIẾN THUẬT
-                      </span>
-                      <span className="text-xs text-gray-400">8 giờ trước</span>
+                      <p className="mb-6 text-sm leading-relaxed text-green-100">
+                        Theo dõi các cập nhật mới nhất từ VFF và hệ thống quản
+                        lý bóng đá.
+                      </p>
                     </div>
 
-                    <h3 className="text-lg font-bold text-gray-900 mb-3 leading-snug">
-                      Sơ đồ 3-4-3: Vũ khí bí mật giúp Leverkusen không thể bị
-                      đánh bại
-                    </h3>
-
-                    <p className="text-sm text-gray-500 mb-6 line-clamp-2">
-                      Phân tích chi tiết cách vận hành hệ thống của Xabi Alonso
-                      và sự linh hoạt của cặp hậu vệ biên.
-                    </p>
-
-                    <div className="mt-auto flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
-                        <img
-                          src="https://i.pravatar.cc/150?img=8"
-                          alt="Avatar"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-
-                      <span className="text-xs font-semibold text-gray-700">
-                        Phạm Quốc Bảo
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Feed Card 4 */}
-                <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-gray-100/50 flex flex-col">
-                  <div className="h-48 bg-blue-100 overflow-hidden relative">
-                    <div
-                      className="absolute inset-0 bg-cover bg-center"
-                      style={{
-                        backgroundImage:
-                          'url("https://images.unsplash.com/photo-1600250395178-40fe1529ce21?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80")',
-                      }}
-                    />
-                  </div>
-
-                  <div className="p-6 flex flex-col grow">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-xs font-bold text-red-600 tracking-wider">
-                        TIN Y TẾ
-                      </span>
-                      <span className="text-xs text-gray-400">Hôm qua</span>
-                    </div>
-
-                    <h3 className="text-lg font-bold text-gray-900 mb-3 leading-snug">
-                      Hung tin cho Real Madrid: Courtois tái phát chấn thương
-                      nghiêm trọng
-                    </h3>
-
-                    <p className="text-sm text-gray-500 mb-6 line-clamp-2">
-                      Thủ thành người Bỉ sẽ phải nghỉ thi đấu ít nhất 3 tháng
-                      tới, đẩy Kền kền trắng vào cuộc khủng hoảng.
-                    </p>
-
-                    <div className="mt-auto flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
-                        <img
-                          src="https://i.pravatar.cc/150?img=33"
-                          alt="Avatar"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-
-                      <span className="text-xs font-semibold text-gray-700">
-                        Dr. Đặng Văn Tú
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-center">
-                <button className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold px-8 py-3 rounded-full transition-colors text-sm">
-                  Xem thêm tin tức
-                </button>
-              </div>
-            </div>
-
-            <div className="xl:w-1/3 flex flex-col gap-8">
-              <div className="bg-white rounded-3xl p-8 border border-gray-100">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">
-                  Danh mục
-                </h3>
-
-                <div className="flex flex-wrap gap-3">
-                  {[
-                    "Tất cả",
-                    "Chuyển nhượng",
-                    "Kết quả",
-                    "Phân tích",
-                    "Câu lạc bộ",
-                    "Cầu thủ",
-                    "Hậu trường",
-                  ].map((tag, idx) => (
-                    <button
-                      key={idx}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                        idx === 0
-                          ? "bg-gray-800 text-white"
-                          : "bg-gray-50 text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-white rounded-3xl p-8 border border-gray-100">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">
-                  Xu hướng
-                </h3>
-
-                <div className="space-y-6">
-                  <div className="flex gap-4">
-                    <span className="text-4xl font-black text-gray-200 leading-none">
-                      01
-                    </span>
-                    <div>
-                      <h4 className="font-bold text-gray-800 mb-1 leading-snug hover:text-green-700 cursor-pointer transition-colors">
-                        Gia hạn hợp đồng của Salah: Những diễn biến mới nhất
-                      </h4>
-                      <span className="text-xs text-gray-400">
-                        1.2k lượt xem
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4">
-                    <span className="text-4xl font-black text-gray-200 leading-none">
-                      02
-                    </span>
-                    <div>
-                      <h4 className="font-bold text-gray-800 mb-1 leading-snug hover:text-green-700 cursor-pointer transition-colors">
-                        Danh sách rút gọn QBV 2024: Haaland dẫn đầu?
-                      </h4>
-                      <span className="text-xs text-gray-400">
-                        980 lượt xem
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4">
-                    <span className="text-4xl font-black text-gray-200 leading-none">
-                      03
-                    </span>
-                    <div>
-                      <h4 className="font-bold text-gray-800 mb-1 leading-snug hover:text-green-700 cursor-pointer transition-colors">
-                        European Super League: Sự trở lại đầy tranh cãi
-                      </h4>
-                      <span className="text-xs text-gray-400">
-                        850 lượt xem
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-green-700 rounded-3xl p-8 text-white relative overflow-hidden">
-                <div className="relative z-10">
-                  <h3 className="text-2xl font-bold mb-4">
-                    Đừng bỏ lỡ nhịp đập bóng đá!
-                  </h3>
-
-                  <p className="text-green-100 text-sm mb-6 leading-relaxed">
-                    Đăng ký nhận bản tin hàng ngày với những tin tức sốt dẻo
-                    nhất được gửi thẳng tới email của bạn.
-                  </p>
-
-                  <div className="flex flex-col gap-3">
-                    <input
-                      type="email"
-                      placeholder="Email của bạn..."
-                      className="w-full bg-green-800/50 border border-green-600 rounded-full px-5 py-3 text-sm text-white placeholder-green-300 focus:outline-none focus:ring-2 focus:ring-green-400"
-                    />
-
-                    <button className="w-full bg-white text-green-800 font-bold rounded-full px-5 py-3 hover:bg-green-50 transition-colors">
-                      Đăng ký ngay
-                    </button>
-                  </div>
-                </div>
-
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -translate-y-10 translate-x-10" />
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-black opacity-10 rounded-full translate-y-10 -translate-x-10" />
-              </div>
-            </div>
-          </section>
+                    <div className="absolute right-0 top-0 h-32 w-32 -translate-y-10 translate-x-10 rounded-full bg-white opacity-5" />
+                    <div className="absolute bottom-0 left-0 h-24 w-24 -translate-x-10 translate-y-10 rounded-full bg-black opacity-10" />
+                  </section>
+                </aside>
+              </section>
+            </>
+          )}
         </div>
       </div>
       <Footer />
     </>
   );
 };
+
+function FeaturedHero({ article }: { article: NewsArticle }) {
+  return (
+    <a
+      href={getArticleUrl(article)}
+      target="_blank"
+      rel="noreferrer"
+      className="group relative h-100 cursor-pointer overflow-hidden rounded-3xl lg:col-span-2 lg:h-full"
+    >
+      <img
+        src={getArticleImage(article)}
+        alt={article.title}
+        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        onError={(event) => {
+          event.currentTarget.src = fallbackImage;
+        }}
+      />
+
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-transparent" />
+
+      <div className="absolute bottom-0 left-0 right-0 flex flex-col justify-end p-8">
+        <span className="mb-4 inline-block w-fit rounded-full bg-green-600 px-3 py-1 text-xs font-bold text-white">
+          {article.category || "Tin tức"}
+        </span>
+
+        <h3 className="mb-3 text-3xl font-extrabold leading-tight text-white md:text-4xl">
+          {article.title}
+        </h3>
+
+        <p className="mb-6 line-clamp-2 max-w-2xl text-sm text-gray-200 md:text-base">
+          {article.summary}
+        </p>
+
+        <ArticleMeta article={article} light />
+      </div>
+    </a>
+  );
+}
+
+function SmallFeaturedCard({ article }: { article: NewsArticle }) {
+  return (
+    <a
+      href={getArticleUrl(article)}
+      target="_blank"
+      rel="noreferrer"
+      className="group relative min-h-62.5 flex-1 cursor-pointer overflow-hidden rounded-3xl"
+    >
+      <img
+        src={getArticleImage(article)}
+        alt={article.title}
+        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        onError={(event) => {
+          event.currentTarget.src = fallbackImage;
+        }}
+      />
+
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent" />
+
+      <div className="absolute bottom-0 left-0 right-0 p-6">
+        <span className="mb-3 inline-block w-fit rounded-full bg-indigo-500 px-2 py-1 text-[10px] font-bold text-white">
+          {article.category || "Tin tức"}
+        </span>
+
+        <h3 className="text-xl font-bold leading-snug text-white">
+          {article.title}
+        </h3>
+      </div>
+    </a>
+  );
+}
+
+function NewsCard({
+  article,
+  compact,
+}: {
+  article: NewsArticle;
+  compact: boolean;
+}) {
+  return (
+    <a
+      href={getArticleUrl(article)}
+      target="_blank"
+      rel="noreferrer"
+      className={`overflow-hidden rounded-2xl border border-gray-100/50 bg-white shadow-sm transition-shadow hover:shadow-md ${
+        compact ? "grid grid-cols-1 md:grid-cols-[220px_1fr]" : "flex flex-col"
+      }`}
+    >
+      <div className={compact ? "h-48 md:h-full" : "h-48"}>
+        <img
+          src={getArticleImage(article)}
+          alt={article.title}
+          className="h-full w-full object-cover"
+          onError={(event) => {
+            event.currentTarget.src = fallbackImage;
+          }}
+        />
+      </div>
+
+      <div className="flex grow flex-col p-6">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <span className="text-xs font-bold tracking-wider text-green-700">
+            {article.category || "Tin tức"}
+          </span>
+          <span className="shrink-0 text-xs text-gray-400">
+            {formatDate(article.publishedAt)}
+          </span>
+        </div>
+
+        <h3 className="mb-3 text-lg font-bold leading-snug text-gray-900">
+          {article.title}
+        </h3>
+
+        <p className="mb-6 line-clamp-2 text-sm text-gray-500">
+          {article.summary}
+        </p>
+
+        <div className="mt-auto flex items-center justify-between gap-3">
+          <ArticleMeta article={article} />
+          <ExternalLink size={16} className="shrink-0 text-gray-400" />
+        </div>
+      </div>
+    </a>
+  );
+}
+
+function ArticleMeta({
+  article,
+  light = false,
+}: {
+  article: NewsArticle;
+  light?: boolean;
+}) {
+  const textClass = light ? "text-gray-300" : "text-gray-500";
+
+  return (
+    <div className={`flex flex-wrap items-center gap-4 text-sm ${textClass}`}>
+      <div className="flex items-center gap-2">
+        <Calendar size={16} />
+        <span>{formatDate(article.publishedAt)}</span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <User size={16} />
+        <span>{article.sourceName || "VFF"}</span>
+      </div>
+    </div>
+  );
+}
 
 export default NewsPage;

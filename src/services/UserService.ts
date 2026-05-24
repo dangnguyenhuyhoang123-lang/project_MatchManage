@@ -23,14 +23,26 @@ class UserService {
       password,
     });
 
-    if (response.data) {
-      CurrentUser.setUser(response.data);
+    try {
+      const currentUserResponse = await this.getCurrentUser();
+      const currentUser = currentUserResponse.data || response.data;
+
+      CurrentUser.setUser(currentUser);
+
+      return {
+        ...response,
+        data: currentUser,
+      };
+    } catch {
+      if (response.data) {
+        CurrentUser.setUser(response.data);
+      }
     }
 
     return response;
   }
 
-  register(user: any) {
+  register(user: unknown) {
     return axiosClient.post(`${API_BASE_URL}/register`, user);
   }
 

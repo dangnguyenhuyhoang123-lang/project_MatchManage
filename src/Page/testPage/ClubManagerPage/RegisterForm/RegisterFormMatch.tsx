@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import type { GrassType } from "../../../../model/Registration";
 import { AppLayout } from "../../../../layouts/AppLayout";
 import CoachRegistration from "./CoachRegistration";
@@ -79,30 +79,163 @@ const defaultDraft: RegistrationDraft = {
   },
 };
 
+const DRAFT_STORAGE_KEY = "club_registration_draft";
+
+const steps = [
+  { step: 1, label: "Chọn giải đấu" },
+  { step: 2, label: "Danh sách ban huấn luyện" },
+  { step: 3, label: "Danh sách cầu thủ" },
+  { step: 4, label: "Sân vận động" },
+  { step: 5, label: "Kiểm tra & xác nhận" },
+];
+
+function readSavedDraft(): RegistrationDraft {
+  if (typeof window === "undefined") return defaultDraft;
+
+  const rawDraft = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+  if (!rawDraft) return defaultDraft;
+
+  try {
+    const savedDraft = JSON.parse(rawDraft) as Partial<RegistrationDraft>;
+
+    return {
+      ...defaultDraft,
+      ...savedDraft,
+      team: {
+        ...defaultDraft.team,
+        ...savedDraft.team,
+      },
+      stadium: {
+        ...defaultDraft.stadium,
+        ...savedDraft.stadium,
+      },
+      coaches: savedDraft.coaches ?? defaultDraft.coaches,
+      mainPlayers: savedDraft.mainPlayers ?? defaultDraft.mainPlayers,
+      subPlayers: savedDraft.subPlayers ?? defaultDraft.subPlayers,
+    };
+  } catch {
+    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    return defaultDraft;
+  }
+}
+
+function normalizeRoleText(role?: string) {
+  return (role ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\u0111/g, "d")
+    .replace(/\u0110/g, "D")
+    .toLowerCase()
+    .trim();
+}
+
+function getCoachRoleKey(role?: string) {
+  const normalizedRole = normalizeRoleText(role);
+
+  if (
+    normalizedRole.includes("head_coach") ||
+    normalizedRole.includes("hlv truong") ||
+    normalizedRole.includes("huan luyen vien truong")
+  ) {
+    return "headCoach";
+  }
+
+  if (
+    normalizedRole.includes("assistant") ||
+    normalizedRole.includes("tro ly") ||
+    normalizedRole.includes("troly")
+  ) {
+    return "assistant";
+  }
+
+  if (
+    normalizedRole.includes("team_doctor") ||
+    normalizedRole.includes("doctor") ||
+    normalizedRole.includes("bac si") ||
+    normalizedRole.includes("y te")
+  ) {
+    return "doctor";
+  }
+
+  return "other";
+}
+
+function getCompletedSteps(draft: RegistrationDraft): Record<number, boolean> {
+  const coachRoleCounts = draft.coaches.reduce<Record<string, number>>(
+    (counts, coach) => {
+      const roleKey = getCoachRoleKey(coach.role);
+      counts[roleKey] = (counts[roleKey] ?? 0) + 1;
+      return counts;
+    },
+    {},
+  );
+  const totalPlayers = draft.mainPlayers.length + draft.subPlayers.length;
+
+  return {
+    1: Boolean(draft.season?.id),
+    2:
+      draft.coaches.length >= 3 &&
+      (coachRoleCounts.headCoach ?? 0) >= 1 &&
+      (coachRoleCounts.assistant ?? 0) >= 1 &&
+      (coachRoleCounts.doctor ?? 0) >= 1,
+    3: totalPlayers >= 14,
+    4:
+      Boolean(draft.stadium.name.trim()) &&
+      Boolean(draft.stadium.address.trim()) &&
+      Number(draft.stadium.capacity) > 0,
+    5: false,
+  };
+}
+
+function getHighestAllowedStep(completedSteps: Record<number, boolean>) {
+  for (let currentStep = 1; currentStep <= 4; currentStep += 1) {
+    if (!completedSteps[currentStep]) {
+      return currentStep;
+    }
+  }
+
+  return 5;
+}
+
 const RegisterFormMatch: React.FC = () => {
   const [step, setStep] = useState(1);
-  const [draft, setDraft] = useState<RegistrationDraft>(defaultDraft);
-
-  const steps = [
-    { step: 1, label: "Chọn Giải đấu" },
-    { step: 2, label: "Danh sách Ban Huấn Luyện" },
-    { step: 3, label: "Danh sách Cầu thủ" },
-    { step: 4, label: "Sân vận động" },
-    { step: 5, label: "Kiểm tra & Xác nhận" },
-  ];
+  const [draft, setDraft] = useState<RegistrationDraft>(() => readSavedDraft());
+  const [draftMessage, setDraftMessage] = useState("");
 
   const selectedSeasonLabel =
     draft.season?.name || draft.season?.year || draft.season?.leagueName;
+  const completedSteps = useMemo(() => getCompletedSteps(draft), [draft]);
+  const highestAllowedStep = useMemo(
+    () => getHighestAllowedStep(completedSteps),
+    [completedSteps],
+  );
+
+  const goToStep = (nextStep: number) => {
+    if (nextStep > highestAllowedStep) {
+      setDraftMessage(
+        `Vui lòng hoàn thành bước ${highestAllowedStep} trước khi chuyển tiếp.`,
+      );
+      return;
+    }
+
+    setDraftMessage("");
+    setStep(nextStep);
+  };
+
+  const handleSaveDraft = () => {
+    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    setDraftMessage("Đã lưu nháp hồ sơ đăng ký trên trình duyệt.");
+  };
 
   return (
     <AppLayout>
-      <header className="flex flex-col gap-4 md:flex-row md:justify-between md:items-end mb-10">
+      <header className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h2 className="text-4xl font-black text-gray-900 tracking-tight mb-2 font-['Be_Vietnam_Pro']">
-            Hồ sơ Đăng ký Giải đấu
+          <h2 className="mb-2 font-['Be_Vietnam_Pro'] text-4xl font-black tracking-tight text-gray-900">
+            Hồ sơ đăng ký giải đấu
           </h2>
           {step > 1 && selectedSeasonLabel && (
-            <p className="text-gray-500 text-sm">
+            <p className="text-sm text-gray-500">
               Đăng ký thi đấu cho giải{" "}
               <span className="font-bold text-[#0d631b]">
                 {selectedSeasonLabel}
@@ -112,25 +245,41 @@ const RegisterFormMatch: React.FC = () => {
           )}
         </div>
 
-        <button className="self-start md:self-auto px-6 py-2.5 rounded-full border border-gray-300 text-gray-600 font-bold hover:bg-white transition-all text-sm">
+        <button
+          type="button"
+          onClick={handleSaveDraft}
+          className="self-start rounded-full border border-gray-300 px-6 py-2.5 text-sm font-bold text-gray-600 transition-all hover:bg-white md:self-auto"
+        >
           Lưu nháp
         </button>
       </header>
 
-      <div className="flex items-center justify-between bg-[#f5f3ef] p-6 rounded-2xl mb-8 border border-gray-200 overflow-x-auto">
+      {draftMessage && (
+        <div className="mb-6 rounded-xl border border-green-100 bg-green-50 px-4 py-3 text-sm font-bold text-green-700">
+          {draftMessage}
+        </div>
+      )}
+
+      <div className="mb-8 flex items-center justify-between overflow-x-auto rounded-2xl border border-gray-200 bg-[#f5f3ef] p-6">
         {steps.map((s) => {
           const isActive = step === s.step;
-          const isDone = step > s.step;
+          const isDone = Boolean(completedSteps[s.step]);
+          const isAllowed = s.step <= highestAllowedStep;
 
           return (
             <button
               key={s.step}
               type="button"
-              onClick={() => setStep(s.step)}
-              className="flex items-center gap-4 flex-1 min-w-[160px] text-left"
+              onClick={() => goToStep(s.step)}
+              disabled={!isAllowed}
+              className={`flex min-w-[160px] flex-1 items-center gap-4 text-left ${
+                isAllowed
+                  ? "cursor-pointer"
+                  : "cursor-not-allowed opacity-50"
+              }`}
             >
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
+                className={`flex h-10 w-10 items-center justify-center rounded-full font-bold transition-all ${
                   isDone || isActive
                     ? "bg-[#0d631b] text-white shadow-lg"
                     : "bg-gray-300 text-gray-600"
@@ -146,11 +295,11 @@ const RegisterFormMatch: React.FC = () => {
               </div>
 
               <div>
-                <p className="text-sm font-bold text-gray-900 leading-none">
+                <p className="text-sm font-bold leading-none text-gray-900">
                   {s.label}
                 </p>
                 <p
-                  className={`text-[11px] mt-1 font-bold ${
+                  className={`mt-1 text-[11px] font-bold ${
                     isActive
                       ? "text-[#0d631b]"
                       : isDone
@@ -162,7 +311,9 @@ const RegisterFormMatch: React.FC = () => {
                     ? "Đang thực hiện"
                     : isDone
                       ? "Hoàn thành"
-                      : "Chưa bắt đầu"}
+                      : isAllowed
+                        ? "Có thể thực hiện"
+                        : "Bị khóa"}
                 </p>
               </div>
             </button>
@@ -172,7 +323,7 @@ const RegisterFormMatch: React.FC = () => {
 
       {step === 1 && (
         <RegistrationPortal
-          setStep={setStep}
+          setStep={goToStep}
           selectedSeason={draft.season}
           onSeasonSelected={(season) =>
             setDraft((prev) => ({
@@ -184,7 +335,7 @@ const RegisterFormMatch: React.FC = () => {
       )}
       {step === 2 && (
         <CoachRegistration
-          setStep={setStep}
+          setStep={goToStep}
           selectedCoaches={draft.coaches}
           onCoachesChange={(coaches) =>
             setDraft((prev) => ({
@@ -196,7 +347,7 @@ const RegisterFormMatch: React.FC = () => {
       )}
       {step === 3 && (
         <PlayerRegistration
-          setStep={setStep}
+          setStep={goToStep}
           mainPlayers={draft.mainPlayers}
           subPlayers={draft.subPlayers}
           onPlayersChange={(mainPlayers, subPlayers) =>
@@ -210,7 +361,7 @@ const RegisterFormMatch: React.FC = () => {
       )}
       {step === 4 && (
         <StadiumRegistration
-          setStep={setStep}
+          setStep={goToStep}
           stadium={draft.stadium}
           onStadiumChange={(stadium) =>
             setDraft((prev) => ({
@@ -220,7 +371,7 @@ const RegisterFormMatch: React.FC = () => {
           }
         />
       )}
-      {step === 5 && <FinalConfirmation setStep={setStep} draft={draft} />}
+      {step === 5 && <FinalConfirmation setStep={goToStep} draft={draft} />}
     </AppLayout>
   );
 };
