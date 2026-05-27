@@ -8,67 +8,71 @@ const StatCard = ({ label, value, subtext, icon, bgColor, textColor }: any) => (
   >
     <div>
       <span className="material-symbols-outlined text-4xl mb-2">{icon}</span>
-      <p className="font-['Be_Vietnam_Pro'] font-bold text-lg tracking-wide">{label}</p>
+      <p className="font-['Be_Vietnam_Pro'] font-bold text-lg tracking-wide">
+        {label}
+      </p>
     </div>
     <div>
-      <p className="text-5xl font-black font-['Be_Vietnam_Pro'] tracking-tight">{value}</p>
+      <p className="text-5xl font-black font-['Be_Vietnam_Pro'] tracking-tight">
+        {value}
+      </p>
       <p className="text-xs opacity-80">{subtext}</p>
     </div>
   </div>
 );
 
-const MatchRow = ({
-  date,
-  league,
-  teamA,
-  teamB,
-  score,
-  yellowCards,
-  redCards,
-}: any) => (
-  <div className="grid grid-cols-12 items-center bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-200">
-    <div className="col-span-2">
-      <p className="text-xs font-bold text-gray-900 tracking-wide">{date}</p>
-      <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
-        {league}
-      </p>
-    </div>
-    <div className="col-span-4 flex items-center justify-center gap-4">
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-bold tracking-wide">{teamA}</span>
-        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-          <span className="material-symbols-outlined text-sm">shield</span>
-        </div>
-      </div>
-      <span className="text-xs font-black text-gray-400 font-['Be_Vietnam_Pro'] tracking-wider">
-        VS
-      </span>
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-          <span className="material-symbols-outlined text-sm">shield</span>
-        </div>
-        <span className="text-sm font-bold tracking-wide">{teamB}</span>
-      </div>
-    </div>
-    <div className="col-span-2 text-center">
-      <span className="font-['Be_Vietnam_Pro'] font-black text-xl text-gray-900 tracking-tight">
-        {score}
-      </span>
-    </div>
-    <div className="col-span-2 text-center">
-      <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-50 text-yellow-700 rounded-full">
-        <div className="w-2 h-3 bg-yellow-400 rounded-sm"></div>
-        <span className="text-sm font-black tracking-wide">{yellowCards}</span>
-      </div>
-    </div>
-    <div className="col-span-2 text-center">
-      <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-50 text-red-700 rounded-full">
-        <div className="w-2 h-3 bg-red-500 rounded-sm"></div>
-        <span className="text-sm font-black tracking-wide">{redCards}</span>
-      </div>
-    </div>
-  </div>
-);
+// const MatchRow = ({
+//   date,
+//   league,
+//   teamA,
+//   teamB,
+//   score,
+//   yellowCards,
+//   redCards,
+// }: any) => (
+//   <div className="grid grid-cols-12 items-center bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-200">
+//     <div className="col-span-2">
+//       <p className="text-xs font-bold text-gray-900 tracking-wide">{date}</p>
+//       <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
+//         {league}
+//       </p>
+//     </div>
+//     <div className="col-span-4 flex items-center justify-center gap-4">
+//       <div className="flex items-center gap-2">
+//         <span className="text-sm font-bold tracking-wide">{teamA}</span>
+//         <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+//           <span className="material-symbols-outlined text-sm">shield</span>
+//         </div>
+//       </div>
+//       <span className="text-xs font-black text-gray-400 font-['Be_Vietnam_Pro'] tracking-wider">
+//         VS
+//       </span>
+//       <div className="flex items-center gap-2">
+//         <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+//           <span className="material-symbols-outlined text-sm">shield</span>
+//         </div>
+//         <span className="text-sm font-bold tracking-wide">{teamB}</span>
+//       </div>
+//     </div>
+//     <div className="col-span-2 text-center">
+//       <span className="font-['Be_Vietnam_Pro'] font-black text-xl text-gray-900 tracking-tight">
+//         {score}
+//       </span>
+//     </div>
+//     <div className="col-span-2 text-center">
+//       <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-50 text-yellow-700 rounded-full">
+//         <div className="w-2 h-3 bg-yellow-400 rounded-sm"></div>
+//         <span className="text-sm font-black tracking-wide">{yellowCards}</span>
+//       </div>
+//     </div>
+//     <div className="col-span-2 text-center">
+//       <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-50 text-red-700 rounded-full">
+//         <div className="w-2 h-3 bg-red-500 rounded-sm"></div>
+//         <span className="text-sm font-black tracking-wide">{redCards}</span>
+//       </div>
+//     </div>
+//   </div>
+// );
 
 // --- Component Chính ---
 

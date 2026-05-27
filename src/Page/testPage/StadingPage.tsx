@@ -1,10 +1,20 @@
-import React, { useState, useEffect } from "react";
-import { Sidebar } from "../../utils/SideBar";
 import { AppLayout } from "../../layouts/AppLayout";
-import { Container } from "../../utils/Container";
 import StandingService from "../../services/StandingService";
 import LeagueService from "../../services/LeagueService";
-import SeasonService from "../../services/SeasonService";
+import { useEffect, useState } from "react";
+
+type LeagueOption = {
+  id: number;
+  name: string;
+};
+
+type SeasonOption = {
+  id: number;
+  name: string;
+};
+
+type LastResult = "W" | "D" | "L";
+
 interface TeamStanding {
   rank: number;
   name: string;
@@ -21,8 +31,8 @@ export default function StandingsPage() {
   const [standingsData, setStandingsData] = useState<TeamStanding[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [leagues, setLeagues] = useState<any[]>([]);
-  const [seasons, setSeasons] = useState<any[]>([]);
+  const [leagues, setLeagues] = useState<LeagueOption[]>([]);
+  const [seasons, setSeasons] = useState<SeasonOption[]>([]);
 
   const [selectedLeague, setSelectedLeague] = useState<number | "">(1);
   const [selectedSeason, setSelectedSeason] = useState<number | "">(1);

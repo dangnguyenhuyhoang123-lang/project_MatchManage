@@ -286,7 +286,7 @@ const InfoCard = ({
 const CheckItem = ({
   label,
   status,
-  passed,
+  // passed,
 }: {
   label: string;
   status: string;

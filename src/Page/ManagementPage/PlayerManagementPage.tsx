@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import LoadingSpinner from "../../components/Spinner/LoadingSpinner";
 
 const PlayerManagementPage = () => {
-  const [players, setPlayers] = useState([]);
+  const [players, setPlayers] = useState<unknown[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -41,6 +41,9 @@ const PlayerManagementPage = () => {
           <h1 className="text-2xl font-bold">Player Management</h1>
           <p>Manage your players here.</p>
           {/* Add player list and form components here */}
+          <p className="mt-2 text-sm text-slate-500">
+            Total players: {players.length}
+          </p>
         </div>
       </div>
     </div>

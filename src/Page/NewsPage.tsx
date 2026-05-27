@@ -7,6 +7,7 @@ import {
   RefreshCw,
   User,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { Footer } from "../components/Footer/Footer_HomePage";
 import LoadingSpinner from "../components/Spinner/LoadingSpinner";
@@ -30,10 +31,6 @@ function formatDate(value?: string | null) {
 
 function getArticleImage(article: NewsArticle) {
   return article.imageUrl?.trim() || fallbackImage;
-}
-
-function getArticleUrl(article: NewsArticle) {
-  return article.sourceUrl?.trim() || "#";
 }
 
 export const NewsPage = () => {
@@ -246,11 +243,9 @@ export const NewsPage = () => {
 
                     <div className="space-y-6">
                       {trendingArticles.map((article, index) => (
-                        <a
+                        <Link
                           key={article.id}
-                          href={getArticleUrl(article)}
-                          target="_blank"
-                          rel="noreferrer"
+                          to={`/news/${article.id}`}
                           className="flex gap-4"
                         >
                           <span className="text-4xl font-black leading-none text-gray-200">
@@ -264,7 +259,7 @@ export const NewsPage = () => {
                               {formatDate(article.publishedAt)}
                             </span>
                           </div>
-                        </a>
+                        </Link>
                       ))}
                     </div>
                   </section>
@@ -297,10 +292,8 @@ export const NewsPage = () => {
 
 function FeaturedHero({ article }: { article: NewsArticle }) {
   return (
-    <a
-      href={getArticleUrl(article)}
-      target="_blank"
-      rel="noreferrer"
+    <Link
+      to={`/news/${article.id}`}
       className="group relative h-100 cursor-pointer overflow-hidden rounded-3xl lg:col-span-2 lg:h-full"
     >
       <img
@@ -329,16 +322,14 @@ function FeaturedHero({ article }: { article: NewsArticle }) {
 
         <ArticleMeta article={article} light />
       </div>
-    </a>
+    </Link>
   );
 }
 
 function SmallFeaturedCard({ article }: { article: NewsArticle }) {
   return (
-    <a
-      href={getArticleUrl(article)}
-      target="_blank"
-      rel="noreferrer"
+    <Link
+      to={`/news/${article.id}`}
       className="group relative min-h-62.5 flex-1 cursor-pointer overflow-hidden rounded-3xl"
     >
       <img
@@ -361,7 +352,7 @@ function SmallFeaturedCard({ article }: { article: NewsArticle }) {
           {article.title}
         </h3>
       </div>
-    </a>
+    </Link>
   );
 }
 
@@ -373,10 +364,8 @@ function NewsCard({
   compact: boolean;
 }) {
   return (
-    <a
-      href={getArticleUrl(article)}
-      target="_blank"
-      rel="noreferrer"
+    <Link
+      to={`/news/${article.id}`}
       className={`overflow-hidden rounded-2xl border border-gray-100/50 bg-white shadow-sm transition-shadow hover:shadow-md ${
         compact ? "grid grid-cols-1 md:grid-cols-[220px_1fr]" : "flex flex-col"
       }`}
@@ -415,7 +404,7 @@ function NewsCard({
           <ExternalLink size={16} className="shrink-0 text-gray-400" />
         </div>
       </div>
-    </a>
+    </Link>
   );
 }
 

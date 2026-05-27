@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import LoadingSpinner from "../../components/Spinner/LoadingSpinner";
 
@@ -7,9 +7,9 @@ const CoachManagementPage = () => {
     { id: 1, name: "Coach A", team: "Team X" },
     { id: 2, name: "Coach B", team: "Team Y" },
   ]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
 
-  const handleDelete = (id) => {
+  const handleDelete = (id: number) => {
     if (window.confirm("Are you sure you want to delete this coach?")) {
       setCoaches((prev) => prev.filter((coach) => coach.id !== id));
     }

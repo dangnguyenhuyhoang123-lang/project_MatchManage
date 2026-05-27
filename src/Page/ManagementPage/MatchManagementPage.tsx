@@ -12,7 +12,6 @@ import {
   getAdminMatches,
   type MatchAdminOptions,
   type MatchFormValues,
-  type MatchOptionItem,
   updateAdminMatch,
 } from "../../services/AdminMatchAPI";
 import LoadingSpinner from "../../components/Spinner/LoadingSpinner";
@@ -38,8 +37,8 @@ const toFormValues = (match: MatchModel): MatchFormValues => ({
 const formatStatusLabel = (status: string) =>
   status.charAt(0) + status.slice(1).toLowerCase();
 
-const getOptionLabel = (options: MatchOptionItem[], id: string) =>
-  options.find((option) => option.id === id)?.label || "Dang cap nhat";
+// const getOptionLabel = (options: MatchOptionItem[], id: string) =>
+//   options.find((option) => option.id === id)?.label || "Dang cap nhat";
 
 const MatchManagementPage = () => {
   const { user, loading } = useAuth();

@@ -34,7 +34,7 @@ export type MatchAdminOptions = {
   seasons: MatchOptionItem[];
 };
 
-const parseMatch = (item: any) =>
+const parseMatch = (item: any): MatchModel =>
   new MatchModel({
     id: item.id,
     status: item.status,
@@ -127,19 +127,19 @@ export const getAdminMatches = async (params?: {
   const matches = data.content.map(parseMatch);
 
   const teams = dedupeOptions<TeamModel>(
-    matches.flatMap((match) => [match.homeTeam, match.awayTeam]),
+    matches.flatMap((match: MatchModel) => [match.homeTeam, match.awayTeam]),
     (team) => team.name,
     (team) => team.league?.name,
   );
 
   const leagues = dedupeOptions<League>(
-    matches.map((match) => match.league),
+    matches.map((match: MatchModel) => match.league),
     (league) => league.name,
     (league) => league.country,
   );
 
   const seasons = dedupeOptions<SeasonModel>(
-    matches.map((match) => match.season),
+    matches.map((match: MatchModel) => match.season),
     (season) => season.year,
   );
 

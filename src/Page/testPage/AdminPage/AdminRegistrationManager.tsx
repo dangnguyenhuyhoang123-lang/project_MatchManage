@@ -18,10 +18,10 @@ type Filters = {
 };
 
 const filterTabs: Array<{ value: FilterStatus; label: string }> = [
-  { value: "ALL", label: "Táº¥t cáº£" },
-  { value: "PENDING", label: "Chá» duyá»‡t" },
+  { value: "ALL", label: "Tất cả" },
+  { value: "PENDING", label: "Chờ duyệt" },
   { value: "APPROVED", label: "Đã duyệt" },
-  { value: "REJECTED", label: "Tá»« chá»‘i" },
+  { value: "REJECTED", label: "Từ chối" },
 ];
 
 const statusMeta: Record<
@@ -33,7 +33,7 @@ const statusMeta: Record<
   }
 > = {
   PENDING: {
-    label: "Chá» duyá»‡t",
+    label: "Chờ duyệt",
     badgeClass: "bg-indigo-50 text-indigo-700",
     dotClass: "bg-indigo-500",
   },
@@ -43,7 +43,7 @@ const statusMeta: Record<
     dotClass: "bg-green-600",
   },
   REJECTED: {
-    label: "Tá»« chá»‘i",
+    label: "Từ chối",
     badgeClass: "bg-red-50 text-red-600",
     dotClass: "bg-red-500",
   },
@@ -288,7 +288,7 @@ const AdminRegistrationManager: React.FC = () => {
       await RegistrationService.rejectRegistration(id, note);
       await loadRegistrations();
     } catch (error) {
-      console.error("Lá»—i khi tá»« chá»‘i há»“ sÆ¡:", error);
+      console.error("Lá»—i khi Từ chối há»“ sÆ¡:", error);
       alert("Không thể từ chối hồ sơ đăng ký.");
     } finally {
       setProcessingId(null);
@@ -406,7 +406,7 @@ const AdminRegistrationManager: React.FC = () => {
           />
 
           <StatCard
-            label="Chá» duyá»‡t"
+            label="Chờ duyệt"
             value={stats.pending}
             icon="schedule"
             valueClassName="text-indigo-700"
@@ -688,7 +688,7 @@ const RegistrationRow = ({
             />
 
             <IconButton
-              label="Tá»« chá»‘i"
+              label="Từ chối"
               icon="close"
               className="bg-red-50 hover:bg-red-100 text-red-500 disabled:opacity-50"
               disabled={isProcessing}

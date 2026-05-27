@@ -22,23 +22,23 @@ const legacyClubPaths = [
   "/registrations",
 ];
 
-const legacyTitles: Record<string, string> = {
-  "/dashBoard": "Tổng quan hệ thống",
-  "/league": "Quản lý giải đấu",
-  "/rounds": "Quản lý vòng đấu",
-  "/clubs": "Quản lý câu lạc bộ",
-  "/players": "Quản lý cầu thủ",
-  "/matches": "Lịch thi đấu",
-  "/results": "Kết quả trận đấu",
-  "/standings": "Bảng xếp hạng",
-  "/reports": "Báo cáo",
-  "/manageRegisger": "Duyệt đăng ký thi đấu",
-  "/manageMatchClub": "Trận đấu và đội hình",
-  "/manageInfoClub": "Thông tin câu lạc bộ",
-  "/managePlayerClub": "Cầu thủ câu lạc bộ",
-  "/manageCoachClub": "Ban huấn luyện",
-  "/manageStadiumClub": "Sân vận động",
-};
+// const legacyTitles: Record<string, string> = {
+//   "/dashBoard": "Tổng quan hệ thống",
+//   "/league": "Quản lý giải đấu",
+//   "/rounds": "Quản lý vòng đấu",
+//   "/clubs": "Quản lý câu lạc bộ",
+//   "/players": "Quản lý cầu thủ",
+//   "/matches": "Lịch thi đấu",
+//   "/results": "Kết quả trận đấu",
+//   "/standings": "Bảng xếp hạng",
+//   "/reports": "Báo cáo",
+//   "/manageRegisger": "Duyệt đăng ký thi đấu",
+//   "/manageMatchClub": "Trận đấu và đội hình",
+//   "/manageInfoClub": "Thông tin câu lạc bộ",
+//   "/managePlayerClub": "Cầu thủ câu lạc bộ",
+//   "/manageCoachClub": "Ban huấn luyện",
+//   "/manageStadiumClub": "Sân vận động",
+// };
 
 function resolveWorkspace(pathname: string, workspace?: AppWorkspace) {
   if (workspace) {
@@ -60,7 +60,7 @@ export const AppLayout = ({ children, workspace }: AppLayoutProps) => {
   const alreadyInsideAppLayout = useContext(AppLayoutContext);
   const location = useLocation();
   const currentWorkspace = resolveWorkspace(location.pathname, workspace);
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) return <LoadingSpinner />;
   if (alreadyInsideAppLayout) {

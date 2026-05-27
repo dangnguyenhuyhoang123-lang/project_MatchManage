@@ -7,6 +7,7 @@ import LoginPage from "./Page/LoginPage";
 import SignUpPage from "./Page/SignUpPage";
 import FeaturePage from "./Page/FeaturePage";
 import NewsPage from "./Page/NewsPage";
+import NewsDetailPage from "./Page/NewsDetailPage";
 import AboutPage from "./Page/AboutPage";
 import PublicLeaguesPage from "./Page/PublicLeaguesPage";
 import MatchDetail from "./Page/MatchDetail";
@@ -21,7 +22,7 @@ import PlayerManagement from "./Page/testPage/AdminPage/PlayerManage/PlayerManag
 import MatchSchedule from "./Page/testPage/AdminPage/MatchSchedule/MatchShedule";
 import MatchResults from "./Page/testPage/Matchresult/MatchResults";
 import StandingsPage from "./Page/testPage/StadingPage";
-import ReportPage from "./Page/testPage/ReportPage";
+import ReportPage from "./Page/testPage/AdminPage/ReportPage";
 import AdminRegistrationManager from "./Page/testPage/AdminPage/AdminRegistrationManager";
 
 import RegisterFormMatch from "./Page/testPage/ClubManagerPage/RegisterForm/RegisterFormMatch";
@@ -34,6 +35,7 @@ import PublicLayout from "./layouts/PublicLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import ClubManagerLayout from "./layouts/ClubManagerLayout";
 
+import ProtectedRoute from "./routes/ProtectedRoute";
 function getRouteWorkspace(pathname: string) {
   if (pathname.startsWith("/admin")) {
     return "admin";
@@ -84,6 +86,7 @@ const AppRoutes = () => {
             <Route path="/homepage" element={<Navigate to="/" replace />} />
             <Route path="/features" element={<FeaturePage />} />
             <Route path="/news" element={<NewsPage />} />
+            <Route path="/news/:id" element={<NewsDetailPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/leagues" element={<PublicLeaguesPage />} />
             <Route
@@ -92,12 +95,25 @@ const AppRoutes = () => {
             />
             <Route path="/matches/:id" element={<MatchDetail />} />
             <Route path="/teams/:teamName" element={<TeamDetail />} />
-            <Route path="/profile" element={<UserProfilePage />} />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <UserProfilePage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/sign-up" element={<SignUpPage />} />
           </Route>
 
-          <Route element={<AdminLayout />}>
+          <Route
+            element={
+              <ProtectedRoute allowedRoles={["ROLE_ADMIN", "ROLE_STAFF"]}>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route
               path="/admin"
               element={<Navigate to="/admin/dashboard" replace />}
@@ -117,7 +133,13 @@ const AppRoutes = () => {
             />
           </Route>
 
-          <Route element={<ClubManagerLayout />}>
+          <Route
+            element={
+              <ProtectedRoute allowedRoles={["ROLE_CLUB_MANAGER"]}>
+                <ClubManagerLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route
               path="/club"
               element={<Navigate to="/club/dashboard" replace />}

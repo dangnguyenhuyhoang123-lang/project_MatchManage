@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import AddMatchModal from "./AddMatchModal";
 import { Modal } from "../../../../components/Modal";
@@ -155,9 +156,9 @@ export default function MatchSchedule() {
     setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleApplyFilter = () => {
-    setTrangHienTai(1);
-  };
+  // const handleApplyFilter = () => {
+  //   setTrangHienTai(1);
+  // };
 
   /* ================= UI ================= */
   return (
@@ -366,6 +367,7 @@ function MatchRow({
   onEdit: (m: MatchModel) => void;
   onDelete: (id: number) => void;
 }) {
+  const navigate = useNavigate();
   const date = new Date(match.matchDate);
 
   const isConflict = String(match.status) === "CONFLICT";
@@ -401,7 +403,8 @@ function MatchRow({
 
   return (
     <div
-      className={`grid grid-cols-12 items-center p-6 rounded-xl transition-all
+      onClick={() => navigate(`/matches/${match.id}`)}
+      className={`cursor-pointer grid grid-cols-12 items-center p-6 rounded-xl transition-all
         ${
           isConflict
             ? "bg-red-50 border-2 border-red-200"
@@ -459,7 +462,7 @@ function MatchRow({
       <div className="col-span-2 text-right">{renderStatus(match.status)}</div>
 
       {/* ACTION */}
-      <div className="col-span-1 flex justify-end gap-1">
+      <div className="col-span-1 flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={() => onEdit(match)}
           className="p-1.5 hover:bg-gray-100 rounded-full"
@@ -477,4 +480,3 @@ function MatchRow({
     </div>
   );
 }
-

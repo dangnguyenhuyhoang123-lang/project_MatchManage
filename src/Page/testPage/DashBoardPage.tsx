@@ -8,8 +8,7 @@ import { getListMatches } from "../../services/MatchAPI";
 import { MatchModel } from "../../model/Match/MatchModel";
 
 import { getTeamDetailPath } from "../../utils/teamRoute";
-import { Sidebar } from "../../utils/SideBar";
-import { Container } from "../../utils/Container";
+
 import { AppLayout } from "../../layouts/AppLayout";
 
 export default function DashBoardPage() {

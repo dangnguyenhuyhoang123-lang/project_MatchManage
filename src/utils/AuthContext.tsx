@@ -20,7 +20,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     getCurrentUser()
       .then((data) => setUser(data))
-      .catch(() => setUser(null))
+      .catch((error) => {
+        // Only clear user state if the error is 401 Unauthorized (token invalid/expired)
+        // If it's 403 Forbidden (e.g., admin doesn't have access to /me) or network error, 
+        // we keep the user state loaded from localStorage.
+        if (error.response?.status === 401) {
+          setUser(null);
+        } else {
+          console.warn("Lỗi khi tải thông tin user, sử dụng cache:", error);
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
 

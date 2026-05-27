@@ -7,6 +7,7 @@ import MatchService from "../../../../services/MatchService";
 import MatchLineupModal, {
   type MatchLineupModalMatch,
 } from "./MatchLineupModal";
+import { useNavigate } from "react-router-dom";
 
 const CURRENT_TEAM_ID = 1;
 const CURRENT_TEAM_SEASON_ID = 60;
@@ -288,6 +289,7 @@ function MatchCardItem({
   match: MatchLineupModalMatch;
   onOpen: (match: MatchLineupModalMatch) => void;
 }) {
+  const navigate = useNavigate();
   const isEditable = match.status === MatchStatus.SCHEDULED;
   const actionLabel = isEditable ? "Cập nhật đội hình" : "Xem chi tiết";
   const actionIcon = isEditable ? "edit_document" : "visibility";
@@ -353,7 +355,7 @@ function MatchCardItem({
 
         <button
           type="button"
-          onClick={() => onOpen(match)}
+          onClick={() => isEditable ? onOpen(match) : navigate(`/matches/${match.id}`)}
           className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-black transition ${
             isEditable
               ? "bg-[#008C2F] text-white hover:bg-green-800"

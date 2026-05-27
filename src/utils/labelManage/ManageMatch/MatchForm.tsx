@@ -1,4 +1,27 @@
 import { MatchStatus } from "../../../model/enum";
+import type { ChangeEvent, FormEvent } from "react";
+import type {
+  MatchAdminOptions,
+  MatchFormValues,
+  MatchOptionItem,
+} from "../../../services/AdminMatchAPI";
+
+type MatchFormProps = {
+  formData: MatchFormValues;
+  options: MatchAdminOptions;
+  editingId: number | null;
+  isSubmitting: boolean;
+  message: string;
+  error: string;
+  selectedHomeTeam?: MatchOptionItem;
+  selectedAwayTeam?: MatchOptionItem;
+  handleChange: (
+    field: keyof MatchFormValues,
+  ) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+  handleSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  resetForm: () => void;
+  formatStatusLabel: (status: string) => string;
+};
 export const MatchForm = ({
   formData,
   options,
@@ -12,7 +35,7 @@ export const MatchForm = ({
   handleSubmit,
   resetForm,
   formatStatusLabel,
-}) => {
+}: MatchFormProps) => {
   const matchStatusOptions = Object.values(MatchStatus);
   return (
     <section className="rounded-3xl bg-white p-8 shadow-lg h-fit sticky top-6">

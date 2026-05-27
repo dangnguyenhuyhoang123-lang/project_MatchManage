@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import SeasonService from "../../../../services/SeasonService";
 import RoundService from "../../../../services/RoundService";
 

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import LoadingSpinner from "../../components/Spinner/LoadingSpinner";
 
 const TeamManagementPage = () => {
-  const [teams, setTeams] = useState([]);
+  const [teams, setTeams] = useState<unknown[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -41,6 +41,9 @@ const TeamManagementPage = () => {
           <h1 className="text-2xl font-bold">Team Management</h1>
           <p>Manage your teams here.</p>
           {/* Add team list and form components here */}
+          <p className="mt-2 text-sm text-slate-500">
+            Total teams: {teams.length}
+          </p>
         </div>
       </div>
     </div>

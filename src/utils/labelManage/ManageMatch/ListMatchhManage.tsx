@@ -1,4 +1,16 @@
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
+import type { MatchModel } from "../../../model/Match/MatchModel";
+import type { MatchAdminOptions } from "../../../services/AdminMatchAPI";
+
+type ListMatchManageProps = {
+  matches: MatchModel[];
+  options: MatchAdminOptions;
+  formatStatusLabel: (status: string) => string;
+  handleDelete: (id: number) => void;
+  handleEdit: (match: MatchModel) => void;
+  onFilterChange: (filters: { leagueName?: string; season?: string }) => void;
+  isLoading?: boolean;
+};
 export const ListMatchManage = ({
   matches,
   options,
@@ -7,7 +19,8 @@ export const ListMatchManage = ({
   handleEdit,
   onFilterChange,
   isLoading,
-}) => {
+}: ListMatchManageProps) => {
+  void isLoading;
   // Add states for league and season filters
   const [selectedLeague, setSelectedLeague] = useState<string>("");
   const [selectedSeason, setSelectedSeason] = useState<string>("");
@@ -23,7 +36,7 @@ export const ListMatchManage = ({
   // }, [matches, selectedLeague, selectedSeason]);
 
   // Handlers for filter changes
-  const handleLeagueFilterChange = (e) => {
+  const handleLeagueFilterChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     setSelectedLeague(value);
 
@@ -33,7 +46,7 @@ export const ListMatchManage = ({
     });
   };
 
-  const handleSeasonFilterChange = (e) => {
+  const handleSeasonFilterChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     setSelectedSeason(value);
 
@@ -150,7 +163,7 @@ export const ListMatchManage = ({
 
                 <button
                   type="button"
-                  onClick={() => handleDelete(match.id)}
+                  onClick={() => match.id != null && handleDelete(match.id)}
                   className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 font-semibold text-red-700 transition hover:bg-red-100"
                 >
                   Xoa
