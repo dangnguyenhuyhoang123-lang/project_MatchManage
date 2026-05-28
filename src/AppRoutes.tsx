@@ -37,6 +37,7 @@ import AdminLayout from "./layouts/AdminLayout";
 import ClubManagerLayout from "./layouts/ClubManagerLayout";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
+import SystemRulesPage from "./Page/testPage/AdminPage/SystemRulesPage";
 function getRouteWorkspace(pathname: string) {
   if (pathname.startsWith("/admin")) {
     return "admin";
@@ -127,6 +128,7 @@ const AppRoutes = () => {
             <Route path="/admin/matches" element={<MatchSchedule />} />
             <Route path="/admin/results" element={<MatchResults />} />
             <Route path="/admin/standings" element={<StandingsPage />} />
+            <Route path="/admin/systemrule" element={<SystemRulesPage />} />
             <Route path="/admin/reports" element={<ReportPage />} />
             <Route
               path="/admin/registrations"

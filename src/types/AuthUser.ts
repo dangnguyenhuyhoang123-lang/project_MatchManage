@@ -1,11 +1,12 @@
 export type AuthUser = {
-  id?: number;
+  id: number;
+  fullName: string;
+  email: string;
   username: string;
-  roles: string[];
-  fullName?: string;
   displayName?: string;
-  email?: string;
   phone?: string;
   avatar?: string;
-  teamId?: number;
+  status: boolean;
+  roles: string[];
+  teamId?: number | null;
 };

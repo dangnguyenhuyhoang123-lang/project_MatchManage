@@ -74,6 +74,12 @@ const adminMenu: MenuItem[] = [
     aliases: ["/reports"],
   },
   {
+    label: "Cấu hình luật",
+    path: "/admin/systemrule",
+    icon: "analytics",
+    aliases: ["/systemrule"],
+  },
+  {
     label: "Cài đặt hệ thống",
     path: "/admin/settings",
     icon: "settings",
@@ -168,10 +174,11 @@ export const Sidebar = ({ workspace }: SidebarProps) => {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 rounded-xl px-4 py-3 font-semibold transition-colors ${isActive
-                ? "bg-white text-[#008C2F] shadow-sm"
-                : "text-gray-600 hover:bg-white/70 hover:text-[#008C2F]"
-                }`}
+              className={`flex items-center gap-3 rounded-xl px-4 py-3 font-semibold transition-colors ${
+                isActive
+                  ? "bg-white text-[#008C2F] shadow-sm"
+                  : "text-gray-600 hover:bg-white/70 hover:text-[#008C2F]"
+              }`}
             >
               <span className="material-symbols-outlined text-[20px]">
                 {item.icon}
@@ -194,7 +201,9 @@ export const Sidebar = ({ workspace }: SidebarProps) => {
           className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-[#008C2F] transition-colors hover:text-[#0d631b]"
         >
           Xem trang public
-          <span className="material-symbols-outlined text-sm">arrow_forward</span>
+          <span className="material-symbols-outlined text-sm">
+            arrow_forward
+          </span>
         </Link>
       </div>
     </aside>
