@@ -1,4 +1,4 @@
-import { MatchEvent } from "../../model/MatchEvents";
+import { MatchEvent } from "../../model/Match/MatchEvents";
 import type { Player } from "../../model/Player";
 import PlayerService from "../../services/PlayerService";
 import { useState, useEffect } from "react";

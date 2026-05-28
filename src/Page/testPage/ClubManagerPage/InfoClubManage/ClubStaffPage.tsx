@@ -4,7 +4,7 @@ import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import { PhanTrang } from "../../../../utils/PhanTrang";
 import CoachService from "../../../../services/CoachService";
 import type { Coach } from "../../../../model/CoachModel";
-
+import TeamService from "../../../../services/TeamService";
 import {
   calculateAge,
   fallbackAvatar,
@@ -13,6 +13,7 @@ import {
   statusLabel,
   useCurrentClubId,
 } from "./clubInfoHelpers";
+import type { TeamModel } from "../../../../model/TeamModel";
 
 interface StaffMember {
   id: number;
@@ -36,7 +37,7 @@ const ClubStaffPage: React.FC = () => {
   const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
+  const [team, setTeam] = useState<TeamModel | null>(null);
   useEffect(() => {
     let mounted = true;
 
@@ -45,7 +46,9 @@ const ClubStaffPage: React.FC = () => {
 
       if (!currentClubId) {
         setLoading(false);
-        setError("Không xác định được câu lạc bộ của người dùng đang đăng nhập.");
+        setError(
+          "Không xác định được câu lạc bộ của người dùng đang đăng nhập.",
+        );
         return;
       }
 
@@ -59,6 +62,11 @@ const ClubStaffPage: React.FC = () => {
           PAGE_SIZE,
         );
 
+        const data_team = await TeamService.getTeamById(currentClubId);
+
+        if (mounted) {
+          setTeam(data_team);
+        }
         if (!mounted) return;
 
         setStaff(
@@ -107,7 +115,7 @@ const ClubStaffPage: React.FC = () => {
   return (
     <AppLayout>
       <div className="mx-auto max-w-7xl space-y-10 font-['Be_Vietnam_Pro']">
-        <StaffHeader total={totalElements} />
+        <StaffHeader total={totalElements} team={team} />
 
         {error && (
           <div className="rounded-sm border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
@@ -169,7 +177,8 @@ function isHeadCoach(role: string) {
   );
 }
 
-function StaffHeader({ total }: { total: number }) {
+function StaffHeader({ total, team }: { total: number; team: TeamModel }) {
+  const teamName = team?.name ?? "câu lạc bộ";
   return (
     <section className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end">
       <div>
@@ -178,7 +187,7 @@ function StaffHeader({ total }: { total: number }) {
         </h1>
 
         <p className="max-w-xl text-base leading-7 text-gray-700">
-          {total} thành viên thuộc biên chế Becamex TP.Hồ Chí Minh.
+          {total} thành viên thuộc biên chế {teamName}.
         </p>
       </div>
 

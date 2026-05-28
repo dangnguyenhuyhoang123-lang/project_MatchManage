@@ -1,23 +1,24 @@
 import { Link, useParams } from "react-router-dom";
-import {
-  getMatchById,
-  getStatsMatch,
-  getListEventMatch,
-} from "../services/MatchAPI";
-import LineupService from "../services/LineupService";
-import type { TeamLineupResponse } from "../model/Lineup";
+import { useEffect, useState } from "react";
+
+import MatchService from "../services/MatchService";
+
 import type { TeamModel } from "../model/TeamModel";
 import { MatchModel } from "../model/Match/MatchModel";
-import { useState, useEffect } from "react";
-import { MatchStats } from "../model/MatchStats";
-import { MatchEvent } from "../model/MatchEvents";
-import { labelStats } from "../utils/labelMatchDetail/labelStats";
-import { PlayerInLineup } from "../model/PlayerInLineup";
+import type { MatchEvent } from "../model/Match/MatchEvents";
+import type { MatchStats } from "../model/Match/MatchStats";
+import type {
+  MatchLineupsResponse,
+  MatchTactics,
+  MatchLineup,
+} from "../model/Match/MatchLineup";
+
 import { getTeamDetailPath } from "../utils/teamRoute";
 import { AnimatedPanel } from "../components/AnimationPanel/AnimatedPanel";
 
-type MatchDetailPlayer = PlayerInLineup & {
+type MatchDetailPlayer = MatchLineup & {
   teamId?: number;
+  teamName?: string;
 };
 
 type PlayerRender = MatchDetailPlayer & {
@@ -64,7 +65,6 @@ const StatRow = ({
   );
 };
 
-/* ================== EVENT ICON ================== */
 const EVENT_ICONS: Record<string, string> = {
   GOAL: "⚽",
   YELLOW_CARD: "🟨",
@@ -73,35 +73,41 @@ const EVENT_ICONS: Record<string, string> = {
   PENALTY: "⚽",
 };
 
-/* ================== TABS ================== */
 const tabs = [
   { id: "event", label: "DIỄN BIẾN CHÍNH", icon: "sports_score" },
   { id: "lineup", label: "ĐỘI HÌNH RA SÂN", icon: "groups" },
   { id: "stats", label: "THỐNG KÊ", icon: "query_stats" },
 ];
 
-const normalizeLineups = (
-  lineups: TeamLineupResponse[],
+const normalizeTacticsLineups = (
+  data: MatchLineupsResponse,
 ): MatchDetailPlayer[] => {
-  return lineups
-    .flatMap((teamLineup) =>
-      (teamLineup.players ?? []).map(
-        (player) =>
-          Object.assign(
-            new PlayerInLineup({
-              id: player.lineupId ?? player.playerId,
-              playerName: player.playerName,
-              shirtNumber: player.shirtNumber,
-              position: player.position,
-              teamName: teamLineup.teamName,
-              avatar: player.avatar ?? "",
-              isStarting: Boolean(player.isStarting),
-              lineupOrder: player.lineupOrder ?? 0,
-              role: player.role ?? null,
-            }),
-            { teamId: teamLineup.teamId },
-          ) as MatchDetailPlayer,
-      ),
+  const tacticsList = [data.home, data.away].filter(Boolean) as MatchTactics[];
+
+  return tacticsList
+    .flatMap((teamTactics) =>
+      (teamTactics.lineups ?? []).map((player) => {
+        const lineupPlayer: MatchDetailPlayer = {
+          ...player,
+
+          // Quan trọng: id để render/key có thể dùng lineup id,
+          // nhưng để match event thì nên giữ playerId riêng.
+          id: player.id,
+          playerId: player.playerId,
+
+          teamId: teamTactics.teamId,
+          teamName: teamTactics.teamName,
+
+          avatar: player.avatar ?? "",
+          position: player.position,
+          shirtNumber: player.shirtNumber,
+          isStarting: Boolean(player.isStarting),
+          lineupOrder: player.lineupOrder ?? 0,
+          role: player.role ?? null,
+        };
+
+        return lineupPlayer;
+      }),
     )
     .sort((a, b) => {
       if (a.teamId !== b.teamId) return (a.teamId ?? 0) - (b.teamId ?? 0);
@@ -111,7 +117,14 @@ const normalizeLineups = (
 };
 
 const sortEventsByMinute = (events: MatchEvent[]) =>
-  [...events].sort((a, b) => (a.minute ?? 0) - (b.minute ?? 0));
+  [...events].sort((a, b) => {
+    const minuteA = a.minute ?? 0;
+    const minuteB = b.minute ?? 0;
+
+    if (minuteA !== minuteB) return minuteA - minuteB;
+
+    return (a.extraMinute ?? 0) - (b.extraMinute ?? 0);
+  });
 
 const isSameTeam = (player: MatchDetailPlayer, team?: TeamModel | null) => {
   if (!team) return false;
@@ -123,7 +136,6 @@ const isSameTeam = (player: MatchDetailPlayer, team?: TeamModel | null) => {
   return player.teamName === team.name;
 };
 
-/* ================== MAP LINEUP (CORE) ================== */
 const mapLineup = (
   players: MatchDetailPlayer[],
   formation: number[],
@@ -134,18 +146,17 @@ const mapLineup = (
   const gk = players.find((p) => p.position === "GK");
   const others = players.filter((p) => p.position !== "GK");
 
-  const topLimit = isHome ? 45 : 5;
-  const bottomLimit = isHome ? 95 : 55;
+  const topLimit = isHome ? 50 : 10;
+  const bottomLimit = isHome ? 100 : 65;
 
   const rawHeight = bottomLimit - topLimit;
-  const height = rawHeight * 1;
+  const height = rawHeight;
   const offset = (rawHeight - height) / 2;
 
-  // GK
   if (gk) {
     result.push({
       ...gk,
-      x: 50,
+      x: 55,
       y: isHome ? bottomLimit : topLimit,
       isHome,
       animationDelay: "0ms",
@@ -160,7 +171,10 @@ const mapLineup = (
       const p = others[index++];
       if (!p) continue;
 
-      const x = ((i + 1) * 100) / (count + 1);
+      const CENTER_SHIFT_X = 5.5;
+
+      const rawX = ((i + 1) * 100) / (count + 1);
+      const x = Math.min(92, Math.max(8, rawX + CENTER_SHIFT_X));
 
       const y = isHome
         ? bottomLimit - offset - ((lineIndex + 1) * height) / (totalLines + 1)
@@ -179,80 +193,20 @@ const mapLineup = (
   return result;
 };
 
-/* ================== MERGE EVENT ================== */
 const enrichWithEvents = (
   players: PlayerRender[],
   events: MatchEvent[],
 ): PlayerRender[] => {
   return players.map((p) => {
-    const e = events.find((ev) => ev.playerName === p.playerName);
+    const event = events.find(
+      (ev) => ev.playerId === p.playerId || ev.playerName === p.playerName,
+    );
+
     return {
       ...p,
-      event: e ? EVENT_ICONS[e.eventType] : null,
+      event: event ? EVENT_ICONS[event.eventType] : null,
     };
   });
-};
-
-const LineupField = ({ players }: { players: PlayerRender[] }) => {
-  return (
-    <div className="relative w-full max-w-3xl mx-auto h-[800px] bg-[#439648] rounded-[24px] overflow-hidden border-[8px] border-[#377A3B] shadow-inner">
-      {/* Grass pattern */}
-      <div className="absolute inset-0 opacity-20 pointer-events-none bg-[repeating-linear-gradient(0deg,transparent,transparent_40px,#fff_40px,#fff_80px)]" />
-
-      {/* Center line */}
-      <div className="absolute top-1/2 left-0 w-full h-[2px] bg-white/60" />
-
-      {/* Center circle */}
-      <div className="absolute top-1/2 left-1/2 w-32 h-32 border-2 border-white/60 rounded-full -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute top-1/2 left-1/2 w-2 h-2 bg-white/80 rounded-full -translate-x-1/2 -translate-y-1/2" />
-
-      {/* Penalty areas */}
-      <div className="absolute top-0 left-1/2 w-64 h-32 border-2 border-white/60 border-t-0 -translate-x-1/2" />
-      <div className="absolute top-0 left-1/2 w-32 h-12 border-2 border-white/60 border-t-0 -translate-x-1/2" />
-
-      <div className="absolute bottom-0 left-1/2 w-64 h-32 border-2 border-white/60 border-b-0 -translate-x-1/2" />
-      <div className="absolute bottom-0 left-1/2 w-32 h-12 border-2 border-white/60 border-b-0 -translate-x-1/2" />
-
-      {/* Penalty marks */}
-      <div className="absolute top-24 left-1/2 w-1.5 h-1.5 bg-white/80 rounded-full -translate-x-1/2" />
-      <div className="absolute bottom-24 left-1/2 w-1.5 h-1.5 bg-white/80 rounded-full -translate-x-1/2" />
-
-      {/* Players */}
-      {players.map((p, index) => (
-        <div
-          key={index}
-          className="absolute flex flex-col items-center animate-match-detail-player transition-all hover:scale-110 cursor-pointer"
-          style={{
-            left: `${p.x}%`,
-            top: `${p.y}%`,
-            transform: "translate(-50%, -50%)",
-            animationDelay: p.animationDelay || "0ms",
-          }}
-        >
-          {/* Avatar / Shirt */}
-          <div
-            className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-black border-2 border-white shadow-md z-10
-              ${p.isHome ? "bg-[#0D631B] text-white" : "bg-[#3A45A4] text-white"}
-            `}
-          >
-            {p.shirtNumber}
-          </div>
-
-          {/* Name */}
-          <span className="text-white text-[10px] font-bold mt-1.5 text-center w-24 px-1 py-0.5 rounded bg-black/40 backdrop-blur-sm truncate shadow-sm z-20">
-            {p.playerName}
-          </span>
-
-          {/* Event icon */}
-          {p.event && (
-            <div className="absolute -top-2 -right-2 text-[10px] bg-white text-black rounded-full w-5 h-5 flex items-center justify-center shadow-sm z-30 animate-bounce">
-              {p.event}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
 };
 
 const detectFormation = (players: MatchDetailPlayer[]) => {
@@ -263,28 +217,103 @@ const detectFormation = (players: MatchDetailPlayer[]) => {
   };
 
   players.forEach((p) => {
-    if (["RB", "LB", "CB", "RCB", "LCB"].includes(p.position)) {
+    const position = p.position ?? "";
+
+    if (["DF", "RB", "LB", "CB", "RCB", "LCB"].includes(position)) {
       lines.DEF++;
-    } else if (["CDM", "CM", "RCM", "LCM"].includes(p.position)) {
+    } else if (["MF", "CDM", "CM", "RCM", "LCM"].includes(position)) {
       lines.MID++;
-    } else if (["RW", "LW", "ST", "CF"].includes(p.position)) {
+    } else if (["FW", "RW", "LW", "ST", "CF"].includes(position)) {
       lines.ATT++;
     }
   });
 
-  return [lines.DEF, lines.MID, lines.ATT];
+  return [lines.DEF, lines.MID, lines.ATT].filter((count) => count > 0);
+};
+
+const LineupField = ({ players }: { players: PlayerRender[] }) => {
+  return (
+    <div className="relative mx-auto w-full max-w-5xl h-[780px] md:h-[900px] lg:h-[980px] rounded-[32px] overflow-hidden border border-[#D8D4CE] bg-[#1a6e38] shadow-inner">
+      {/* Field background */}
+      <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(255,255,255,0.06)_50%,transparent_50%)] bg-[length:100%_120px]" />
+
+      {/* Halfway line */}
+      <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-white/50" />
+
+      {/* Center circle */}
+      <div className="absolute left-1/2 top-1/2 w-32 h-32 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/50" />
+      <div className="absolute left-1/2 top-1/2 w-3 h-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/70" />
+
+      {/* Penalty boxes */}
+      <div className="absolute left-1/2 top-0 w-64 h-24 -translate-x-1/2 border-x-2 border-b-2 border-white/50 rounded-b-xl" />
+      <div className="absolute left-1/2 bottom-0 w-64 h-24 -translate-x-1/2 border-x-2 border-t-2 border-white/50 rounded-t-xl" />
+
+      {/* Goals */}
+      <div className="absolute left-1/2 top-0 w-24 h-4 -translate-x-1/2 border-x-2 border-b-2 border-white/50" />
+      <div className="absolute left-1/2 bottom-0 w-24 h-4 -translate-x-1/2 border-x-2 border-t-2 border-white/50" />
+
+      {players.map((player) => (
+        <div
+          key={`${player.teamId}-${player.playerId}-${player.isHome ? "home" : "away"}`}
+          className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center animate-match-detail-player"
+          style={{
+            left: `${player.x}%`,
+            top: `${player.y}%`,
+            animationDelay: player.animationDelay,
+          }}
+        >
+          <div
+            className={`relative w-12 h-12 md:w-14 md:h-14 rounded-full border-2 flex items-center justify-center shadow-lg bg-white ${
+              player.isHome ? "border-[#0D631B]" : "border-[#3A45A4]"
+            }`}
+          >
+            {player.avatar ? (
+              <img
+                src={player.avatar}
+                alt={player.playerName}
+                className="w-full h-full object-cover rounded-full"
+              />
+            ) : (
+              <span
+                className={`material-symbols-outlined ${
+                  player.isHome ? "text-[#0D631B]" : "text-[#3A45A4]"
+                }`}
+              >
+                person
+              </span>
+            )}
+
+            {player.event && (
+              <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white shadow-md flex items-center justify-center text-sm">
+                {player.event}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-1 px-2 py-1 rounded-lg bg-black/55 backdrop-blur-sm text-white text-center min-w-[72px] max-w-[110px]">
+            <p className="text-[10px] font-black leading-tight truncate">
+              {player.shirtNumber ? `${player.shirtNumber}. ` : ""}
+              {player.playerName}
+            </p>
+            <p className="text-[9px] opacity-80 font-bold">{player.position}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 };
 
 const MatchDetail = () => {
   const { id } = useParams();
+
   const [match, setMatch] = useState<MatchModel | null>(null);
-  const [matchStats, setMatchStats] = useState<MatchStats | null>(null);
+  const [matchStats, setMatchStats] = useState<MatchStats[]>([]);
   const [listEventMatch, setListEventMatch] = useState<MatchEvent[]>([]);
   const [listPlayerInLineUp, setListPlayerInLineUp] = useState<
     MatchDetailPlayer[]
   >([]);
-  const [error, setError] = useState<string | null>(null);
 
+  const [error, setError] = useState<string | null>(null);
   const [selectedLabel, setSelectedLabel] = useState("stats");
   const [loading, setLoading] = useState(true);
 
@@ -293,7 +322,7 @@ const MatchDetail = () => {
 
     if (!id || Number.isNaN(matchId)) {
       setMatch(null);
-      setMatchStats(null);
+      setMatchStats([]);
       setListEventMatch([]);
       setListPlayerInLineUp([]);
       setError("Mã trận đấu không hợp lệ.");
@@ -308,7 +337,7 @@ const MatchDetail = () => {
       setError(null);
 
       try {
-        const matchData = await getMatchById(matchId);
+        const matchData = await MatchService.getMatchById(matchId);
 
         if (cancelled) return;
 
@@ -316,17 +345,15 @@ const MatchDetail = () => {
 
         const [statsResult, eventsResult, lineupResult] =
           await Promise.allSettled([
-            getStatsMatch(matchId),
-            getListEventMatch(matchId),
-            LineupService.getLineupsByMatch(matchId),
+            MatchService.getStatsMatch(matchId),
+            MatchService.getListEventMatch(matchId),
+            MatchService.getMatchLineups(matchId),
           ]);
 
         if (cancelled) return;
 
         setMatchStats(
-          statsResult.status === "fulfilled"
-            ? new MatchStats(statsResult.value)
-            : new MatchStats(),
+          statsResult.status === "fulfilled" ? statsResult.value : [],
         );
 
         setListEventMatch(
@@ -337,15 +364,16 @@ const MatchDetail = () => {
 
         setListPlayerInLineUp(
           lineupResult.status === "fulfilled"
-            ? normalizeLineups(lineupResult.value.data ?? [])
+            ? normalizeTacticsLineups(lineupResult.value)
             : [],
         );
       } catch (error) {
         if (cancelled) return;
 
         console.error("Lỗi khi tải chi tiết trận đấu:", error);
+
         setMatch(null);
-        setMatchStats(null);
+        setMatchStats([]);
         setListEventMatch([]);
         setListPlayerInLineUp([]);
         setError("Không thể tải dữ liệu chi tiết trận đấu.");
@@ -374,7 +402,7 @@ const MatchDetail = () => {
     );
   }
 
-  if (!match || !matchStats) {
+  if (!match) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center">
         <span className="material-symbols-outlined text-6xl text-gray-300 mb-4">
@@ -421,6 +449,14 @@ const MatchDetail = () => {
 
   const safe = (value?: number) => value ?? 0;
 
+  const homeStats = matchStats.find(
+    (stats) => stats.teamId === match.homeTeam?.id,
+  );
+
+  const awayStats = matchStats.find(
+    (stats) => stats.teamId === match.awayTeam?.id,
+  );
+
   const isFinished =
     match.status === "FINISHED" ||
     (match.homeScore != null && match.awayScore != null);
@@ -428,9 +464,9 @@ const MatchDetail = () => {
   return (
     <div className="w-full bg-[#fbf9f5] min-h-screen pb-12">
       {/* Banner / Header Background */}
-      <div className="h-48 md:h-64 bg-[#1B1C1A] relative overflow-hidden flex items-center justify-center">
+      <div className="h-48 md:h-64 bg-[#1a6e38] relative overflow-hidden flex items-center justify-center">
         <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] pointer-events-none"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#1B1C1A]"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#1a6e38]"></div>
         <div className="z-10 text-center px-4">
           <span className="inline-block px-3 py-1 bg-white/10 backdrop-blur-md border border-white/20 text-white rounded-full text-[10px] font-bold uppercase tracking-widest mb-3">
             {match.league?.name || "Giải đấu"} •{" "}
@@ -585,7 +621,7 @@ const MatchDetail = () => {
                     onClick={() => handleButtonOnclickLabel(tab.id)}
                     className={`flex items-center justify-center gap-2 px-6 py-3.5 rounded-[16px] text-sm font-bold transition-all duration-300 whitespace-nowrap ${
                       tab.id === selectedLabel
-                        ? "bg-[#1B1C1A] text-white shadow-md"
+                        ? "bg-[#1a6e38] text-white shadow-md"
                         : "text-[#707A6C] hover:bg-[#F5F3EF] hover:text-[#1B1C1A]"
                     }`}
                   >
@@ -606,47 +642,67 @@ const MatchDetail = () => {
               {listEventMatch.length > 0 ? (
                 <div className="max-w-3xl mx-auto relative before:absolute before:inset-y-0 before:left-1/2 before:w-0.5 before:bg-[#E4E2DE] before:-translate-x-1/2 space-y-6">
                   {listEventMatch.map((e, index) => {
-                    const isHome = e.teamName === match.homeTeam?.name;
+                    const isHome =
+                      e.teamId === match.homeTeam?.id ||
+                      e.teamName === match.homeTeam?.name;
+
+                    const eventIcon = EVENT_ICONS[e.eventType] || "🎯";
+                    const eventMinute =
+                      e.extraMinute != null
+                        ? `${e.minute}+${e.extraMinute}'`
+                        : `${e.minute}'`;
+
                     return (
                       <div
-                        key={index}
-                        className={`relative flex items-center justify-between w-full ${isHome ? "flex-row" : "flex-row-reverse"}`}
+                        key={`${e.id ?? index}-${e.eventType}-${e.minute}`}
+                        className="relative grid grid-cols-[1fr_48px_1fr] items-center w-full gap-4"
                       >
-                        <div className="w-5/12 flex justify-end">
+                        {/* HOME EVENT - LEFT SIDE */}
+                        <div className="flex justify-end">
                           {isHome && (
-                            <div className="bg-[#fbf9f5] border border-[#E4E2DE] p-3 rounded-2xl shadow-sm text-right flex items-center gap-3">
-                              <div className="flex-1">
-                                <p className="font-bold text-[#1B1C1A]">
+                            <div className="bg-[#fbf9f5] border border-[#E4E2DE] p-3 rounded-2xl shadow-sm text-right flex items-center gap-3 max-w-[260px]">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-bold text-[#1B1C1A] truncate">
                                   {e.playerName || "Cầu thủ"}
                                 </p>
-                                <p className="text-[11px] text-[#707A6C] font-medium">
-                                  {e.description}
-                                </p>
+
+                                {e.note && (
+                                  <p className="text-[11px] text-[#707A6C] font-medium mt-0.5">
+                                    {e.note}
+                                  </p>
+                                )}
                               </div>
-                              <span className="text-2xl bg-white w-10 h-10 rounded-full flex items-center justify-center shadow-sm">
-                                {EVENT_ICONS[e.eventType] || "🎯"}
+
+                              <span className="text-2xl bg-white w-10 h-10 rounded-full flex items-center justify-center shadow-sm shrink-0">
+                                {eventIcon}
                               </span>
                             </div>
                           )}
                         </div>
 
-                        <div className="z-10 w-10 h-10 bg-white border-4 border-[#1B1C1A] rounded-full flex items-center justify-center font-black text-xs shadow-md">
-                          {e.minute}'
+                        {/* MINUTE CENTER */}
+                        <div className="z-10 w-11 h-11 bg-white border-4 border-[#1B1C1A] rounded-full flex items-center justify-center font-black text-xs shadow-md mx-auto">
+                          {eventMinute}
                         </div>
 
-                        <div className="w-5/12 flex justify-start">
+                        {/* AWAY EVENT - RIGHT SIDE */}
+                        <div className="flex justify-start">
                           {!isHome && (
-                            <div className="bg-[#fbf9f5] border border-[#E4E2DE] p-3 rounded-2xl shadow-sm text-left flex items-center gap-3">
-                              <span className="text-2xl bg-white w-10 h-10 rounded-full flex items-center justify-center shadow-sm">
-                                {EVENT_ICONS[e.eventType] || "🎯"}
+                            <div className="bg-[#fbf9f5] border border-[#E4E2DE] p-3 rounded-2xl shadow-sm text-left flex items-center gap-3 max-w-[260px]">
+                              <span className="text-2xl bg-white w-10 h-10 rounded-full flex items-center justify-center shadow-sm shrink-0">
+                                {eventIcon}
                               </span>
-                              <div className="flex-1">
-                                <p className="font-bold text-[#1B1C1A]">
+
+                              <div className="flex-1 min-w-0">
+                                <p className="font-bold text-[#1B1C1A] truncate">
                                   {e.playerName || "Cầu thủ"}
                                 </p>
-                                <p className="text-[11px] text-[#707A6C] font-medium">
-                                  {e.description}
-                                </p>
+
+                                {e.note && (
+                                  <p className="text-[11px] text-[#707A6C] font-medium mt-0.5">
+                                    {e.note}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           )}
@@ -711,7 +767,78 @@ const MatchDetail = () => {
           {selectedLabel === "stats" && (
             <AnimatedPanel panelKey="stats">
               <div className="max-w-2xl mx-auto space-y-2 py-4">
-                {labelStats(matchStats, safe, StatRow)}
+                {homeStats || awayStats ? (
+                  <>
+                    <StatRow
+                      left={safe(homeStats?.possession)}
+                      right={safe(awayStats?.possession)}
+                      label="Kiểm soát bóng"
+                    />
+
+                    <StatRow
+                      left={safe(homeStats?.shots)}
+                      right={safe(awayStats?.shots)}
+                      label="Số cú sút"
+                    />
+
+                    <StatRow
+                      left={safe(homeStats?.shotsOnTarget)}
+                      right={safe(awayStats?.shotsOnTarget)}
+                      label="Sút trúng đích"
+                    />
+
+                    <StatRow
+                      left={safe(homeStats?.corners)}
+                      right={safe(awayStats?.corners)}
+                      label="Phạt góc"
+                    />
+
+                    <StatRow
+                      left={safe(homeStats?.fouls)}
+                      right={safe(awayStats?.fouls)}
+                      label="Phạm lỗi"
+                    />
+
+                    <StatRow
+                      left={safe(homeStats?.offsides)}
+                      right={safe(awayStats?.offsides)}
+                      label="Việt vị"
+                    />
+
+                    <StatRow
+                      left={safe(homeStats?.yellowCards)}
+                      right={safe(awayStats?.yellowCards)}
+                      label="Thẻ vàng"
+                    />
+
+                    <StatRow
+                      left={safe(homeStats?.redCards)}
+                      right={safe(awayStats?.redCards)}
+                      label="Thẻ đỏ"
+                    />
+
+                    <StatRow
+                      left={safe(homeStats?.totalPasses)}
+                      right={safe(awayStats?.totalPasses)}
+                      label="Tổng đường chuyền"
+                    />
+
+                    <StatRow
+                      left={safe(homeStats?.passAccuracy)}
+                      right={safe(awayStats?.passAccuracy)}
+                      label="Độ chính xác chuyền"
+                    />
+                  </>
+                ) : (
+                  <div className="text-center py-16">
+                    <span className="material-symbols-outlined text-6xl text-[#D8D4CE] mb-4">
+                      query_stats
+                    </span>
+                    <p className="text-[#707A6C] font-bold">
+                      Thống kê trận đấu chưa được cập nhật.
+                    </p>
+                  </div>
+                )}
               </div>
             </AnimatedPanel>
           )}

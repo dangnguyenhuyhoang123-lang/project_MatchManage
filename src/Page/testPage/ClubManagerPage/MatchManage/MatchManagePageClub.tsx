@@ -4,14 +4,17 @@ import { Modal } from "../../../../components/Modal";
 import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import { MatchStatus } from "../../../../model/enum";
 import MatchService from "../../../../services/MatchService";
+import TeamService from "../../../../services/TeamService";
+import {
+  useCurrentClubId,
+  CURRENT_TEAM_SEASON_ID,
+} from "../InfoClubManage/clubInfoHelpers";
 import MatchLineupModal, {
   type MatchLineupModalMatch,
 } from "./MatchLineupModal";
 import { useNavigate } from "react-router-dom";
 
-const CURRENT_TEAM_ID = 1;
-const CURRENT_TEAM_SEASON_ID = 60;
-const CURRENT_TEAM_NAME = "Becamex Hồ Chí Minh";
+// Team constants are now dynamically fetched or imported
 
 type StatusFilter = "SCHEDULED" | "LIVE" | "FINISHED";
 
@@ -40,6 +43,8 @@ const fallbackLogo =
   "https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=200&h=200&fit=crop";
 
 const MatchManagePageClub: React.FC = () => {
+  const { currentClubId, authLoading } = useCurrentClubId();
+  const [teamName, setTeamName] = useState("Đang tải...");
   const [matches, setMatches] = useState<MatchLineupModalMatch[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("SCHEDULED");
   const [selectedMatch, setSelectedMatch] =
@@ -49,12 +54,24 @@ const MatchManagePageClub: React.FC = () => {
   const [error, setError] = useState("");
 
   const fetchMatches = async () => {
+    if (authLoading) return;
+    if (!currentClubId) {
+      setLoading(false);
+      setError("Không xác định được câu lạc bộ của người dùng.");
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
-      const response = await MatchService.getAllMatches(0, 200, {
-        teamId: CURRENT_TEAM_ID,
-      });
+      const [response, team] = await Promise.all([
+        MatchService.getAllMatches(0, 200, {
+          teamId: currentClubId,
+        }),
+        TeamService.getTeamById(currentClubId),
+      ]);
+      setTeamName(team?.name || "Câu lạc bộ");
+
       const normalized = extractMatches(response.data)
         .map(normalizeMatch)
         .filter(Boolean) as MatchLineupModalMatch[];
@@ -62,8 +79,8 @@ const MatchManagePageClub: React.FC = () => {
       setMatches(
         normalized.filter(
           (match) =>
-            match.homeTeamId === CURRENT_TEAM_ID ||
-            match.awayTeamId === CURRENT_TEAM_ID,
+            match.homeTeamId === currentClubId ||
+            match.awayTeamId === currentClubId,
         ),
       );
     } catch (err) {
@@ -76,7 +93,7 @@ const MatchManagePageClub: React.FC = () => {
 
   useEffect(() => {
     fetchMatches();
-  }, []);
+  }, [currentClubId, authLoading]);
 
   const filteredMatches = useMemo(
     () => matches.filter((match) => match.status === statusFilter),
@@ -111,7 +128,10 @@ const MatchManagePageClub: React.FC = () => {
       )[0];
   }, [matches]);
 
-  const stats = useMemo(() => buildStats(matches), [matches]);
+  const stats = useMemo(
+    () => buildStats(matches, currentClubId),
+    [matches, currentClubId],
+  );
 
   const openLineupModal = (match: MatchLineupModalMatch) => {
     const action = statusConfig[match.status as StatusFilter]?.action ?? "view";
@@ -122,7 +142,7 @@ const MatchManagePageClub: React.FC = () => {
   return (
     <AppLayout>
       <div className="mx-auto max-w-6xl space-y-8">
-        <PageHeader nextMatch={nextMatch} />
+        <PageHeader nextMatch={nextMatch} teamName={teamName} />
 
         <MatchTabs
           active={statusFilter}
@@ -168,8 +188,8 @@ const MatchManagePageClub: React.FC = () => {
           <MatchLineupModal
             match={selectedMatch}
             mode={modalMode}
-            teamId={CURRENT_TEAM_ID}
-            teamName={CURRENT_TEAM_NAME}
+            teamId={currentClubId || 0}
+            teamName={teamName}
             teamSeasonId={CURRENT_TEAM_SEASON_ID}
             onClose={() => setSelectedMatch(null)}
             onSaved={fetchMatches}
@@ -182,7 +202,13 @@ const MatchManagePageClub: React.FC = () => {
 
 export default MatchManagePageClub;
 
-function PageHeader({ nextMatch }: { nextMatch?: MatchLineupModalMatch }) {
+function PageHeader({
+  nextMatch,
+  teamName,
+}: {
+  nextMatch?: MatchLineupModalMatch;
+  teamName: string;
+}) {
   const countdown = getCountdown(nextMatch?.matchDate);
 
   return (
@@ -193,8 +219,7 @@ function PageHeader({ nextMatch }: { nextMatch?: MatchLineupModalMatch }) {
         </h2>
 
         <p className="mt-2 max-w-2xl text-sm text-gray-500">
-          Theo dõi lịch thi đấu và cập nhật đội hình ra sân cho{" "}
-          {CURRENT_TEAM_NAME}.
+          Theo dõi lịch thi đấu và cập nhật đội hình ra sân cho {teamName}.
         </p>
       </div>
 
@@ -355,7 +380,9 @@ function MatchCardItem({
 
         <button
           type="button"
-          onClick={() => isEditable ? onOpen(match) : navigate(`/matches/${match.id}`)}
+          onClick={() =>
+            isEditable ? onOpen(match) : navigate(`/matches/${match.id}`)
+          }
           className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-black transition ${
             isEditable
               ? "bg-[#008C2F] text-white hover:bg-green-800"
@@ -554,7 +581,7 @@ function getCountdown(value?: string) {
   };
 }
 
-function buildStats(matches: MatchLineupModalMatch[]) {
+function buildStats(matches: MatchLineupModalMatch[], teamId?: number) {
   const finished = matches.filter(
     (match) =>
       match.status === MatchStatus.FINISHED &&
@@ -562,7 +589,7 @@ function buildStats(matches: MatchLineupModalMatch[]) {
       match.awayScore != null,
   );
 
-  if (finished.length === 0) {
+  if (finished.length === 0 || !teamId) {
     return { winRate: "0%", goalsFor: "0.0", goalsAgainst: "0.0" };
   }
 
@@ -571,7 +598,7 @@ function buildStats(matches: MatchLineupModalMatch[]) {
   let goalsAgainst = 0;
 
   finished.forEach((match) => {
-    const isHome = match.homeTeamId === CURRENT_TEAM_ID;
+    const isHome = match.homeTeamId === teamId;
     const forScore = Number(isHome ? match.homeScore : match.awayScore) || 0;
     const againstScore =
       Number(isHome ? match.awayScore : match.homeScore) || 0;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getListMatches } from "../services/MatchAPI";
+import MatchService from "../services/MatchService";
 import type { MatchModel } from "../model/Match/MatchModel";
 import { motion } from "framer-motion";
 import {
@@ -19,7 +19,7 @@ const HomePage = () => {
 
   useEffect(() => {
     // Lấy 2 trận đấu nổi bật
-    getListMatches(1).then((data) => {
+    MatchService.getListMatches(1).then((data) => {
       if (data && data.ketQua) {
         setDsSanPham(data.ketQua.slice(0, 2));
       }

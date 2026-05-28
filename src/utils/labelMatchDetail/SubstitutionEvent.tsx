@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MatchEvent } from "../../model/MatchEvents";
+import { MatchEvent } from "../../model/Match/MatchEvents";
 import { Player } from "../../model/Player";
 
 import PlayerService from "../../services/PlayerService";

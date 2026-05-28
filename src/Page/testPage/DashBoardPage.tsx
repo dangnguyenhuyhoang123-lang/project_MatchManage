@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 
 import { PhanTrang } from "../../utils/PhanTrang";
 import { Link, useNavigate } from "react-router-dom";
-
-import { getListMatches } from "../../services/MatchAPI";
+import MatchService from "../../services/MatchService";
 
 import { MatchModel } from "../../model/Match/MatchModel";
 
@@ -22,7 +21,7 @@ export default function DashBoardPage() {
   };
 
   useEffect(() => {
-    getListMatches(trangHienTai).then((data) => {
+    MatchService.getListMatches(trangHienTai).then((data) => {
       setDsSanPham(data.ketQua);
       setTongSoTrang(data.tongSoTrang);
     });

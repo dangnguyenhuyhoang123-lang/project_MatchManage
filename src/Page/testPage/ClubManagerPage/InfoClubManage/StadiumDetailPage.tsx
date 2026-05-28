@@ -34,7 +34,9 @@ const StadiumDetailPage: React.FC = () => {
 
       if (!currentClubId) {
         setLoading(false);
-        setError("Không xác định được câu lạc bộ của người dùng đang đăng nhập.");
+        setError(
+          "Không xác định được câu lạc bộ của người dùng đang đăng nhập.",
+        );
         return;
       }
 
@@ -127,7 +129,7 @@ function PageHeader({
           {loading ? "Đang tải sân nhà..." : "Thông tin Sân nhà"}
         </h1>
         <p className="text-sm font-semibold text-gray-500">
-          {team?.name || "Becamex TP.Hồ Chí Minh"}
+          {team?.name || ""}
         </p>
       </div>
 

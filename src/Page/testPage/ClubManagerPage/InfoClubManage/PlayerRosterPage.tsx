@@ -3,6 +3,7 @@ import { AppLayout } from "../../../../layouts/AppLayout";
 import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import { PhanTrang } from "../../../../utils/PhanTrang";
 import PlayerService from "../../../../services/PlayerService";
+import TeamService from "../../../../services/TeamService";
 import type { Player } from "../../../../model/Player";
 import {
   calculateAge,
@@ -29,6 +30,7 @@ const PAGE_SIZE = 10;
 
 const PlayerRosterPage: React.FC = () => {
   const { currentClubId, authLoading } = useCurrentClubId();
+  const [teamName, setTeamName] = useState("Đang tải...");
   const [players, setPlayers] = useState<RosterPlayer[]>([]);
   const [search, setSearch] = useState("");
   const [positionFilter, setPositionFilter] = useState("");
@@ -54,13 +56,18 @@ const PlayerRosterPage: React.FC = () => {
         setLoading(true);
         setError("");
 
-        const data = await PlayerService.getPlayersByTeamNormalized(
-          currentClubId,
-          currentPage - 1,
-          PAGE_SIZE,
-        );
+        const [data, team] = await Promise.all([
+          PlayerService.getPlayersByTeamNormalized(
+            currentClubId,
+            currentPage - 1,
+            PAGE_SIZE,
+          ),
+          TeamService.getTeamById(currentClubId),
+        ]);
 
         if (!mounted) return;
+
+        setTeamName(team?.name || "Câu lạc bộ");
 
         setPlayers(
           (data.content ?? [])
@@ -108,7 +115,7 @@ const PlayerRosterPage: React.FC = () => {
   return (
     <AppLayout>
       <div className="mx-auto max-w-7xl space-y-8 font-['Be_Vietnam_Pro']">
-        <RosterHeader total={totalElements} />
+        <RosterHeader total={totalElements} teamName={teamName} />
 
         {error && (
           <div className="rounded-sm border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
@@ -163,7 +170,7 @@ function normalizeRosterPlayer(player: Player): RosterPlayer | null {
   };
 }
 
-function RosterHeader({ total }: { total: number }) {
+function RosterHeader({ total, teamName }: { total: number; teamName: string }) {
   return (
     <section className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
       <div>
@@ -172,7 +179,7 @@ function RosterHeader({ total }: { total: number }) {
         </h1>
 
         <p className="mt-1 font-medium text-[#008C2F]">
-          {total} cầu thủ thuộc Becamex TP.Hồ Chí Minh
+          {total} cầu thủ thuộc {teamName}
         </p>
       </div>
 

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Modal } from "../../../components/Modal";
-import { AppLayout } from "../../../layouts/AppLayout";
-import { PageHeader } from "../../../components/PageHeader";
+import { Modal } from "../../../../components/Modal";
+import { AppLayout } from "../../../../layouts/AppLayout";
+import { PageHeader } from "../../../../components/PageHeader";
 import MatchResultUpdate from "./MatchResultUpdate";
-import MatchService from "../../../services/MatchService";
-import LeagueService from "../../../services/LeagueService";
-import { PhanTrang } from "../../../utils/PhanTrang";
+import MatchService from "../../../../services/MatchService";
+import LeagueService from "../../../../services/LeagueService";
+import { PhanTrang } from "../../../../utils/PhanTrang";
 
 type LeagueOption = {
   id: number;
@@ -57,7 +57,9 @@ const MatchResults: React.FC = () => {
     if (selectedLeague) {
       const fetchSeasons = async () => {
         try {
-          const list = await LeagueService.getSeasonsByLeague(Number(selectedLeague));
+          const list = await LeagueService.getSeasonsByLeague(
+            Number(selectedLeague),
+          );
           setSeasons(list);
           if (list.length > 0) {
             setSelectedSeason(list[0].id || "");
@@ -160,7 +162,9 @@ const MatchResults: React.FC = () => {
                   className="appearance-none h-[56px] min-w-[220px] bg-[#ECE9E4] rounded-[18px] px-5 pr-10 text-[16px] text-[#1B1C1A] border-none outline-none focus:ring-2 focus:ring-[#D8D4CE] cursor-pointer"
                   value={selectedLeague}
                   onChange={(e) => {
-                    setSelectedLeague(e.target.value ? Number(e.target.value) : "");
+                    setSelectedLeague(
+                      e.target.value ? Number(e.target.value) : "",
+                    );
                     setSelectedSeason("");
                   }}
                 >
@@ -181,7 +185,11 @@ const MatchResults: React.FC = () => {
                 <select
                   className="appearance-none h-[56px] min-w-[190px] bg-[#ECE9E4] rounded-[18px] px-5 pr-10 text-[16px] text-[#1B1C1A] border-none outline-none focus:ring-2 focus:ring-[#D8D4CE] cursor-pointer disabled:opacity-50"
                   value={selectedSeason}
-                  onChange={(e) => setSelectedSeason(e.target.value ? Number(e.target.value) : "")}
+                  onChange={(e) =>
+                    setSelectedSeason(
+                      e.target.value ? Number(e.target.value) : "",
+                    )
+                  }
                   disabled={!selectedLeague}
                 >
                   <option value="">Tất cả Mùa giải</option>
@@ -212,14 +220,20 @@ const MatchResults: React.FC = () => {
 
             {/* Rows */}
             {loading ? (
-              <div className="text-center py-10 font-bold text-gray-500">Đang tải dữ liệu trận đấu...</div>
+              <div className="text-center py-10 font-bold text-gray-500">
+                Đang tải dữ liệu trận đấu...
+              </div>
             ) : matches.length === 0 ? (
-              <div className="text-center py-10 font-bold text-gray-500">Không tìm thấy trận đấu nào.</div>
+              <div className="text-center py-10 font-bold text-gray-500">
+                Không tìm thấy trận đấu nào.
+              </div>
             ) : (
               matches.map((match) => {
                 const homeName = match.homeTeam?.name || "Chủ nhà";
                 const awayName = match.awayTeam?.name || "Đội khách";
-                const isFinished = match.status === "FINISHED" || (match.homeScore != null && match.awayScore != null);
+                const isFinished =
+                  match.status === "FINISHED" ||
+                  (match.homeScore != null && match.awayScore != null);
 
                 return (
                   <div
@@ -235,19 +249,33 @@ const MatchResults: React.FC = () => {
                         </span>
                         <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center shrink-0 border border-gray-100 overflow-hidden">
                           {match.homeTeam?.logo ? (
-                            <img src={match.homeTeam.logo} alt={homeName} className="w-full h-full object-cover" />
+                            <img
+                              src={match.homeTeam.logo}
+                              alt={homeName}
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
-                            <span className="material-symbols-outlined text-[16px] text-green-700">shield</span>
+                            <span className="material-symbols-outlined text-[16px] text-green-700">
+                              shield
+                            </span>
                           )}
                         </div>
                       </div>
-                      <span className="text-label-sm text-on-surface-variant font-medium shrink-0">vs</span>
+                      <span className="text-label-sm text-on-surface-variant font-medium shrink-0">
+                        vs
+                      </span>
                       <div className="flex items-center gap-3 w-[45%]">
                         <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center shrink-0 border border-gray-100 overflow-hidden">
                           {match.awayTeam?.logo ? (
-                            <img src={match.awayTeam.logo} alt={awayName} className="w-full h-full object-cover" />
+                            <img
+                              src={match.awayTeam.logo}
+                              alt={awayName}
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
-                            <span className="material-symbols-outlined text-[16px] text-indigo-700">shield</span>
+                            <span className="material-symbols-outlined text-[16px] text-indigo-700">
+                              shield
+                            </span>
                           )}
                         </div>
                         <span className="font-headline font-semibold text-body-md text-on-surface truncate">
@@ -266,7 +294,9 @@ const MatchResults: React.FC = () => {
                         </div>
                       ) : (
                         <span className="px-3 py-1 bg-yellow-50 text-yellow-700 rounded-full text-xs font-bold border border-yellow-200">
-                          {match.status === "SCHEDULED" ? "CHƯA ĐÁ" : match.status}
+                          {match.status === "SCHEDULED"
+                            ? "CHƯA ĐÁ"
+                            : match.status}
                         </span>
                       )}
                     </div>
@@ -291,13 +321,18 @@ const MatchResults: React.FC = () => {
                     </div>
 
                     {/* Actions */}
-                    <div className="col-span-1 flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                    <div
+                      className="col-span-1 flex justify-end gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <button
                         onClick={() => handleEditMatch(match)}
                         className="p-2 text-[#0D631B] hover:bg-[#ABF4AC80] rounded-full transition-colors flex items-center justify-center"
                         title="Cập nhật kết quả"
                       >
-                        <span className="material-symbols-outlined text-[18px]">edit_square</span>
+                        <span className="material-symbols-outlined text-[18px]">
+                          edit_square
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -305,7 +340,7 @@ const MatchResults: React.FC = () => {
               })
             )}
           </div>
-          
+
           {matches.length > 0 && (
             <PhanTrang
               tongSoTrang={totalPages}
@@ -322,7 +357,7 @@ const MatchResults: React.FC = () => {
         <span>Phiên bản 1.2.0-Tactical</span>
       </div>
 
-      <Modal open={open} onClose={handleCloseModal}>
+      <Modal open={open} onClose={handleCloseModal} size="xl">
         {selectedMatch && (
           <MatchResultUpdate
             matchData={selectedMatch}

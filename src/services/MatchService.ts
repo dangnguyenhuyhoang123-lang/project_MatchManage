@@ -1,7 +1,22 @@
 // src/service/MatchService.ts
 import axiosClient from "./axiosClient";
-
+import type { MatchEvent } from "../model/Match/MatchEvents";
+import type { MatchStats } from "../model/Match/MatchStats";
+import type {
+  MatchLineupsResponse,
+  MatchTactics,
+  MatchTacticsUpsertRequest,
+} from "../model/Match/MatchLineup";
+import { MatchModel } from "../model/Match/MatchModel";
+import type { MatchEventUpsertRequest } from "../model/Match/MatchEvents";
+// --- Types ---
 const API_BASE_URL = "/matches";
+
+interface KetQuaInterface {
+  ketQua: MatchModel[];
+  tongSoTrang: number;
+  tongSoTran: number;
+}
 
 class MatchService {
   getAllMatches(page: number, size: number, filters?: any) {
@@ -26,9 +41,164 @@ class MatchService {
   updateMatch(id: number, match: any) {
     return axiosClient.put(`${API_BASE_URL}/updateMatch/${id}`, match);
   }
+  async updateMatchStatus(
+    matchId: number,
+    status: "SCHEDULED" | "LIVE" | "FINISHED" | "CANCELLED" | string,
+  ): Promise<MatchModel> {
+    const response = await axiosClient.patch(
+      `${API_BASE_URL}/${matchId}/status`,
+      { status },
+    );
+
+    const responseData = response.data;
+
+    return new MatchModel({
+      id: responseData.id,
+      status: responseData.status,
+      homeScore: responseData.homeScore,
+      awayScore: responseData.awayScore,
+      matchDate: new Date(responseData.matchDate),
+      league: responseData.league,
+      season: responseData.season,
+      homeTeam: responseData.homeTeam,
+      awayTeam: responseData.awayTeam,
+    });
+  }
 
   deleteMatch(id: number) {
     return axiosClient.delete(`${API_BASE_URL}/deleteMatch/${id}`);
+  }
+
+  async createMatchEvent(
+    matchId: number,
+    payload: MatchEventUpsertRequest,
+  ): Promise<MatchEvent> {
+    const response = await axiosClient.post<MatchEvent>(
+      `${API_BASE_URL}/${matchId}/events`,
+      payload,
+    );
+
+    return response.data;
+  }
+
+  async updateMatchEvent(
+    matchId: number,
+    eventId: number,
+    payload: MatchEventUpsertRequest,
+  ): Promise<MatchEvent> {
+    const response = await axiosClient.put<MatchEvent>(
+      `${API_BASE_URL}/${matchId}/events/${eventId}`,
+      payload,
+    );
+
+    return response.data;
+  }
+
+  async deleteMatchEvent(matchId: number, eventId: number): Promise<void> {
+    await axiosClient.delete(`${API_BASE_URL}/${matchId}/events/${eventId}`);
+  }
+
+  async getListEventMatch(matchID: number): Promise<MatchEvent[]> {
+    const response = await axiosClient.get<MatchEvent[]>(
+      `${API_BASE_URL}/${matchID}/events`,
+    );
+
+    return response.data;
+  }
+
+  async getStatsMatch(matchID: number): Promise<MatchStats[]> {
+    const response = await axiosClient.get<MatchStats[]>(
+      `${API_BASE_URL}/${matchID}/stats`,
+    );
+
+    return response.data;
+  }
+  async getMatchLineups(matchId: number): Promise<MatchLineupsResponse> {
+    const response = await axiosClient.get<MatchLineupsResponse>(
+      `${API_BASE_URL}/${matchId}/lineups`,
+    );
+
+    return response.data;
+  }
+
+  async getTeamLineup(matchId: number, teamId: number): Promise<MatchTactics> {
+    const response = await axiosClient.get<MatchTactics>(
+      `${API_BASE_URL}/${matchId}/teams/${teamId}/lineup`,
+    );
+
+    return response.data;
+  }
+
+  async upsertTeamLineup(
+    matchId: number,
+    teamId: number,
+    payload: MatchTacticsUpsertRequest,
+  ): Promise<MatchTactics> {
+    const response = await axiosClient.put<MatchTactics>(
+      `${API_BASE_URL}/${matchId}/teams/${teamId}/lineup`,
+      payload,
+    );
+
+    return response.data;
+  }
+
+  async getMatchTactics(matchId: number): Promise<MatchTactics[]> {
+    const response = await axiosClient.get<MatchTactics[]>(
+      `${API_BASE_URL}/${matchId}/tactics`,
+    );
+
+    return response.data;
+  }
+
+  async getListMatches(trangHienTai: number): Promise<KetQuaInterface> {
+    const response = await axiosClient.get(`${API_BASE_URL}/getAllMatches`, {
+      params: {
+        page: Math.max(trangHienTai - 1, 0),
+        size: 3,
+      },
+    });
+    const result: MatchModel[] = [];
+    const responseData = response.data?.content ?? [];
+
+    for (const item of responseData) {
+      result.push(
+        new MatchModel({
+          id: item.id,
+          status: item.status,
+          homeScore: item.homeScore,
+          awayScore: item.awayScore,
+          matchDate: new Date(item.matchDate),
+          league: item.league,
+          season: item.season,
+          homeTeam: item.homeTeam,
+          awayTeam: item.awayTeam,
+        }),
+      );
+    }
+
+    return {
+      ketQua: result,
+      tongSoTran: response.data?.totalElements ?? result.length,
+      tongSoTrang: response.data?.totalPages ?? 0,
+    };
+  }
+
+  async getMatchById(matchID: number): Promise<MatchModel> {
+    const response = await axiosClient.get(`${API_BASE_URL}/${matchID}`);
+
+    const responseData = response.data;
+
+    return new MatchModel({
+      id: responseData.id,
+      status: responseData.status,
+      homeScore: responseData.homeScore,
+      awayScore: responseData.awayScore,
+      matchDate: new Date(responseData.matchDate),
+      league: responseData.league,
+      season: responseData.season,
+      homeTeam: responseData.homeTeam,
+      awayTeam: responseData.awayTeam,
+    });
   }
 }
 

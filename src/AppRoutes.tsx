@@ -20,7 +20,7 @@ import RoundManagement from "./Page/testPage/AdminPage/RoundManage/RoundManageme
 import ClubManagement from "./Page/testPage/TeamManage/ClubManagement";
 import PlayerManagement from "./Page/testPage/AdminPage/PlayerManage/PlayerManagement";
 import MatchSchedule from "./Page/testPage/AdminPage/MatchSchedule/MatchShedule";
-import MatchResults from "./Page/testPage/Matchresult/MatchResults";
+import MatchResults from "./Page/testPage/AdminPage/Matchresult/MatchResults";
 import StandingsPage from "./Page/testPage/StadingPage";
 import ReportPage from "./Page/testPage/AdminPage/ReportPage";
 import AdminRegistrationManager from "./Page/testPage/AdminPage/AdminRegistrationManager";

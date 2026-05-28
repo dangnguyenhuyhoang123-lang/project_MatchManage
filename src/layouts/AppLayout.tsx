@@ -81,7 +81,7 @@ export const AppLayout = ({ children, workspace }: AppLayoutProps) => {
   const areaLabel = isClubArea ? "Club Workspace" : "Admin Workspace";
 
   const homePath = isClubArea ? "/club/dashboard" : "/admin/dashboard";
-  const accountLabel = isClubArea ? "Becamex TP.Hồ Chí Minh" : "Quản trị viên";
+  const accountLabel = isClubArea ? "Quản lý CLB" : "Quản trị viên";
 
   return (
     <AppLayoutContext.Provider value>

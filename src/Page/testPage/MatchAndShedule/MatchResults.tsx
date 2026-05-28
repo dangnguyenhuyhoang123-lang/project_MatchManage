@@ -89,7 +89,7 @@ const MatchResults: React.FC = () => {
       </div>
 
       <Modal open={open} onClose={() => setOpen(false)}>
-        <MatchResultUpdateModal onClose={() => setOpen(false)} />
+        {/* <MatchResultUpdateModal onClose={() => setOpen(false)} /> */}
       </Modal>
     </AppLayout>
   );
