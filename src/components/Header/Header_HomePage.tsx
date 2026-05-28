@@ -170,9 +170,8 @@ export const Header_HomePage = () => {
 
                 <ChevronDown
                   size={18}
-                  className={`hidden text-gray-400 transition-transform md:block ${
-                    open ? "rotate-180" : ""
-                  }`}
+                  className={`hidden text-gray-400 transition-transform md:block ${open ? "rotate-180" : ""
+                    }`}
                 />
               </button>
 
