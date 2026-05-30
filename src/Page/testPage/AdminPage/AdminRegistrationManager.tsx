@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   GrassType,
   RegistrationDetailDTO,
@@ -7,7 +7,11 @@ import type {
 } from "../../../model/Registration";
 import LoadingSpinner from "../../../components/Spinner/LoadingSpinner";
 import RegistrationService from "../../../services/RegistrationService";
+import SeasonService from "../../../services/SeasonService";
+import SystemRuleService from "../../../services/SystemRuleService";
 import { AppLayout } from "../../../layouts/AppLayout";
+import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../services/websocket/NotificationSocketService";
 
 type FilterStatus = "ALL" | RegistrationStatus;
 
@@ -145,10 +149,142 @@ const getClubInitials = (name: string) => {
     .join("");
 };
 
+const getRegistrationValidationErrors = (detail: RegistrationDetailDTO, rule: any) => {
+  const errors: string[] = [];
+
+  if (!rule) return errors;
+
+  const minPlayersReq = rule.minRegistrationPlayers || rule.minPlayers || 14;
+  const maxPlayersReq = rule.maxPlayers || 30;
+  const minAgeReq = rule.minAge || 16;
+  const maxAgeReq = rule.maxAge || 40;
+  const maxForeignReq = rule.maxForeignPlayers !== null && rule.maxForeignPlayers !== undefined ? rule.maxForeignPlayers : 3;
+
+  // 1. Player Count
+  const totalPlayers = detail.players.length;
+  if (totalPlayers < minPlayersReq) {
+    errors.push(`Số lượng cầu thủ (${totalPlayers}) ít hơn mức tối thiểu quy định (${minPlayersReq}).`);
+  }
+  if (totalPlayers > maxPlayersReq) {
+    errors.push(`Số lượng cầu thủ (${totalPlayers}) nhiều hơn mức tối đa quy định (${maxPlayersReq}).`);
+  }
+
+  // 2. Player Age
+  const invalidAgePlayers = detail.players.filter((p) => {
+    const age = calculateAge(p.dateOfBirth);
+    if (age === "--") return true;
+    const numericAge = Number(age);
+    return numericAge < minAgeReq || numericAge > maxAgeReq;
+  });
+  if (invalidAgePlayers.length > 0) {
+    errors.push(
+      `Độ tuổi không hợp lệ: Có ${invalidAgePlayers.length} cầu thủ không nằm trong độ tuổi quy định từ ${minAgeReq} đến ${maxAgeReq} tuổi (${invalidAgePlayers.map(p => `${p.name} - ${calculateAge(p.dateOfBirth)}t`).join(", ")}).`
+    );
+  }
+
+  // 3. Foreign Players
+  const isForeignPlayer = (nationality?: string) => {
+    if (!nationality) return false;
+    const n = nationality.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    return n !== "viet nam" && n !== "vietnam";
+  };
+  const foreignCount = detail.players.filter((p) => isForeignPlayer(p.nationality)).length;
+  if (foreignCount > maxForeignReq) {
+    errors.push(`Số lượng ngoại binh (${foreignCount}) vượt quá giới hạn tối đa cho phép (${maxForeignReq}).`);
+  }
+
+  // 4. Duplicate Shirts
+  const shirtCounts: Record<number, number> = {};
+  detail.players.forEach((p) => {
+    if (p.shirtNumber != null) {
+      shirtCounts[p.shirtNumber] = (shirtCounts[p.shirtNumber] || 0) + 1;
+    }
+  });
+  const duplicateShirts = Object.keys(shirtCounts)
+    .map(Number)
+    .filter((num) => shirtCounts[num] > 1);
+  if (duplicateShirts.length > 0) {
+    errors.push(`Trùng số áo: Các số áo ${duplicateShirts.join(", ")} bị đăng ký trùng lặp.`);
+  }
+
+  // 5. Duplicate Players
+  const playerIds = new Set<string>();
+  const duplicatePlayerNames: string[] = [];
+  detail.players.forEach((p) => {
+    if (p.idCode) {
+      if (playerIds.has(p.idCode)) {
+        duplicatePlayerNames.push(p.name);
+      } else {
+        playerIds.add(p.idCode);
+      }
+    }
+  });
+  if (duplicatePlayerNames.length > 0) {
+    errors.push(`Trùng lặp cầu thủ: Cầu thủ ${duplicatePlayerNames.join(", ")} bị đăng ký trùng lặp.`);
+  }
+
+  // 6. Coaches Checks
+  const totalCoaches = detail.coaches.length;
+  if (totalCoaches === 0) {
+    errors.push(`Danh sách ban huấn luyện trống.`);
+  } else {
+    const normalizeRoleText = (role?: string) =>
+      (role ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "D")
+        .toLowerCase()
+        .trim();
+
+    const getRoleKey = (role?: string) => {
+      const normalizedRole = normalizeRoleText(role);
+      if (normalizedRole.includes("head_coach") || normalizedRole.includes("hlv truong") || normalizedRole.includes("huan luyen vien truong")) return "headCoach";
+      if (normalizedRole.includes("assistant") || normalizedRole.includes("tro ly") || normalizedRole.includes("troly")) return "assistant";
+      if (normalizedRole.includes("team_doctor") || normalizedRole.includes("doctor") || normalizedRole.includes("bac si") || normalizedRole.includes("y te")) return "doctor";
+      return "other";
+    };
+
+    const roleCounts = detail.coaches.reduce<Record<string, number>>((counts, coach) => {
+      const roleKey = getRoleKey(coach.role);
+      counts[roleKey] = (counts[roleKey] || 0) + 1;
+      return counts;
+    }, {});
+
+    if ((roleCounts.headCoach ?? 0) < 1) {
+      errors.push(`Thiếu Huấn luyện viên trưởng.`);
+    }
+    if ((roleCounts.assistant ?? 0) < 1) {
+      errors.push(`Thiếu Trợ lý huấn luyện viên.`);
+    }
+    if ((roleCounts.doctor ?? 0) < 1) {
+      errors.push(`Thiếu Bác sĩ đội bóng.`);
+    }
+
+    const coachIds = new Set<string>();
+    const duplicateCoachNames: string[] = [];
+    detail.coaches.forEach((c) => {
+      if (c.idCode) {
+        if (coachIds.has(c.idCode)) {
+          duplicateCoachNames.push(c.name);
+        } else {
+          coachIds.add(c.idCode);
+        }
+      }
+    });
+    if (duplicateCoachNames.length > 0) {
+      errors.push(`Trùng lặp thành viên ban huấn luyện: ${duplicateCoachNames.join(", ")}.`);
+    }
+  }
+
+  return errors;
+};
+
 const AdminRegistrationManager: React.FC = () => {
   const [registrations, setRegistrations] = useState<RegistrationSummaryDTO[]>(
     [],
   );
+  const [selectedRule, setSelectedRule] = useState<any | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterStatus>("ALL");
   const [filters, setFilters] = useState<Filters>({
     teamName: "",
@@ -185,6 +321,20 @@ const AdminRegistrationManager: React.FC = () => {
   useEffect(() => {
     loadRegistrations();
   }, [loadRegistrations]);
+
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (
+        event.action === "REFETCH_REGISTRATIONS" ||
+        event.referenceType === "REGISTRATION_TEAM"
+      ) {
+        loadRegistrations();
+      }
+    },
+    [loadRegistrations],
+  );
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   useEffect(() => {
     setVisibleCount(8);
@@ -265,6 +415,21 @@ const AdminRegistrationManager: React.FC = () => {
     setProcessingId(id);
 
     try {
+      const detailRes = await RegistrationService.getRegistrationById(id);
+      const detail = detailRes.data;
+      if (detail?.seasonId) {
+        const seasonRes = await SeasonService.getSeasonById(detail.seasonId);
+        const systemRuleId = seasonRes.data?.systemRuleId;
+        if (systemRuleId) {
+          const ruleRes = await SystemRuleService.getById(systemRuleId);
+          const errors = getRegistrationValidationErrors(detail, ruleRes);
+          if (errors.length > 0) {
+            alert(`Không thể duyệt hồ sơ do vi phạm các điều luật:\n- ${errors.join("\n- ")}`);
+            return;
+          }
+        }
+      }
+
       await RegistrationService.approveRegistration(id);
       await loadRegistrations();
     } catch (error) {
@@ -300,12 +465,21 @@ const AdminRegistrationManager: React.FC = () => {
     setIsDetailLoading(true);
     setDetailErrorMessage("");
     setSelectedRegistrationDetail(null);
+    setSelectedRule(null);
 
     try {
       const response = await RegistrationService.getRegistrationById(
         registration.id,
       );
       setSelectedRegistrationDetail(response.data);
+      if (response.data?.seasonId) {
+        const seasonRes = await SeasonService.getSeasonById(response.data.seasonId);
+        const systemRuleId = seasonRes.data?.systemRuleId;
+        if (systemRuleId) {
+          const ruleRes = await SystemRuleService.getById(systemRuleId);
+          setSelectedRule(ruleRes);
+        }
+      }
     } catch (error) {
       console.error("Lá»—i khi táº£i chi tiáº¿t há»“ sÆ¡:", error);
       setDetailErrorMessage("Không thể tải chi tiết phiếu đăng ký.");
@@ -317,6 +491,7 @@ const AdminRegistrationManager: React.FC = () => {
   const closeDetailModal = () => {
     setIsDetailOpen(false);
     setSelectedRegistrationDetail(null);
+    setSelectedRule(null);
     setDetailErrorMessage("");
   };
 
@@ -567,9 +742,13 @@ const AdminRegistrationManager: React.FC = () => {
       {isDetailOpen && (
         <RegistrationDetailModal
           detail={selectedRegistrationDetail}
+          rule={selectedRule}
           errorMessage={detailErrorMessage}
           isLoading={isDetailLoading}
           onClose={closeDetailModal}
+          onApprove={handleApprove}
+          onReject={handleReject}
+          isProcessing={processingId !== null}
         />
       )}
     </AppLayout>
@@ -730,263 +909,373 @@ const IconButton = ({
 
 type RegistrationDetailModalProps = {
   detail: RegistrationDetailDTO | null;
+  rule: any | null;
   errorMessage: string;
   isLoading: boolean;
   onClose: () => void;
+  onApprove: (id: number) => void;
+  onReject: (id: number) => void;
+  isProcessing: boolean;
 };
 
 const RegistrationDetailModal = ({
   detail,
+  rule,
   errorMessage,
   isLoading,
   onClose,
-}: RegistrationDetailModalProps) => (
-  <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-6">
-    <div
-      className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
-    />
+  onApprove,
+  onReject,
+  isProcessing,
+}: RegistrationDetailModalProps) => {
+  const validationErrors = useMemo(() => {
+    if (!detail || !rule) return [];
+    return getRegistrationValidationErrors(detail, rule);
+  }, [detail, rule]);
 
-    <div className="relative z-10 w-full max-w-6xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#fbf9f5] shadow-2xl">
-      <div className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-100 bg-white/95 px-6 py-4 backdrop-blur">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-green-700">
-            Chi tiết phiếu đăng ký
-          </p>
-          <h3 className="mt-1 text-2xl font-black text-gray-900 font-['Be_Vietnam_Pro']">
-            {detail ? detail.teamName : "Đang tải hồ sơ"}
-          </h3>
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-6">
+      <div
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      <div className="relative z-10 w-full max-w-6xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#fbf9f5] shadow-2xl">
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-100 bg-white/95 px-6 py-4 backdrop-blur">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-green-700">
+              Chi tiết phiếu đăng ký
+            </p>
+            <h3 className="mt-1 text-2xl font-black text-gray-900 font-['Be_Vietnam_Pro']">
+              {detail ? detail.teamName : "Đang tải hồ sơ"}
+            </h3>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f5f3ef] text-gray-600 hover:bg-gray-200"
+            aria-label="Đóng chi tiết"
+          >
+            <span className="material-symbols-outlined text-lg">close</span>
+          </button>
         </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f5f3ef] text-gray-600 hover:bg-gray-200"
-          aria-label="Đóng chi tiết"
-        >
-          <span className="material-symbols-outlined text-lg">close</span>
-        </button>
-      </div>
+        <div className="p-6">
+          {isLoading ? (
+            <LoadingSpinner
+              message="Đang tải chi tiết phiếu đăng ký"
+              description="Vui lòng chờ trong giây lát để hệ thống lấy đầy đủ thông tin đội bóng, cầu thủ và ban huấn luyện."
+              fullHeight
+            />
+          ) : errorMessage ? (
+            <div className="rounded-2xl border border-red-100 bg-red-50 p-8 text-center font-bold text-red-600">
+              {errorMessage}
+            </div>
+          ) : detail ? (
+            <div className="grid grid-cols-12 gap-6">
+              <section className="col-span-12 lg:col-span-7 space-y-6">
+                <div className="rounded-3xl bg-white p-6 border border-gray-100 shadow-sm">
+                  <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+                    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-green-50 text-2xl font-black text-green-700">
+                      {detail.logo ? (
+                        <img
+                          src={detail.logo}
+                          alt={detail.teamName}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        getClubInitials(detail.teamName)
+                      )}
+                    </div>
 
-      <div className="p-6">
-        {isLoading ? (
-          <LoadingSpinner
-            message="Đang tải chi tiết phiếu đăng ký"
-            description="Vui lòng chờ trong giây lát để hệ thống lấy đầy đủ thông tin đội bóng, cầu thủ và ban huấn luyện."
-            fullHeight
-          />
-        ) : errorMessage ? (
-          <div className="rounded-2xl border border-red-100 bg-red-50 p-8 text-center font-bold text-red-600">
-            {errorMessage}
-          </div>
-        ) : detail ? (
-          <div className="grid grid-cols-12 gap-6">
-            <section className="col-span-12 lg:col-span-7 space-y-6">
-              <div className="rounded-3xl bg-white p-6 border border-gray-100 shadow-sm">
-                <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-                  <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-green-50 text-2xl font-black text-green-700">
-                    {detail.logo ? (
-                      <img
-                        src={detail.logo}
-                        alt={detail.teamName}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      getClubInitials(detail.teamName)
-                    )}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-3xl font-black text-gray-900 font-['Be_Vietnam_Pro']">
-                      {detail.teamName}
-                    </h4>
-                    <p className="mt-1 text-sm text-gray-500">
-                      {detail.city || "Chưa cập nhật thành phố"} •{" "}
-                      {detail.region || "ChÆ°a cáº­p nháº­t khu vá»±c"}
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <StatusBadge status={detail.status} />
-                      <span className="rounded-full bg-[#f5f3ef] px-3 py-1 text-xs font-bold text-gray-600">
-                        Mùa giải: {detail.seasonName}
-                      </span>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-3xl font-black text-gray-900 font-['Be_Vietnam_Pro']">
+                        {detail.teamName}
+                      </h4>
+                      <p className="mt-1 text-sm text-gray-500">
+                        {detail.city || "Chưa cập nhật thành phố"} •{" "}
+                        {detail.region || "Chưa cập nhật khu vực"}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <StatusBadge status={detail.status} />
+                        <span className="rounded-full bg-[#f5f3ef] px-3 py-1 text-xs font-bold text-gray-600">
+                          Mùa giải: {detail.seasonName}
+                        </span>
+                      </div>
                     </div>
                   </div>
+
+                  <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <InfoCard
+                      label="Năm thành lập"
+                      value={detail.establishedYear ?? "--"}
+                    />
+                    <InfoCard label="Chủ sở hữu" value={detail.owner || "--"} />
+                    <InfoCard
+                      label="Ngày gửi"
+                      value={formatSubmittedAt(detail.submittedAt).date}
+                    />
+                  </div>
+
+                  {detail.description && (
+                    <div className="mt-5 rounded-2xl bg-[#f5f3ef] p-4">
+                      <p className="text-xs font-black uppercase tracking-widest text-gray-400">
+                        Mô tả
+                      </p>
+                      <p className="mt-2 text-sm leading-relaxed text-gray-600">
+                        {detail.description}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-                  <InfoCard
-                    label="Năm thành lập"
-                    value={detail.establishedYear ?? "--"}
-                  />
-                  <InfoCard label="Chá»§ sá»Ÿ há»¯u" value={detail.owner || "--"} />
-                  <InfoCard
-                    label="Ngày gửi"
-                    value={formatSubmittedAt(detail.submittedAt).date}
-                  />
-                </div>
+                <div className="rounded-3xl bg-white p-6 border border-gray-100 shadow-sm">
+                  <div className="mb-5 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xl font-black text-gray-900 font-['Be_Vietnam_Pro']">
+                        Danh sách cầu thủ
+                      </h4>
+                      <p className="text-sm text-gray-500">
+                        {detail.players.length} cầu thủ trong hồ sơ
+                      </p>
+                    </div>
+                    <span className="material-symbols-outlined text-green-700">
+                      groups
+                    </span>
+                  </div>
 
-                {detail.description && (
-                  <div className="mt-5 rounded-2xl bg-[#f5f3ef] p-4">
-                    <p className="text-xs font-black uppercase tracking-widest text-gray-400">
-                      Mô tả
-                    </p>
-                    <p className="mt-2 text-sm leading-relaxed text-gray-600">
-                      {detail.description}
-                    </p>
+                  <div className="space-y-2">
+                    {detail.players.length === 0 ? (
+                      <EmptyDetail text="Không có cầu thủ trong hồ sơ." />
+                    ) : (
+                      detail.players.map((player) => (
+                        <div
+                          key={`${player.idCode}-${player.shirtNumber}`}
+                          className="grid grid-cols-1 gap-3 rounded-2xl border border-gray-100 bg-white p-4 md:grid-cols-12 md:items-center"
+                        >
+                          <div className="md:col-span-5">
+                            <p className="font-black text-gray-900">
+                              {player.name}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              CCCD: {player.idCode}
+                            </p>
+                          </div>
+                          <div className="md:col-span-2 text-sm font-bold text-gray-700">
+                            Số {player.shirtNumber}
+                          </div>
+                          <div className="md:col-span-2 text-sm text-gray-600">
+                            {player.position}
+                          </div>
+                          <div className="md:col-span-3 flex flex-wrap gap-2 md:justify-end">
+                            <span className="rounded-full bg-[#f5f3ef] px-3 py-1 text-xs font-bold text-gray-600">
+                              {player.nationality}
+                            </span>
+                            <span className="rounded-full bg-[#f5f3ef] px-3 py-1 text-xs font-bold text-gray-600">
+                              {calculateAge(player.dateOfBirth)} tuổi
+                            </span>
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-bold ${
+                                player.official
+                                  ? "bg-green-50 text-green-700"
+                                  : "bg-blue-50 text-blue-700"
+                              }`}
+                            >
+                              {player.official ? "Chính thức" : "Dự bị"}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              <aside className="col-span-12 lg:col-span-5 space-y-6">
+                {rule && (
+                  <div className="rounded-3xl bg-white p-6 border border-gray-100 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                      <h4 className="text-lg font-black text-gray-900 font-['Be_Vietnam_Pro'] flex items-center gap-2">
+                        <span className="material-symbols-outlined text-green-700">fact_check</span>
+                        Kiểm tra bộ luật giải đấu
+                      </h4>
+                    </div>
+                    
+                    {validationErrors.length > 0 ? (
+                      <div className="rounded-2xl bg-red-50 border border-red-200 p-4 space-y-2">
+                        <p className="text-xs font-black uppercase tracking-wider text-red-800 flex items-center gap-1.5 font-bold">
+                          <span className="material-symbols-outlined text-sm">cancel</span>
+                          Phát hiện {validationErrors.length} lỗi vi phạm
+                        </p>
+                        <ul className="list-disc list-inside text-xs text-red-700 space-y-1.5">
+                          {validationErrors.map((err, idx) => (
+                            <li key={idx}>{err}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl bg-green-50 border border-green-200 p-4">
+                        <p className="text-xs font-black uppercase tracking-wider text-green-800 flex items-center gap-1.5 font-bold">
+                          <span className="material-symbols-outlined text-sm">check_circle</span>
+                          Hồ sơ hoàn toàn hợp lệ
+                        </p>
+                        <p className="mt-1 text-xs text-green-700">
+                          Đơn đăng ký tuân thủ đầy đủ các quy tắc quy định trong bộ luật của mùa giải này.
+                        </p>
+                      </div>
+                    )}
+
+                    {detail.status === "PENDING" && (
+                      <div className="flex gap-3 pt-2 border-t border-gray-100">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onApprove(detail.id);
+                            onClose();
+                          }}
+                          disabled={validationErrors.length > 0 || isProcessing}
+                          className="flex-1 bg-[#008C2F] text-white text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-800 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-sm">check</span>
+                          Duyệt hồ sơ
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onReject(detail.id);
+                            onClose();
+                          }}
+                          disabled={isProcessing}
+                          className="flex-1 bg-red-50 text-red-600 text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 hover:bg-red-100 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-sm">close</span>
+                          Từ chối
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
 
-              <div className="rounded-3xl bg-white p-6 border border-gray-100 shadow-sm">
-                <div className="mb-5 flex items-center justify-between">
-                  <div>
-                    <h4 className="text-xl font-black text-gray-900 font-['Be_Vietnam_Pro']">
-                      Danh sách cầu thủ
-                    </h4>
-                    <p className="text-sm text-gray-500">
-                      {detail.players.length} cáº§u thá»§ trong há»“ sÆ¡
-                    </p>
-                  </div>
-                  <span className="material-symbols-outlined text-green-700">
-                    groups
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  {detail.players.length === 0 ? (
-                    <EmptyDetail text="Không có cầu thủ trong hồ sơ." />
-                  ) : (
-                    detail.players.map((player) => (
-                      <div
-                        key={`${player.idCode}-${player.shirtNumber}`}
-                        className="grid grid-cols-1 gap-3 rounded-2xl border border-gray-100 bg-white p-4 md:grid-cols-12 md:items-center"
+                {detail.status === "PENDING" && !rule && (
+                  <div className="rounded-3xl bg-white p-6 border border-gray-100 shadow-sm space-y-4">
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onApprove(detail.id);
+                          onClose();
+                        }}
+                        disabled={isProcessing}
+                        className="flex-1 bg-[#008C2F] text-white text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 hover:bg-green-800 transition-colors"
                       >
-                        <div className="md:col-span-5">
-                          <p className="font-black text-gray-900">
-                            {player.name}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            CCCD: {player.idCode}
-                          </p>
-                        </div>
-                        <div className="md:col-span-2 text-sm font-bold text-gray-700">
-                          Sá»‘ {player.shirtNumber}
-                        </div>
-                        <div className="md:col-span-2 text-sm text-gray-600">
-                          {player.position}
-                        </div>
-                        <div className="md:col-span-3 flex flex-wrap gap-2 md:justify-end">
-                          <span className="rounded-full bg-[#f5f3ef] px-3 py-1 text-xs font-bold text-gray-600">
-                            {player.nationality}
-                          </span>
-                          <span className="rounded-full bg-[#f5f3ef] px-3 py-1 text-xs font-bold text-gray-600">
-                            {calculateAge(player.dateOfBirth)} tuá»•i
-                          </span>
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-bold ${
-                              player.official
-                                ? "bg-green-50 text-green-700"
-                                : "bg-blue-50 text-blue-700"
-                            }`}
-                          >
-                            {player.official ? "Chính thức" : "Dự bị"}
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </section>
-
-            <aside className="col-span-12 lg:col-span-5 space-y-6">
-              <div className="rounded-3xl bg-white p-6 border border-gray-100 shadow-sm">
-                <div className="mb-5 flex items-center justify-between">
-                  <div>
-                    <h4 className="text-xl font-black text-gray-900 font-['Be_Vietnam_Pro']">
-                      Sân vận động
-                    </h4>
-                    <p className="text-sm text-gray-500">
-                      Thông tin địa điểm thi đấu
-                    </p>
-                  </div>
-                  <span className="material-symbols-outlined text-green-700">
-                    stadium
-                  </span>
-                </div>
-
-                <div className="space-y-3">
-                  <InfoCard label="Tên sân" value={detail.stadiumName} />
-                  <InfoCard label="Địa chỉ" value={detail.stadiumAddress} />
-                  <InfoCard
-                    label="Sá»©c chá»©a"
-                    value={`${detail.stadiumCapacity.toLocaleString("vi-VN")} ngÆ°á»i`}
-                  />
-                  <InfoCard
-                    label="Máº·t cá»"
-                    value={grassLabels[detail.stadiumGrass]}
-                  />
-                </div>
-              </div>
-
-              <div className="rounded-3xl bg-white p-6 border border-gray-100 shadow-sm">
-                <div className="mb-5 flex items-center justify-between">
-                  <div>
-                    <h4 className="text-xl font-black text-gray-900 font-['Be_Vietnam_Pro']">
-                      Ban huáº¥n luyá»‡n
-                    </h4>
-                    <p className="text-sm text-gray-500">
-                      {detail.coaches.length} thành viên trong hồ sơ
-                    </p>
-                  </div>
-                  <span className="material-symbols-outlined text-green-700">
-                    manage_accounts
-                  </span>
-                </div>
-
-                <div className="space-y-3">
-                  {detail.coaches.length === 0 ? (
-                    <EmptyDetail text="Không có ban huấn luyện trong hồ sơ." />
-                  ) : (
-                    detail.coaches.map((coach) => (
-                      <div
-                        key={`${coach.idCode}-${coach.role}`}
-                        className="rounded-2xl bg-[#f5f3ef] p-4"
+                        <span className="material-symbols-outlined text-sm">check</span>
+                        Duyệt hồ sơ
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onReject(detail.id);
+                          onClose();
+                        }}
+                        disabled={isProcessing}
+                        className="flex-1 bg-red-50 text-red-600 text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 hover:bg-red-100 transition-colors"
                       >
-                        <p className="font-black text-gray-900">{coach.name}</p>
-                        <p className="mt-1 text-xs font-bold text-green-700">
-                          {coach.role}
-                        </p>
-                        <p className="mt-2 text-xs text-gray-500">
-                          {coach.nationality} â€¢ {calculateAge(coach.birthDay)}{" "}
-                          tuá»•i â€¢ CCCD: {coach.idCode}
-                        </p>
-                        {coach.description && (
+                        <span className="material-symbols-outlined text-sm">close</span>
+                        Từ chối
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="rounded-3xl bg-white p-6 border border-gray-100 shadow-sm">
+                  <div className="mb-5 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xl font-black text-gray-900 font-['Be_Vietnam_Pro']">
+                        Sân vận động
+                      </h4>
+                      <p className="text-sm text-gray-500">
+                        Thông tin địa điểm thi đấu
+                      </p>
+                    </div>
+                    <span className="material-symbols-outlined text-green-700">
+                      stadium
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <InfoCard label="Tên sân" value={detail.stadiumName} />
+                    <InfoCard label="Địa chỉ" value={detail.stadiumAddress} />
+                    <InfoCard
+                      label="Sức chứa"
+                      value={`${detail.stadiumCapacity.toLocaleString("vi-VN")} người`}
+                    />
+                    <InfoCard
+                      label="Mặt cỏ"
+                      value={grassLabels[detail.stadiumGrass]}
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-3xl bg-white p-6 border border-gray-100 shadow-sm">
+                  <div className="mb-5 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xl font-black text-gray-900 font-['Be_Vietnam_Pro']">
+                        Ban huấn luyện
+                      </h4>
+                      <p className="text-sm text-gray-500">
+                        {detail.coaches.length} thành viên trong hồ sơ
+                      </p>
+                    </div>
+                    <span className="material-symbols-outlined text-green-700">
+                      manage_accounts
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {detail.coaches.length === 0 ? (
+                      <EmptyDetail text="Không có ban huấn luyện trong hồ sơ." />
+                    ) : (
+                      detail.coaches.map((coach) => (
+                        <div
+                          key={`${coach.idCode}-${coach.role}`}
+                          className="rounded-2xl bg-[#f5f3ef] p-4"
+                        >
+                          <p className="font-black text-gray-900">{coach.name}</p>
+                          <p className="mt-1 text-xs font-bold text-green-700">
+                            {coach.role}
+                          </p>
                           <p className="mt-2 text-xs text-gray-500">
-                            {coach.description}
+                            {coach.nationality} • {calculateAge(coach.birthDay)}{" "}
+                            tuổi • CCCD: {coach.idCode}
                           </p>
-                        )}
-                      </div>
-                    ))
-                  )}
+                          {coach.description && (
+                            <p className="mt-2 text-xs text-gray-500">
+                              {coach.description}
+                            </p>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              {detail.note && (
-                <div className="rounded-3xl border border-amber-100 bg-amber-50 p-6">
-                  <p className="text-xs font-black uppercase tracking-widest text-amber-700">
-                    Ghi chú
-                  </p>
-                  <p className="mt-2 text-sm text-amber-700">{detail.note}</p>
-                </div>
-              )}
-            </aside>
-          </div>
-        ) : null}
+                {detail.note && (
+                  <div className="rounded-3xl border border-amber-100 bg-amber-50 p-6">
+                    <p className="text-xs font-black uppercase tracking-widest text-amber-700">
+                      Ghi chú
+                    </p>
+                    <p className="mt-2 text-sm text-amber-700">{detail.note}</p>
+                  </div>
+                )}
+              </aside>
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+}
 
 const StatusBadge = ({ status }: { status: RegistrationStatus }) => {
   const meta = statusMeta[status];

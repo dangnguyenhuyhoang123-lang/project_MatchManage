@@ -1,12 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import CreateTournament from "./CreateTournament";
+import CreateSeasonModal from "./CreateSeasonModal";
 
 import { Modal } from "../../../../components/Modal";
 import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import { AppLayout } from "../../../../layouts/AppLayout";
 import LeagueService from "../../../../services/LeagueService";
+import SeasonService from "../../../../services/SeasonService";
+import SystemRuleService from "../../../../services/SystemRuleService";
 import { PhanTrang } from "../../../../utils/PhanTrang";
 import { League } from "../../../../model/LeagueModel";
+
 type FilterState = {
   search: string;
   scale: string;
@@ -15,11 +19,7 @@ type FilterState = {
 
 type LeagueWithSeasons = {
   league: League;
-  seasons: Array<{
-    id?: number;
-    year?: string;
-    name?: string;
-  }>;
+  seasons: Array<any>;
 };
 
 const PAGE_SIZE = 10;
@@ -35,43 +35,29 @@ const STATUS_LABELS: Record<string, string> = {
   INACTIVE: "Ngừng hoạt động",
 };
 
-const STATUS_STYLES: Record<string, string> = {
-  ACTIVE: "bg-green-100 text-green-700",
-  INACTIVE: "bg-stone-100 text-stone-500",
+const normalizeKeyword = (value?: string | null) =>
+  (value ?? "").trim().toLowerCase();
+
+const getStatusLabel = (status?: string | null) =>
+  status ? (STATUS_LABELS[status] ?? status) : "Chưa cập nhật";
+
+const getSeasonStatus = (season: any) => {
+  const now = new Date();
+  const start = season.startDate ? new Date(season.startDate) : null;
+  const end = season.endDate ? new Date(season.endDate) : null;
+
+  if (start && now < start) return "Sắp diễn ra";
+  if (end && now > end) return "Đã kết thúc";
+  if (start && end && now >= start && now <= end) return "Đang diễn ra";
+  return "Chưa rõ";
 };
 
-const normalizeKeyword = (value: string) => value.trim().toLowerCase();
-const getStatusLabel = (status: string) => STATUS_LABELS[status] ?? status;
-
-const StatCard: React.FC<{
-  title: string;
-  value: string;
-  trend: string;
-  desc: string;
-  icon: string;
-  colorClass?: string;
-}> = ({ title, value, trend, desc, icon, colorClass = "text-primary" }) => (
-  <div className="group relative overflow-hidden rounded-2xl bg-stone-100 p-6">
-    <div className="absolute right-0 top-0 p-8 opacity-5 transition-transform group-hover:scale-110">
-      <span className="material-symbols-outlined text-8xl">{icon}</span>
-    </div>
-    <h3 className="mb-2 text-xs font-bold uppercase tracking-widest text-stone-500">
-      {title}
-    </h3>
-    <div className="flex items-end gap-2">
-      <span className="font-headline text-4xl font-bold leading-none">
-        {value}
-      </span>
-      <span
-        className={`${colorClass} mb-1 flex items-center text-sm font-bold`}
-      >
-        <span className="material-symbols-outlined text-xs">trending_up</span>
-        {trend}
-      </span>
-    </div>
-    <p className="mt-4 text-xs text-stone-400">{desc}</p>
-  </div>
-);
+const formatDate = (value?: string | null) => {
+  if (!value) return "Chưa cập nhật";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("vi-VN");
+};
 
 const TournamentManagement: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -87,6 +73,10 @@ const TournamentManagement: React.FC = () => {
     useState<FilterState>(DEFAULT_FILTERS);
   const [appliedFilters, setAppliedFilters] =
     useState<FilterState>(DEFAULT_FILTERS);
+
+  const [seasonModalOpen, setSeasonModalOpen] = useState(false);
+  const [selectedSeason, setSelectedSeason] = useState<any | null>(null);
+  const [seasonLeagueId, setSeasonLeagueId] = useState<number | null>(null);
 
   const hasClientFilters = useMemo(
     () =>
@@ -136,11 +126,7 @@ const TournamentManagement: React.FC = () => {
 
     return leagues.map((league, index) => ({
       league,
-      seasons: seasonsList[index].map((season) => ({
-        id: season.id,
-        year: season.year,
-        name: season.name,
-      })),
+      seasons: seasonsList[index] ?? [],
     }));
   };
 
@@ -235,6 +221,22 @@ const TournamentManagement: React.FC = () => {
     }
   };
 
+  const handleDeleteSeason = async (seasonId: number) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa mùa giải này không?")) {
+      return;
+    }
+
+    try {
+      await SeasonService.deleteSeason(seasonId);
+      fetchLeagues(trangHienTai, appliedFilters);
+    } catch (error) {
+      console.error("Lỗi khi xóa mùa giải:", error);
+      alert(
+        "Không thể xóa mùa giải này. Vui lòng kiểm tra xem có hồ sơ đăng ký hoặc trận đấu liên quan không.",
+      );
+    }
+  };
+
   const activeCount = useMemo(
     () => items.filter((item) => item.league.status === "ACTIVE").length,
     [items],
@@ -245,180 +247,228 @@ const TournamentManagement: React.FC = () => {
     [items],
   );
 
+  const upcomingSeasonCount = useMemo(
+    () =>
+      items.reduce(
+        (sum, item) =>
+          sum +
+          item.seasons.filter(
+            (season) => getSeasonStatus(season) === "Sắp diễn ra",
+          ).length,
+        0,
+      ),
+    [items],
+  );
+
   return (
     <AppLayout>
-      <header className="mb-10 flex justify-between items-end">
-        <h2 className="mb-2 font-['Be_Vietnam_Pro'] text-4xl font-black tracking-tight text-gray-900">
-          Quản lý giải đấu
-        </h2>
-        <div className="flex items-center gap-4">
-          <div className="relative hidden sm:block">
-            <input
-              name="search"
-              value={draftFilters.search}
-              onChange={handleFilterChange}
-              className="w-64 rounded-full border-none bg-stone-100 py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-green-700/20"
-              placeholder="Tìm kiếm giải đấu..."
-            />
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400">
-              search
-            </span>
-          </div>
-          <button
-            onClick={() => {
-              setSelectedLeague(null);
-              setOpen(true);
-            }}
-            className="flex items-center gap-2 rounded-full bg-[#0d631b] px-6 py-2 text-sm font-bold text-white shadow-lg shadow-green-900/20"
-          >
-            Tạo Giải Đấu
-          </button>
-        </div>
-      </header>
+      <div>
+        <section className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="mb-2 text-xs font-black uppercase tracking-[0.22em] text-[#008C2F]">
+              League operations
+            </p>
 
-      <div className="mb-8 grid grid-cols-1 gap-6 items-end md:grid-cols-12">
-        <div className="flex flex-wrap gap-4 md:col-span-8">
-          <div className="space-y-2">
-            <label className="ml-1 text-[10px] font-bold uppercase tracking-widest text-stone-400">
-              Quy mô
+            <h1 className="font-['Be_Vietnam_Pro'] text-4xl font-black tracking-tight text-[#1B1C1A] md:text-5xl">
+              Quản lý giải đấu
+            </h1>
+
+            <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-[#707A6C]">
+              Quản lý theo luồng League → Season. Mở từng giải đấu để tạo mùa
+              giải, gán bộ luật và theo dõi trạng thái vận hành.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedLeague(null);
+                setOpen(true);
+              }}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0D631B] px-6 py-3 text-sm font-black text-white shadow-lg shadow-green-900/20 transition hover:bg-[#00490E]"
+            >
+              <span className="material-symbols-outlined text-lg">add</span>
+              Tạo giải đấu
+            </button>
+          </div>
+        </section>
+
+        <section className="mb-8 grid grid-cols-1 gap-5 md:grid-cols-3">
+          <StatCard
+            title="Giải đang hoạt động"
+            value={String(activeCount)}
+            desc="Theo dữ liệu đang hiển thị"
+            icon="military_tech"
+            accent="green"
+          />
+          <StatCard
+            title="Tổng mùa giải"
+            value={String(seasonCount)}
+            desc="Tổng season trong các league hiện tại"
+            icon="stadium"
+            accent="lime"
+          />
+          <StatCard
+            title="Sắp diễn ra"
+            value={String(upcomingSeasonCount)}
+            desc="Season có ngày bắt đầu trong tương lai"
+            icon="event_upcoming"
+            accent="amber"
+          />
+        </section>
+
+        <section className="mb-8 rounded-[2rem] border border-[#E4E2DE] bg-white p-5 shadow-sm">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-end">
+            <label className="lg:col-span-5">
+              <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-[#707A6C]">
+                Tìm kiếm
+              </span>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-xl text-[#707A6C]">
+                  search
+                </span>
+                <input
+                  name="search"
+                  value={draftFilters.search}
+                  onChange={handleFilterChange}
+                  className="w-full rounded-full border border-transparent bg-[#F5F3EF] py-3 pl-12 pr-4 text-sm font-semibold outline-none transition focus:border-[#0D631B] focus:bg-white focus:ring-4 focus:ring-[#0D631B]/10"
+                  placeholder="Tìm theo tên giải đấu hoặc quốc gia..."
+                />
+              </div>
             </label>
-            <select
+
+            <FilterSelect
+              label="Quy mô"
               name="scale"
               value={draftFilters.scale}
               onChange={handleFilterChange}
-              className="block w-full rounded-xl border-none bg-stone-100 px-4 py-2.5 text-sm"
-            >
-              <option>Tất cả quy mô</option>
-              <option value="Quốc gia">Quốc gia</option>
-              <option value="Khu vực">Khu vực</option>
-              <option value="Quốc tế">Quốc tế</option>
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label className="ml-1 text-[10px] font-bold uppercase tracking-widest text-stone-400">
-              Trạng thái
-            </label>
-            <select
+              options={["Tất cả quy mô", "Quốc gia", "Khu vực", "Quốc tế"]}
+            />
+
+            <FilterSelect
+              label="Trạng thái"
               name="status"
               value={draftFilters.status}
               onChange={handleFilterChange}
-              className="block w-full rounded-xl border-none bg-stone-100 px-4 py-2.5 text-sm"
-            >
-              <option>Tất cả trạng thái</option>
-              <option value="ACTIVE">Đang hoạt động</option>
-              <option value="INACTIVE">Ngừng hoạt động</option>
-            </select>
+              options={[
+                "Tất cả trạng thái",
+                { label: "Đang hoạt động", value: "ACTIVE" },
+                { label: "Ngừng hoạt động", value: "INACTIVE" },
+              ]}
+            />
+
+            <div className="flex gap-3 lg:col-span-3 lg:justify-end">
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="flex-1 rounded-full bg-[#F0EEEA] px-4 py-3 text-sm font-black text-[#40493D] transition hover:bg-[#E4E2DE] lg:flex-none"
+              >
+                Đặt lại
+              </button>
+              <button
+                type="button"
+                onClick={applyFilters}
+                className="flex-1 rounded-full bg-[#1B1C1A] px-5 py-3 text-sm font-black text-white transition hover:bg-black lg:flex-none"
+              >
+                Áp dụng
+              </button>
+            </div>
           </div>
-        </div>
-        <div className="md:col-span-4 flex justify-end gap-3">
-          <button
-            onClick={resetFilters}
-            className="rounded-xl bg-stone-100 px-4 py-2.5 text-sm font-semibold text-stone-600"
-          >
-            Đặt lại
-          </button>
-          <button
-            onClick={applyFilters}
-            className="rounded-xl bg-[#4c56af] px-4 py-2.5 text-sm font-semibold text-white"
-          >
-            Áp dụng
-          </button>
-        </div>
-      </div>
 
-      <div className="space-y-3">
-        <div className="hidden grid-cols-12 px-6 py-2 text-xs font-bold uppercase tracking-widest text-stone-400 md:grid">
-          <div className="col-span-4">Tên giải đấu</div>
-          <div className="col-span-2">Quốc gia</div>
-          <div className="col-span-2">Mùa giải</div>
-          <div className="col-span-2">Trạng thái</div>
-          <div className="col-span-2 text-right">Thao tác</div>
-        </div>
+          {hasClientFilters && (
+            <div className="mt-4 rounded-[1rem] bg-[#B2F746]/20 px-4 py-3 text-xs font-bold text-[#496F00]">
+              Đang dùng bộ lọc phía client cho quy mô hoặc trạng thái.
+            </div>
+          )}
+        </section>
 
-        {isLoading ? (
-          <LoadingSpinner
-            message="Đang tải danh sách giải đấu"
-            description="Các giải đấu và mùa giải liên quan đang được đồng bộ từ hệ thống."
-            fullHeight
-          />
-        ) : items.length > 0 ? (
-          items.map((item) => (
-            <TournamentRow
-              key={item.league.id}
-              item={item}
-              onEdit={() => {
-                setSelectedLeague(item.league);
+        <section className="space-y-4">
+          <div className="hidden grid-cols-12 px-6 py-2 text-xs font-black uppercase tracking-widest text-[#707A6C] md:grid">
+            <div className="col-span-4">Tên giải đấu</div>
+            <div className="col-span-2">Quốc gia</div>
+            <div className="col-span-2">Mùa giải</div>
+            <div className="col-span-2">Trạng thái</div>
+            <div className="col-span-2 text-right">Thao tác</div>
+          </div>
+
+          {isLoading ? (
+            <LoadingSpinner
+              message="Đang tải danh sách giải đấu"
+              description="Các giải đấu và mùa giải liên quan đang được đồng bộ từ hệ thống."
+              fullHeight
+            />
+          ) : items.length > 0 ? (
+            items.map((item) => (
+              <TournamentRow
+                key={item.league.id}
+                item={item}
+                onEdit={() => {
+                  setSelectedLeague(item.league);
+                  setOpen(true);
+                }}
+                onDelete={() => handleDelete(item.league)}
+                onAddSeason={(leagueId) => {
+                  setSelectedSeason(null);
+                  setSeasonLeagueId(leagueId);
+                  setSeasonModalOpen(true);
+                }}
+                onEditSeason={(season) => {
+                  setSelectedSeason(season);
+                  setSeasonLeagueId(season.leagueId ?? item.league.id ?? null);
+                  setSeasonModalOpen(true);
+                }}
+                onDeleteSeason={handleDeleteSeason}
+              />
+            ))
+          ) : (
+            <EmptyState
+              onCreate={() => {
+                setSelectedLeague(null);
                 setOpen(true);
               }}
-              onDelete={() => handleDelete(item.league)}
             />
-          ))
-        ) : (
-          <EmptyState />
-        )}
-      </div>
+          )}
+        </section>
 
-      <section className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
-        <StatCard
-          title="Đang hoạt động"
-          value={String(activeCount)}
-          trend="+API"
-          desc="Số giải đấu đang mở theo bộ lọc hiện tại"
-          icon="military_tech"
-        />
-        <StatCard
-          title="Tổng mùa giải"
-          value={String(seasonCount)}
-          trend="+sync"
-          desc="Tổng mùa giải lấy từ endpoint getLeagueSeasons"
-          icon="stadium"
-          colorClass="text-blue-600"
-        />
-        <div className="relative overflow-hidden rounded-2xl bg-[#0d631b] p-6 text-white">
-          <h3 className="mb-2 text-xs font-bold uppercase text-white/70">
-            Hệ thống gợi ý
-          </h3>
-          <p className="mb-4 text-sm">
-            {hasClientFilters
-              ? "Bạn đang dùng bộ lọc phía client cho quy mô hoặc trạng thái."
-              : "Bạn có thể mở từng giải đấu để đồng bộ thêm dữ liệu mùa giải."}
+        <div className="mt-8 flex flex-col gap-4 border-t border-black/5 pt-6 md:flex-row md:items-center md:justify-between">
+          <p className="text-sm font-medium text-[#40493D]">
+            Hiển thị{" "}
+            <span className="font-black">
+              {tongSoPhanTu === 0
+                ? "0"
+                : `${(trangHienTai - 1) * PAGE_SIZE + 1} - ${Math.min(
+                    trangHienTai * PAGE_SIZE,
+                    tongSoPhanTu,
+                  )}`}
+            </span>{" "}
+            trong số <span className="font-black">{tongSoPhanTu}</span> giải đấu
           </p>
-          <button
-            onClick={() => {
-              setSelectedLeague(null);
-              setOpen(true);
-            }}
-            className="rounded-full bg-white px-4 py-2 text-xs font-bold text-[#0d631b]"
-          >
-            Tạo mới
-          </button>
+          <PhanTrang
+            tongSoTrang={tongSoTrang}
+            trangHienTai={trangHienTai}
+            xuLyTrang={(page) => setTrangHienTai(Number(page))}
+          />
         </div>
-      </section>
-
-      <div className="mt-8 flex items-center justify-between border-t border-black/5 pt-6">
-        <p className="text-sm font-medium text-[#40493d]">
-          Hiển thị{" "}
-          <span className="font-bold">
-            {tongSoPhanTu === 0
-              ? "0"
-              : `${(trangHienTai - 1) * PAGE_SIZE + 1} - ${Math.min(
-                  trangHienTai * PAGE_SIZE,
-                  tongSoPhanTu,
-                )}`}
-          </span>{" "}
-          trong số <span className="font-bold">{tongSoPhanTu}</span> giải đấu
-        </p>
-        <PhanTrang
-          tongSoTrang={tongSoTrang}
-          trangHienTai={trangHienTai}
-          xuLyTrang={(page) => setTrangHienTai(Number(page))}
-        />
       </div>
 
-      <Modal open={open} onClose={() => setOpen(false)}>
+      <Modal open={open} onClose={() => setOpen(false)} size="xl">
         <CreateTournament
           onClose={() => setOpen(false)}
           currentLeague={selectedLeague}
+          onSuccess={() => fetchLeagues(trangHienTai, appliedFilters)}
+        />
+      </Modal>
+
+      <Modal
+        open={seasonModalOpen}
+        onClose={() => setSeasonModalOpen(false)}
+        size="xl"
+      >
+        <CreateSeasonModal
+          onClose={() => setSeasonModalOpen(false)}
+          leagueId={seasonLeagueId || 0}
+          currentSeason={selectedSeason}
           onSuccess={() => fetchLeagues(trangHienTai, appliedFilters)}
         />
       </Modal>
@@ -430,8 +480,50 @@ const TournamentRow: React.FC<{
   item: LeagueWithSeasons;
   onEdit: () => void;
   onDelete: () => void;
-}> = ({ item, onEdit, onDelete }) => {
+  onAddSeason: (leagueId: number) => void;
+  onEditSeason: (season: any) => void;
+  onDeleteSeason: (seasonId: number) => void;
+}> = ({
+  item,
+  onEdit,
+  onDelete,
+  onAddSeason,
+  onEditSeason,
+  onDeleteSeason,
+}) => {
   const { league, seasons } = item;
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [rules, setRules] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!isExpanded) return;
+
+    const extractArray = (value: any): any[] => {
+      if (Array.isArray(value)) return value;
+      if (Array.isArray(value?.data)) return value.data;
+      if (Array.isArray(value?.content)) return value.content;
+      if (Array.isArray(value?.data?.content)) return value.data.content;
+      return [];
+    };
+
+    const loadRules = async () => {
+      try {
+        const response = await SystemRuleService.getAllNoPaging();
+        const ruleList = extractArray(response);
+
+        console.log("Rules raw response:", response);
+        console.log("Rules parsed list:", ruleList);
+
+        setRules(ruleList);
+      } catch (error) {
+        console.error("Lỗi khi tải bộ luật:", error);
+        setRules([]);
+      }
+    };
+
+    loadRules();
+  }, [isExpanded]);
+
   const seasonLabel =
     seasons.length > 0
       ? seasons
@@ -440,71 +532,385 @@ const TournamentRow: React.FC<{
           .join(", ")
       : "Chưa có mùa giải";
 
+  const activeSeason = seasons.find(
+    (season) => getSeasonStatus(season) === "Đang diễn ra",
+  );
+
   return (
-    <div className="group grid grid-cols-12 items-center rounded-2xl border border-stone-100/50 bg-white px-6 py-4 shadow-sm transition-all hover:bg-stone-50">
-      <div className="col-span-12 flex items-center gap-4 md:col-span-4">
-        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-green-50">
-          {league.logo ? (
-            <img
-              src={league.logo}
-              alt="Logo"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <span className="material-symbols-outlined text-green-700">
-              emoji_events
-            </span>
+    <article className="overflow-hidden rounded-[1.75rem] border border-[#E4E2DE] bg-white shadow-[0_8px_24px_rgba(0,73,14,0.05)] transition hover:border-[#BFCABA]">
+      <div className="flex flex-col gap-y-4 px-6 py-5 md:grid md:grid-cols-12 md:items-center">
+        <div className="flex items-center gap-4 md:col-span-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[1.1rem] bg-[#F5F3EF] ring-1 ring-[#E4E2DE]">
+            {league.logo ? (
+              <img
+                src={league.logo}
+                alt={league.name || "Logo"}
+                className="h-full w-full object-contain p-2"
+              />
+            ) : (
+              <span className="material-symbols-outlined text-3xl text-[#0D631B]">
+                emoji_events
+              </span>
+            )}
+          </div>
+          <div className="min-w-0">
+            <h4 className="truncate text-base font-black text-[#1B1C1A]">
+              {league.name}
+            </h4>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-bold text-[#707A6C]">
+              <span>ID: {league.id}</span>
+              <span className="h-1 w-1 rounded-full bg-[#BFCABA]" />
+              <span>{league.scale || "Chưa cập nhật"}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-sm font-bold text-[#40493D] md:col-span-2">
+          {league.country || "Chưa cập nhật"}
+        </div>
+
+        <div className="text-sm font-bold text-[#40493D] md:col-span-2">
+          <p className="line-clamp-2">{seasonLabel}</p>
+          {seasons.length > 2 && (
+            <p className="mt-1 text-[11px] font-black text-[#707A6C]">
+              +{seasons.length - 2} mùa giải khác
+            </p>
+          )}
+          {activeSeason && (
+            <p className="mt-1 text-[11px] font-black text-[#0D631B]">
+              Hiện tại: {activeSeason.year || activeSeason.name}
+            </p>
           )}
         </div>
-        <div>
-          <h4 className="font-headline font-bold text-stone-900">
-            {league.name}
-          </h4>
-          <p className="text-xs text-stone-400">ID: {league.id}</p>
-          <p className="text-xs text-stone-400">{league.scale}</p>
+
+        <div className="md:col-span-2">
+          <StatusPill status={league.status} />
+        </div>
+
+        <div className="flex gap-2 md:col-span-2 md:justify-end">
+          <IconButton
+            icon="expand_more"
+            title="Quản lý mùa giải"
+            active={isExpanded}
+            onClick={() => setIsExpanded((current) => !current)}
+          />
+          <IconButton icon="edit" title="Sửa giải đấu" onClick={onEdit} />
+          <IconButton
+            icon="delete"
+            title="Xóa giải đấu"
+            danger
+            onClick={onDelete}
+          />
         </div>
       </div>
-      <div className="col-span-6 mt-4 text-sm font-medium text-stone-600 md:col-span-2 md:mt-0">
-        {league.country}
+
+      {isExpanded && (
+        <div className="border-t border-[#E4E2DE] bg-[#F5F3EF] p-6">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h5 className="flex items-center gap-2 text-sm font-black text-[#1B1C1A]">
+                <span className="material-symbols-outlined text-[#0D631B]">
+                  stadium
+                </span>
+                Mùa giải của {league.name}
+              </h5>
+              <p className="mt-1 text-xs font-medium text-[#707A6C]">
+                Season nằm trong ngữ cảnh League và dùng để quản lý vòng đấu,
+                đăng ký đội, lịch thi đấu.
+              </p>
+            </div>
+
+            {league.id && (
+              <button
+                type="button"
+                onClick={() => onAddSeason(league.id!)}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0D631B] px-4 py-2.5 text-xs font-black text-white shadow-sm transition hover:bg-[#00490E]"
+              >
+                <span className="material-symbols-outlined text-base">add</span>
+                Thêm mùa giải
+              </button>
+            )}
+          </div>
+
+          {seasons.length === 0 ? (
+            <div className="rounded-[1.5rem] border border-dashed border-[#BFCABA] bg-white p-8 text-center">
+              <span className="material-symbols-outlined text-5xl text-[#0D631B]">
+                event_busy
+              </span>
+              <p className="mt-3 text-sm font-black text-[#1B1C1A]">
+                Chưa có mùa giải nào
+              </p>
+              <p className="mt-1 text-xs font-medium text-[#707A6C]">
+                Tạo mùa giải đầu tiên để bắt đầu gán bộ luật và đăng ký đội.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              {seasons.map((season) => {
+                const safeRules = Array.isArray(rules) ? rules : [];
+
+                const systemRuleId =
+                  season.systemRuleId ?? season.ruleId ?? season.systemRule?.id;
+
+                const matchedRule = safeRules.find(
+                  (rule) => Number(rule.id) === Number(systemRuleId),
+                );
+
+                const ruleName =
+                  matchedRule?.ruleName?.trim() ||
+                  season.systemRuleName?.trim?.() ||
+                  season.systemRule?.ruleName?.trim?.() ||
+                  (systemRuleId
+                    ? `Bộ luật #${systemRuleId}`
+                    : "Chưa gán bộ luật");
+
+                const status = getSeasonStatus(season);
+
+                return (
+                  <div
+                    key={season.id}
+                    className="rounded-[1.5rem] border border-[#E4E2DE] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                  >
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-black text-[#1B1C1A]">
+                          {season.name || "Mùa giải chưa đặt tên"}
+                        </p>
+                        <p className="mt-1 text-xs font-bold text-[#707A6C]">
+                          {season.year || "Chưa cập nhật năm"}
+                        </p>
+                      </div>
+                      <SeasonStatusPill status={status} />
+                    </div>
+
+                    <div className="space-y-2 rounded-[1rem] bg-[#F5F3EF] p-4 text-xs font-bold text-[#40493D]">
+                      <InfoLine
+                        icon="calendar_month"
+                        label="Thời gian"
+                        value={`${formatDate(season.startDate)} - ${formatDate(
+                          season.endDate,
+                        )}`}
+                      />
+                      <InfoLine icon="gavel" label="Bộ luật" value={ruleName} />
+                      <InfoLine
+                        icon="tag"
+                        label="Mã mùa giải"
+                        value={`#${season.id ?? "N/A"}`}
+                      />
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-[#E4E2DE] pt-4">
+                      <button
+                        type="button"
+                        onClick={() => onEditSeason(season)}
+                        className="inline-flex items-center gap-1 rounded-full bg-[#F0EEEA] px-3 py-2 text-xs font-black text-[#40493D] transition hover:bg-[#E4E2DE]"
+                      >
+                        <span className="material-symbols-outlined text-sm">
+                          edit
+                        </span>
+                        Sửa
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDeleteSeason(season.id)}
+                        className="inline-flex items-center gap-1 rounded-full bg-red-50 px-3 py-2 text-xs font-black text-red-600 transition hover:bg-red-100"
+                      >
+                        <span className="material-symbols-outlined text-sm">
+                          delete
+                        </span>
+                        Xóa
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </article>
+  );
+};
+
+const StatCard: React.FC<{
+  title: string;
+  value: string;
+  desc: string;
+  icon: string;
+  accent: "green" | "lime" | "amber";
+}> = ({ title, value, desc, icon, accent }) => {
+  const accentClass =
+    accent === "lime"
+      ? "bg-[#B2F746]/30 text-[#496F00]"
+      : accent === "amber"
+        ? "bg-amber-100 text-amber-700"
+        : "bg-[#0D631B]/10 text-[#0D631B]";
+
+  return (
+    <div className="relative overflow-hidden rounded-[1.75rem] border border-[#E4E2DE] bg-white p-6 shadow-sm">
+      <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-[#F5F3EF]" />
+      <div
+        className={`relative mb-5 flex h-12 w-12 items-center justify-center rounded-full ${accentClass}`}
+      >
+        <span className="material-symbols-outlined">{icon}</span>
       </div>
-      <div className="col-span-6 mt-4 text-sm font-medium text-stone-600 md:col-span-2 md:mt-0">
-        {seasonLabel}
-      </div>
-      <div className="col-span-6 mt-4 md:col-span-2 md:mt-0">
-        <span
-          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
-            STATUS_STYLES[league.status] ?? "bg-stone-100 text-stone-500"
-          }`}
-        >
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${
-              league.status === "ACTIVE" ? "bg-green-600" : "bg-stone-400"
-            }`}
-          ></span>
-          {getStatusLabel(league.status)}
-        </span>
-      </div>
-      <div className="col-span-6 mt-4 flex justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100 md:col-span-2 md:mt-0">
-        <button
-          onClick={onEdit}
-          className="rounded-full p-2 text-stone-400 transition-all hover:bg-green-50 hover:text-green-700"
-        >
-          <span className="material-symbols-outlined text-xl">edit</span>
-        </button>
-        <button
-          onClick={onDelete}
-          className="rounded-full p-2 text-stone-400 transition-all hover:bg-red-50 hover:text-red-600"
-        >
-          <span className="material-symbols-outlined text-xl">delete</span>
-        </button>
-      </div>
+      <p className="text-[10px] font-black uppercase tracking-widest text-[#707A6C]">
+        {title}
+      </p>
+      <p className="mt-2 text-4xl font-black text-[#1B1C1A]">{value}</p>
+      <p className="mt-2 text-xs font-medium text-[#707A6C]">{desc}</p>
     </div>
   );
 };
 
-const EmptyState = () => (
-  <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-12 text-center text-gray-500">
-    Không có giải đấu phù hợp với bộ lọc hiện tại.
+type FilterOption = string | { label: string; value: string };
+
+function FilterSelect({
+  label,
+  name,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  options: FilterOption[];
+}) {
+  return (
+    <label className="block lg:col-span-2">
+      <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-[#707A6C]">
+        {label}
+      </span>
+      <select
+        name={name}
+        value={value}
+        onChange={onChange}
+        className="w-full rounded-full border border-transparent bg-[#F5F3EF] px-4 py-3 text-sm font-semibold outline-none transition focus:border-[#0D631B] focus:bg-white focus:ring-4 focus:ring-[#0D631B]/10"
+      >
+        {options.map((option) => {
+          const item =
+            typeof option === "string"
+              ? { label: option, value: option }
+              : option;
+          return (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          );
+        })}
+      </select>
+    </label>
+  );
+}
+
+function StatusPill({ status }: { status?: string | null }) {
+  const active = status === "ACTIVE";
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-black ${
+        active
+          ? "bg-[#B2F746]/30 text-[#0D631B]"
+          : "bg-[#F0EEEA] text-[#707A6C]"
+      }`}
+    >
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${
+          active ? "bg-[#0D631B]" : "bg-[#707A6C]"
+        }`}
+      />
+      {getStatusLabel(status)}
+    </span>
+  );
+}
+
+function SeasonStatusPill({ status }: { status: string }) {
+  const className =
+    status === "Đang diễn ra"
+      ? "bg-[#B2F746]/30 text-[#0D631B]"
+      : status === "Sắp diễn ra"
+        ? "bg-amber-100 text-amber-700"
+        : "bg-[#F0EEEA] text-[#707A6C]";
+
+  return (
+    <span
+      className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-black ${className}`}
+    >
+      {status}
+    </span>
+  );
+}
+
+function IconButton({
+  icon,
+  title,
+  active,
+  danger,
+  onClick,
+}: {
+  icon: string;
+  title: string;
+  active?: boolean;
+  danger?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      className={`rounded-full p-2 transition ${
+        active
+          ? "rotate-180 bg-[#F0EEEA] text-[#1B1C1A]"
+          : danger
+            ? "text-[#707A6C] hover:bg-red-50 hover:text-red-600"
+            : "text-[#707A6C] hover:bg-[#F0EEEA] hover:text-[#1B1C1A]"
+      }`}
+    >
+      <span className="material-symbols-outlined text-xl">{icon}</span>
+    </button>
+  );
+}
+
+function InfoLine({
+  icon,
+  label,
+  value,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <p className="flex items-start gap-2">
+      <span className="material-symbols-outlined mt-0.5 text-sm text-[#0D631B]">
+        {icon}
+      </span>
+      <span className="text-[#707A6C]">{label}:</span>
+      <span className="font-black text-[#1B1C1A]">{value}</span>
+    </p>
+  );
+}
+
+const EmptyState = ({ onCreate }: { onCreate: () => void }) => (
+  <div className="rounded-[2rem] border border-dashed border-[#BFCABA] bg-white px-6 py-14 text-center shadow-sm">
+    <span className="material-symbols-outlined text-6xl text-[#0D631B]">
+      search_off
+    </span>
+    <h3 className="mt-4 text-xl font-black text-[#1B1C1A]">
+      Không có giải đấu phù hợp
+    </h3>
+    <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-6 text-[#707A6C]">
+      Thử thay đổi bộ lọc hoặc tạo mới một giải đấu để bắt đầu quản lý mùa giải.
+    </p>
+    <button
+      type="button"
+      onClick={onCreate}
+      className="mt-6 rounded-full bg-[#0D631B] px-6 py-3 text-sm font-black text-white shadow-lg shadow-green-900/20 transition hover:bg-[#00490E]"
+    >
+      Tạo giải đấu mới
+    </button>
   </div>
 );
 

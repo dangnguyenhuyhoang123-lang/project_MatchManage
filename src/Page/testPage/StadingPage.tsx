@@ -1,7 +1,9 @@
 import { AppLayout } from "../../layouts/AppLayout";
 import StandingService from "../../services/StandingService";
 import LeagueService from "../../services/LeagueService";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useRealtimeEvent } from "../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../services/websocket/NotificationSocketService";
 
 type LeagueOption = {
   id: number;
@@ -9,11 +11,10 @@ type LeagueOption = {
 };
 
 type SeasonOption = {
-  id: number;
-  name: string;
+  id?: number;
+  name?: string;
+  year?: string;
 };
-
-type LastResult = "W" | "D" | "L";
 
 interface TeamStanding {
   rank: number;
@@ -36,6 +37,7 @@ export default function StandingsPage() {
 
   const [selectedLeague, setSelectedLeague] = useState<number | "">(1);
   const [selectedSeason, setSelectedSeason] = useState<number | "">(1);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const fetchLeagues = async () => {
@@ -108,7 +110,18 @@ export default function StandingsPage() {
     };
 
     fetchStandings();
-  }, [selectedSeason]);
+  }, [selectedSeason, reloadKey]);
+
+  const handleRealtimeEvent = useCallback((event: RealtimeEventDTO) => {
+    if (
+      event.action === "REFETCH_STANDINGS" ||
+      event.referenceType === "STANDING"
+    ) {
+      setReloadKey((current) => current + 1);
+    }
+  }, []);
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   return (
     <AppLayout>
@@ -154,7 +167,10 @@ export default function StandingsPage() {
           >
             <option value="">-- Chọn Mùa giải --</option>
             {seasons.map((season) => (
-              <option key={season.id} value={season.id}>
+              <option
+                key={season.id ?? season.name ?? season.year}
+                value={season.id ?? ""}
+              >
                 {season.name || season.year}
               </option>
             ))}

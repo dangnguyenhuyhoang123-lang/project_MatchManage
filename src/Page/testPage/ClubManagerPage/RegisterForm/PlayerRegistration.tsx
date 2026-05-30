@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import PlayerService from "../../../../services/PlayerService";
 import { Modal } from "../../../../components/Modal";
@@ -6,6 +6,7 @@ import type { SelectedPlayer } from "./RegisterFormMatch";
 
 type Props = {
   setStep: (step: number) => void;
+  rule?: any;
   mainPlayers?: SelectedPlayer[];
   subPlayers?: SelectedPlayer[];
   onPlayersChange?: (
@@ -16,6 +17,7 @@ type Props = {
 
 const PlayerRegistration: React.FC<Props> = ({
   setStep,
+  rule,
   mainPlayers: initialMainPlayers = [],
   subPlayers: initialSubPlayers = [],
   onPlayersChange,
@@ -115,25 +117,120 @@ const PlayerRegistration: React.FC<Props> = ({
 
   const totalSelected = mainPlayers.length + subPlayers.length;
 
+  const minPlayersReq = rule?.minRegistrationPlayers || rule?.minPlayers || 14;
+  const maxPlayersReq = rule?.maxPlayers || 30;
+  const minAgeReq = rule?.minAge || 16;
+  const maxAgeReq = rule?.maxAge || 40;
+  const maxForeignReq = rule?.maxForeignPlayers !== null && rule?.maxForeignPlayers !== undefined ? rule.maxForeignPlayers : 3;
+
+  // Age check
+  const invalidAgePlayers = [...mainPlayers, ...subPlayers].filter((p) => {
+    const age = calculateAge(p.dateOfBirth);
+    if (age === "--") return false;
+    const numericAge = Number(age);
+    return numericAge < minAgeReq || numericAge > maxAgeReq;
+  });
+
+  // Foreign check
+  const isForeignPlayer = (nationality?: string) => {
+    if (!nationality) return false;
+    const n = nationality.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    return n !== "viet nam" && n !== "vietnam";
+  };
+  const foreignPlayers = [...mainPlayers, ...subPlayers].filter((p: any) => isForeignPlayer(p.nationality));
+
+  // Jersey check
+  const duplicateShirts = useMemo(() => {
+    const counts: Record<number, number> = {};
+    [...mainPlayers, ...subPlayers].forEach((p) => {
+      const num = p.shirtNumber ?? p.number;
+      if (num != null) {
+        counts[num] = (counts[num] || 0) + 1;
+      }
+    });
+    return Object.keys(counts)
+      .map(Number)
+      .filter((num) => counts[num] > 1);
+  }, [mainPlayers, subPlayers]);
+
+  const duplicatePlayers = useMemo(() => {
+    const ids = new Set<number>();
+    const dupes: string[] = [];
+    [...mainPlayers, ...subPlayers].forEach((p) => {
+      if (ids.has(p.id)) {
+        dupes.push(p.name);
+      } else {
+        ids.add(p.id);
+      }
+    });
+    return dupes;
+  }, [mainPlayers, subPlayers]);
+
+  const hasValidationErrors =
+    totalSelected < minPlayersReq ||
+    totalSelected > maxPlayersReq ||
+    invalidAgePlayers.length > 0 ||
+    foreignPlayers.length > maxForeignReq ||
+    duplicateShirts.length > 0 ||
+    duplicatePlayers.length > 0;
+
   return (
     <>
-      <div className="mb-8 flex items-start gap-4 rounded-xl border border-[#fbc02d]/30 bg-[#fff9c4]/40 p-5">
-        <span className="material-symbols-outlined text-2xl text-[#f57f17]">
-          warning
-        </span>
-        <div>
-          <h3 className="text-sm font-bold text-[#f57f17]">
-            Cần bổ sung cầu thủ
-          </h3>
-          <p className="mt-1 text-xs text-[#f57f17]/80">
-            Danh sách hiện có{" "}
-            <span className="font-bold">{totalSelected}/18</span> cầu thủ.
-            {totalSelected < 14 && (
-              <> Cần thêm ít nhất {14 - totalSelected} cầu thủ nữa.</>
-            )}
-          </p>
+      {hasValidationErrors ? (
+        <div className="mb-8 flex items-start gap-4 rounded-xl border border-red-200 bg-red-50 p-5">
+          <span className="material-symbols-outlined text-2xl text-red-600">
+            error
+          </span>
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-red-800">
+              Hồ sơ cầu thủ chưa hợp lệ
+            </h3>
+            <ul className="list-disc list-inside text-xs text-red-700 space-y-1">
+              {totalSelected < minPlayersReq && (
+                <li>Thiếu cầu thủ: Đã chọn {totalSelected} cầu thủ (cần tối thiểu {minPlayersReq}).</li>
+              )}
+              {totalSelected > maxPlayersReq && (
+                <li>Vượt quá giới hạn: Đã chọn {totalSelected} cầu thủ (tối đa cho phép {maxPlayersReq}).</li>
+              )}
+              {invalidAgePlayers.length > 0 && (
+                <li>
+                  Độ tuổi không hợp lệ: {invalidAgePlayers.map(p => `${p.name} (${calculateAge(p.dateOfBirth)} tuổi)`).join(", ")}{" "}
+                  (yêu cầu từ {minAgeReq} đến {maxAgeReq} tuổi).
+                </li>
+              )}
+              {foreignPlayers.length > maxForeignReq && (
+                <li>
+                  Vượt số lượng ngoại binh: Đã chọn {foreignPlayers.length} ngoại binh (tối đa cho phép {maxForeignReq}).
+                </li>
+              )}
+              {duplicateShirts.length > 0 && (
+                <li>
+                  Trùng số áo: Số áo {duplicateShirts.join(", ")} bị trùng lặp. Vui lòng kiểm tra lại.
+                </li>
+              )}
+              {duplicatePlayers.length > 0 && (
+                <li>
+                  Trùng cầu thủ: Cầu thủ {duplicatePlayers.join(", ")} được chọn nhiều lần.
+                </li>
+              )}
+            </ul>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="mb-8 flex items-start gap-4 rounded-xl border border-green-200 bg-green-50 p-5">
+          <span className="material-symbols-outlined text-2xl text-green-600">
+            check_circle
+          </span>
+          <div>
+            <h3 className="text-sm font-bold text-green-800">
+              Danh sách cầu thủ hợp lệ
+            </h3>
+            <p className="mt-1 text-xs text-green-700/80">
+              Đã chọn {totalSelected} cầu thủ, tất cả đều thỏa mãn quy định của giải đấu.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-12 gap-8 pb-24">
         <div className="col-span-12 xl:col-span-7">
@@ -283,6 +380,33 @@ const PlayerRegistration: React.FC<Props> = ({
             </div>
           </section>
 
+          {rule && (
+            <section className="rounded-2xl border border-green-100 bg-green-50/20 p-5 shadow-sm">
+              <h3 className="mb-3 flex items-center gap-2 font-bold text-green-800 text-sm">
+                <span className="material-symbols-outlined text-base">gavel</span>
+                Quy định đăng ký mùa giải
+              </h3>
+              <ul className="space-y-2 text-xs text-green-700">
+                <li className="flex justify-between">
+                  <span>Số cầu thủ tối thiểu:</span>
+                  <span className="font-bold">{minPlayersReq} cầu thủ</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>Số cầu thủ tối đa:</span>
+                  <span className="font-bold">{maxPlayersReq} cầu thủ</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>Độ tuổi quy định:</span>
+                  <span className="font-bold">{minAgeReq} - {maxAgeReq} tuổi</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>Số ngoại binh tối đa:</span>
+                  <span className="font-bold">{maxForeignReq} cầu thủ</span>
+                </li>
+              </ul>
+            </section>
+          )}
+
           <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
             <h3 className="mb-6 flex items-center gap-2 font-bold text-gray-900">
               <span className="material-symbols-outlined text-[#0d631b]">
@@ -295,26 +419,64 @@ const PlayerRegistration: React.FC<Props> = ({
               <li className="flex items-start gap-3">
                 <span
                   className={`material-symbols-outlined ${
-                    totalSelected >= 14 ? "text-[#0d631b]" : "text-red-500"
+                    totalSelected >= minPlayersReq && totalSelected <= maxPlayersReq ? "text-[#0d631b]" : "text-red-500"
                   }`}
                 >
-                  {totalSelected >= 14 ? "check_circle" : "cancel"}
+                  {totalSelected >= minPlayersReq && totalSelected <= maxPlayersReq ? "check_circle" : "cancel"}
                 </span>
                 <div>
-                  <p className="text-sm font-bold">Số lượng tối thiểu</p>
+                  <p className="text-sm font-bold">Số lượng cầu thủ</p>
                   <p className="text-[11px] text-gray-400">
-                    {totalSelected}/18 cầu thủ (cần tối thiểu 14)
+                    {totalSelected} cầu thủ (yêu cầu {minPlayersReq} - {maxPlayersReq})
                   </p>
                 </div>
               </li>
 
               <li className="flex items-start gap-3">
-                <span className="material-symbols-outlined text-[#0d631b]">
-                  check_circle
+                <span
+                  className={`material-symbols-outlined ${
+                    invalidAgePlayers.length === 0 ? "text-[#0d631b]" : "text-red-500"
+                  }`}
+                >
+                  {invalidAgePlayers.length === 0 ? "check_circle" : "cancel"}
                 </span>
                 <div>
                   <p className="text-sm font-bold">Độ tuổi hợp lệ</p>
-                  <p className="text-[11px] text-gray-400">Tất cả hợp lệ</p>
+                  <p className="text-[11px] text-gray-400">
+                    {invalidAgePlayers.length === 0 ? "Tất cả hợp lệ" : `${invalidAgePlayers.length} cầu thủ sai độ tuổi`}
+                  </p>
+                </div>
+              </li>
+
+              <li className="flex items-start gap-3">
+                <span
+                  className={`material-symbols-outlined ${
+                    foreignPlayers.length <= maxForeignReq ? "text-[#0d631b]" : "text-red-500"
+                  }`}
+                >
+                  {foreignPlayers.length <= maxForeignReq ? "check_circle" : "cancel"}
+                </span>
+                <div>
+                  <p className="text-sm font-bold">Số lượng ngoại binh</p>
+                  <p className="text-[11px] text-gray-400">
+                    {foreignPlayers.length}/{maxForeignReq} ngoại binh
+                  </p>
+                </div>
+              </li>
+
+              <li className="flex items-start gap-3">
+                <span
+                  className={`material-symbols-outlined ${
+                    duplicateShirts.length === 0 ? "text-[#0d631b]" : "text-red-500"
+                  }`}
+                >
+                  {duplicateShirts.length === 0 ? "check_circle" : "cancel"}
+                </span>
+                <div>
+                  <p className="text-sm font-bold">Số áo duy nhất</p>
+                  <p className="text-[11px] text-gray-400">
+                    {duplicateShirts.length === 0 ? "Không bị trùng số áo" : `Bị trùng số áo ${duplicateShirts.join(", ")}`}
+                  </p>
                 </div>
               </li>
             </ul>
@@ -325,14 +487,14 @@ const PlayerRegistration: React.FC<Props> = ({
                   Độ sẵn sàng
                 </span>
                 <span className="text-xs font-black text-[#0d631b]">
-                  {Math.min(Math.round((totalSelected / 18) * 100), 100)}%
+                  {Math.min(Math.round((totalSelected / minPlayersReq) * 100), 100)}%
                 </span>
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
                 <div
                   className="h-full bg-[#0d631b] transition-all"
                   style={{
-                    width: `${Math.min((totalSelected / 18) * 100, 100)}%`,
+                    width: `${Math.min((totalSelected / minPlayersReq) * 100, 100)}%`,
                   }}
                 />
               </div>
@@ -369,7 +531,7 @@ const PlayerRegistration: React.FC<Props> = ({
 
             <button
               onClick={() => setStep(4)}
-              disabled={totalSelected < 14}
+              disabled={hasValidationErrors}
               className="rounded-full bg-green-700 px-10 py-3 text-sm font-bold text-white shadow-lg shadow-green-700/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
             >
               Tiếp tục

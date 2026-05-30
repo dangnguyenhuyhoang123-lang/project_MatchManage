@@ -165,6 +165,7 @@ const RegistrationPortal: React.FC<Props> = ({
                     leagueName: season.leagueName,
                     startDate: season.startDate,
                     endDate: season.endDate,
+                    systemRuleId: season.systemRuleId,
                   });
                 }}
               />

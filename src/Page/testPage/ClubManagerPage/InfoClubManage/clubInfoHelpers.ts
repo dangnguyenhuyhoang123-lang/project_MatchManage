@@ -1,6 +1,6 @@
 import { useAuth } from "../../../../utils/useAuth";
 
-export const CURRENT_TEAM_SEASON_ID = 60;
+export const CURRENT_TEAM_SEASON_ID = 1;
 
 export function useCurrentClubId() {
   const { user, loading } = useAuth();

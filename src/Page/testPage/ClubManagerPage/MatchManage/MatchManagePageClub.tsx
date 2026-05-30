@@ -1,18 +1,17 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AppLayout } from "../../../../layouts/AppLayout";
 import { Modal } from "../../../../components/Modal";
 import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import { MatchStatus } from "../../../../model/enum";
 import MatchService from "../../../../services/MatchService";
 import TeamService from "../../../../services/TeamService";
-import {
-  useCurrentClubId,
-  CURRENT_TEAM_SEASON_ID,
-} from "../InfoClubManage/clubInfoHelpers";
+import { useCurrentClubId } from "../InfoClubManage/clubInfoHelpers";
 import MatchLineupModal, {
   type MatchLineupModalMatch,
 } from "./MatchLineupModal";
 import { useNavigate } from "react-router-dom";
+import { useRealtimeEvent } from "../../../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../../services/websocket/NotificationSocketService";
 
 // Team constants are now dynamically fetched or imported
 
@@ -45,6 +44,9 @@ const fallbackLogo =
 const MatchManagePageClub: React.FC = () => {
   const { currentClubId, authLoading } = useCurrentClubId();
   const [teamName, setTeamName] = useState("Đang tải...");
+  const [selectedTeamSeasonId, setSelectedTeamSeasonId] = useState<
+    number | null
+  >(null);
   const [matches, setMatches] = useState<MatchLineupModalMatch[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("SCHEDULED");
   const [selectedMatch, setSelectedMatch] =
@@ -53,7 +55,7 @@ const MatchManagePageClub: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const fetchMatches = async () => {
+  const fetchMatches = useCallback(async () => {
     if (authLoading) return;
     if (!currentClubId) {
       setLoading(false);
@@ -89,11 +91,25 @@ const MatchManagePageClub: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authLoading, currentClubId]);
 
   useEffect(() => {
     fetchMatches();
-  }, [currentClubId, authLoading]);
+  }, [fetchMatches]);
+
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (
+        event.action === "REFETCH_MATCHES" ||
+        event.referenceType === "MATCH"
+      ) {
+        fetchMatches();
+      }
+    },
+    [fetchMatches],
+  );
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   const filteredMatches = useMemo(
     () => matches.filter((match) => match.status === statusFilter),
@@ -129,14 +145,29 @@ const MatchManagePageClub: React.FC = () => {
   }, [matches]);
 
   const stats = useMemo(
-    () => buildStats(matches, currentClubId),
+    () => buildStats(matches, currentClubId ?? undefined),
     [matches, currentClubId],
   );
 
-  const openLineupModal = (match: MatchLineupModalMatch) => {
-    const action = statusConfig[match.status as StatusFilter]?.action ?? "view";
-    setSelectedMatch(match);
-    setModalMode(action);
+  const openLineupModal = async (match: MatchLineupModalMatch) => {
+    if (!currentClubId) {
+      setError("Không xác định được câu lạc bộ hiện tại.");
+      return;
+    }
+
+    try {
+      const response = await MatchService.getTeamSeasonByMatchAndTeam(
+        match.id,
+        currentClubId,
+      );
+
+      setSelectedTeamSeasonId(Number(response.data.teamSeasonId));
+      setSelectedMatch(match);
+      setModalMode("edit");
+    } catch (error) {
+      console.error("Cannot get teamSeasonId", error);
+      setError("Không thể xác định đội bóng trong mùa giải của trận đấu này.");
+    }
   };
 
   return (
@@ -190,7 +221,7 @@ const MatchManagePageClub: React.FC = () => {
             mode={modalMode}
             teamId={currentClubId || 0}
             teamName={teamName}
-            teamSeasonId={CURRENT_TEAM_SEASON_ID}
+            teamSeasonId={selectedTeamSeasonId ?? 0}
             onClose={() => setSelectedMatch(null)}
             onSaved={fetchMatches}
           />

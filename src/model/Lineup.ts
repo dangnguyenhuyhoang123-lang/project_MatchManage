@@ -8,11 +8,11 @@ export interface PlayerPositionDTO {
 }
 
 export interface MatchLineupSubmitDTO {
-  matchId: number;
-  teamId: number;
+  // matchId: number;
+  // teamId: number;
   formationName: string;
   description?: string;
-  players: PlayerPositionDTO[];
+  lineups: PlayerPositionDTO[];
 }
 
 export interface LineupPlayerResponse {
@@ -28,11 +28,14 @@ export interface LineupPlayerResponse {
 }
 
 export interface TeamLineupResponse {
-  tacticsId: number;
+  id?: number;
+  tacticsId?: number;
   matchId: number;
   teamId: number;
   teamName: string;
+  teamLogo?: string;
   formationName: string;
   description?: string;
-  players: LineupPlayerResponse[];
+  players?: LineupPlayerResponse[];
+  lineups?: LineupPlayerResponse[];
 }

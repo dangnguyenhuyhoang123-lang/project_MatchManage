@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import type { GrassType } from "../../../../model/Registration";
 import { AppLayout } from "../../../../layouts/AppLayout";
 import CoachRegistration from "./CoachRegistration";
@@ -6,6 +6,7 @@ import FinalConfirmation from "./FinalConfirmation";
 import PlayerRegistration from "./PlayerRegistration";
 import RegistrationPortal from "./RegistrationPortal";
 import StadiumRegistration from "./StadiumRegistration";
+import SystemRuleService from "../../../../services/SystemRuleService";
 
 export type SelectedSeason = {
   id: number;
@@ -14,6 +15,7 @@ export type SelectedSeason = {
   leagueName?: string;
   startDate?: string;
   endDate?: string;
+  systemRuleId?: number;
 };
 
 export type SelectedCoach = {
@@ -201,6 +203,21 @@ const RegisterFormMatch: React.FC = () => {
   const [step, setStep] = useState(1);
   const [draft, setDraft] = useState<RegistrationDraft>(() => readSavedDraft());
   const [draftMessage, setDraftMessage] = useState("");
+  const [rule, setRule] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (draft.season?.systemRuleId) {
+      SystemRuleService.getById(draft.season.systemRuleId)
+        .then((res) => {
+          setRule(res);
+        })
+        .catch((err) => {
+          console.error("Lỗi khi tải bộ luật giải đấu:", err);
+        });
+    } else {
+      setRule(null);
+    }
+  }, [draft.season?.systemRuleId]);
 
   const selectedSeasonLabel =
     draft.season?.name || draft.season?.year || draft.season?.leagueName;
@@ -348,6 +365,7 @@ const RegisterFormMatch: React.FC = () => {
       {step === 3 && (
         <PlayerRegistration
           setStep={goToStep}
+          rule={rule}
           mainPlayers={draft.mainPlayers}
           subPlayers={draft.subPlayers}
           onPlayersChange={(mainPlayers, subPlayers) =>

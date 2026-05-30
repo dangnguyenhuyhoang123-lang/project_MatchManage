@@ -1,10 +1,13 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
 import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
+import { useCallback } from "react";
 import { MatchStatus } from "../../../../model/enum";
 import type { TeamLineupResponse } from "../../../../model/Lineup";
 import type { PlayerSeason } from "../../../../model/PlayerSeason";
 import LineupService from "../../../../services/LineupService";
 import PlayerSeasonService from "../../../../services/PlayerSeasonService";
+import { useRealtimeEvent } from "../../../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../../services/websocket/NotificationSocketService";
 type PositionGroup = "GK" | "DF" | "MF" | "FW";
 type PlayerFilter = "ALL" | PositionGroup;
 
@@ -144,6 +147,8 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [hasExistingLineup, setHasExistingLineup] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const isReadOnly = mode === "view";
   const slots = FORMATIONS[formation];
@@ -176,6 +181,7 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
           loadLineup(match.id, teamId),
         ]);
 
+        console.log(registeredPlayers);
         if (!mounted) return;
         setPlayers(
           extractPlayerSeasons(registeredPlayers)
@@ -190,7 +196,9 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
 
         if (lineupData) {
           hydrateLineup(lineupData);
+          setHasExistingLineup(true);
         } else {
+          setHasExistingLineup(false);
           const initialFormation = "4-3-3";
           setFormation(initialFormation);
           setSlotMap(createEmptySlotMap(initialFormation));
@@ -217,7 +225,22 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
     return () => {
       mounted = false;
     };
-  }, [match.id, teamId, teamSeasonId, isReadOnly]);
+  }, [match.id, teamId, teamSeasonId, isReadOnly, reloadKey]);
+
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (
+        event.referenceId === match.id &&
+        (event.action === "REFETCH_LINEUPS" ||
+          event.referenceType === "MATCH_LINEUP")
+      ) {
+        setReloadKey((current) => current + 1);
+      }
+    },
+    [match.id],
+  );
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   const selectedPlayerIds = useMemo(
     () =>
@@ -311,12 +334,10 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
       setSaving(true);
       setNotice("");
       setError("");
-      await LineupService.submitLineup({
-        matchId: match.id,
-        teamId,
+      await LineupService.submitLineup(match.id, teamId, {
         formationName: formation,
         description: `Đội hình ${formation} của ${teamName}`,
-        players: slots.map((item, index) => {
+        lineups: slots.map((item, index) => {
           const player = slotMap[item.key]!;
           return {
             playerId: player.id,
@@ -343,13 +364,20 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
     const nextFormation = getKnownFormation(lineup.formationName);
     const nextSlots = FORMATIONS[nextFormation];
     const nextMap = createEmptySlotMap(nextFormation);
-    const sortedPlayers = [...(lineup.players ?? [])].sort(
-      (a, b) => a.lineupOrder - b.lineupOrder,
-    );
 
-    sortedPlayers.forEach((lineupPlayer, index) => {
-      const targetSlot = nextSlots[index];
+    const rawLineups = lineup.lineups ?? lineup.players ?? [];
+
+    const sortedPlayers = [...rawLineups]
+      .filter((player) => player.isStarting !== false)
+      .sort((a, b) => (a.lineupOrder ?? 0) - (b.lineupOrder ?? 0));
+
+    sortedPlayers.forEach((lineupPlayer) => {
+      const targetSlot =
+        nextSlots.find((slot) => slot.label === lineupPlayer.position) ??
+        nextSlots[(lineupPlayer.lineupOrder ?? 1) - 1];
+
       if (!targetSlot) return;
+
       nextMap[targetSlot.key] = {
         id: lineupPlayer.playerId,
         name: lineupPlayer.playerName,
@@ -363,6 +391,27 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
     setFormation(nextFormation);
     setSlotMap(nextMap);
     setSelectedSlotKey(null);
+  };
+
+  const deleteLineupAction = async () => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa đội hình này?")) return;
+    try {
+      setSaving(true);
+      setNotice("");
+      setError("");
+      await LineupService.deleteLineup(match.id, teamId);
+
+      setHasExistingLineup(false);
+      setSlotMap(createEmptySlotMap(formation));
+
+      onSaved?.();
+      setNotice("Đã xóa đội hình thành công.");
+    } catch (err) {
+      console.error("Cannot delete lineup", err);
+      setError("Không thể xóa đội hình. Vui lòng thử lại.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -423,6 +472,17 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
       )}
 
       <div className="flex flex-col-reverse gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:justify-end">
+        {!isReadOnly && hasExistingLineup && (
+          <button
+            type="button"
+            onClick={deleteLineupAction}
+            disabled={saving || loading}
+            className="rounded-full bg-red-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-red-900/15 transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60 sm:mr-auto"
+          >
+            {saving ? "Đang xử lý..." : "Xóa đội hình"}
+          </button>
+        )}
+
         <button
           type="button"
           onClick={onClose}
@@ -743,7 +803,7 @@ function AvailablePlayersPanel({
   onSelectPlayer: (player: SlotPlayer) => void;
 }) {
   return (
-    <section className="flex h-full min-h-[620px] flex-col rounded-[2rem] bg-[#f5f3ef] p-6">
+    <section className="flex h-[620px] min-h-[620px] flex-col rounded-[2rem] bg-[#f5f3ef] p-6">
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <h3 className="font-['Be_Vietnam_Pro'] text-xl font-black text-gray-900">
@@ -757,7 +817,7 @@ function AvailablePlayersPanel({
         </div>
 
         <span className="rounded-full bg-[#008C2F]/10 px-3 py-1 text-xs font-black text-[#008C2F]">
-          {allCount} Tá»•ng
+          {allCount} Tổng
         </span>
       </div>
 
@@ -773,12 +833,12 @@ function AvailablePlayersPanel({
                 : "bg-gray-200 text-gray-500 hover:bg-gray-300"
             }`}
           >
-            {item === "ALL" ? "Táº¤T Cáº¢" : item}
+            {item === "ALL" ? "TẤT CẢ" : item}
           </button>
         ))}
       </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-2">
         {players.length === 0 ? (
           <div className="rounded-[1.5rem] bg-white p-5 text-center text-sm font-bold text-gray-500">
             Không có cầu thủ phù hợp bộ lọc.
@@ -805,7 +865,7 @@ function AvailablePlayersPanel({
           label="Thi đấu được"
           className="bg-emerald-100 text-emerald-700"
         />
-        <StatusLegend label="Cháº¥n thÆ°Æ¡ng" className="bg-red-100 text-red-600" />
+        <StatusLegend label="Chấn thương" className="bg-red-100 text-red-600" />
         <StatusLegend label="Thẻ đỏ" className="bg-gray-200 text-gray-600" />
       </div>
     </section>
@@ -911,7 +971,10 @@ async function loadLineup(matchId: number, teamId: number) {
       teamId,
     );
     if (response.status === 404) return null;
-    return response.data;
+    const resData: any = response.data;
+    if (resData && resData.data && !Array.isArray(resData.data))
+      return resData.data;
+    return resData;
   } catch (err: any) {
     if (err?.response?.status === 404) return null;
     return null;
@@ -1081,7 +1144,7 @@ function getStatusLabel(status: MatchStatus) {
 }
 
 function formatDateTime(value: string) {
-  if (!value) return "ChÆ°a cáº­p nháº­t";
+  if (!value) return "Chưa cập nhật";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
 

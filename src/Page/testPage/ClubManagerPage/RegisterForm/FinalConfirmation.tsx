@@ -1,10 +1,12 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import type {
   FullRegistrationDTO,
   RegistrationSummaryDTO,
 } from "../../../../model/Registration";
 import RegistrationService from "../../../../services/RegistrationService";
 import type { RegistrationDraft, SelectedPlayer } from "./RegisterFormMatch";
+import { useRealtimeEvent } from "../../../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../../services/websocket/NotificationSocketService";
 
 type Props = {
   setStep: (step: number) => void;
@@ -117,6 +119,43 @@ const FinalConfirmation: React.FC<Props> = ({ setStep, draft }) => {
       setIsSubmitting(false);
     }
   };
+
+  const loadSubmittedRegistration = useCallback(async () => {
+    if (!submittedSummary?.id) return;
+
+    try {
+      const response = await RegistrationService.getRegistrationById(
+        submittedSummary.id,
+      );
+      const detail = response.data;
+      setSubmittedSummary((current) =>
+        current
+          ? {
+              ...current,
+              status: detail.status,
+              note: detail.note,
+            }
+          : current,
+      );
+    } catch (error) {
+      console.error("Lỗi khi tải trạng thái hồ sơ đăng ký:", error);
+    }
+  }, [submittedSummary?.id]);
+
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (
+        event.referenceId === submittedSummary?.id &&
+        (event.action === "REFETCH_REGISTRATIONS" ||
+          event.referenceType === "REGISTRATION_TEAM")
+      ) {
+        loadSubmittedRegistration();
+      }
+    },
+    [loadSubmittedRegistration, submittedSummary?.id],
+  );
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   return (
     <div className="pb-28">

@@ -1,15 +1,13 @@
-import {
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
-import { getCurrentUser } from "../services/UserAccountAPI";
+import { useEffect, useState, type ReactNode } from "react";
+import { getCurrentUser } from "../services/UserService";
 import UserService from "../services/UserService";
 import CurrentUser from "./CurrentUser";
 import { AuthContext, type User } from "./AuthContextCore";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUserState] = useState<User | null>(() => CurrentUser.getUser());
+  const [user, setUserState] = useState<User | null>(() =>
+    CurrentUser.getUser(),
+  );
   const [loading, setLoading] = useState(true);
 
   const setUser = (nextUser: User | null) => {
@@ -22,7 +20,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .then((data) => setUser(data))
       .catch((error) => {
         // Only clear user state if the error is 401 Unauthorized (token invalid/expired)
-        // If it's 403 Forbidden (e.g., admin doesn't have access to /me) or network error, 
+        // If it's 403 Forbidden (e.g., admin doesn't have access to /me) or network error,
         // we keep the user state loaded from localStorage.
         if (error.response?.status === 401) {
           setUser(null);

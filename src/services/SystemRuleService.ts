@@ -1,52 +1,86 @@
-// src/service/SystemRuleService.ts
 import axiosClient from "./axiosClient";
-import type { SystemRule } from "../model/SystemRule";
+
 const API_BASE_URL = "/system-rules";
 
-export type SystemRulePayload = Omit<SystemRule, "id">;
+export type SystemRule = {
+  id: number;
+
+  ruleName: string;
+  description: string | null;
+
+  maxTeams: number | null;
+
+  minAge: number | null;
+  maxAge: number | null;
+
+  minPlayers: number | null;
+  maxPlayers: number | null;
+
+  winPoints: number | null;
+  drawPoints: number | null;
+  losePoints: number | null;
+
+  allowedGoalTypes: string | null;
+  status: "ACTIVE" | "INACTIVE" | string;
+
+  maxSubstitution: number | null;
+  minRegistrationPlayers: number | null;
+  maxForeignPlayers: number | null;
+};
+
+export type SystemRulePayload = {
+  ruleName: string;
+  description: string | null;
+
+  maxTeams: number | null;
+
+  minAge: number | null;
+  maxAge: number | null;
+
+  minPlayers: number | null;
+  maxPlayers: number | null;
+
+  winPoints: number | null;
+  drawPoints: number | null;
+  losePoints: number | null;
+
+  allowedGoalTypes: string | null;
+  status: "ACTIVE" | "INACTIVE";
+
+  maxSubstitution: number | null;
+  minRegistrationPlayers: number | null;
+  maxForeignPlayers: number | null;
+};
 
 class SystemRuleService {
-  async getAll(
-    page = 0,
-    size = 10,
-  ): Promise<{
-    content: SystemRule[];
-    totalElements: number;
-    totalPages: number;
-  }> {
-    const response = await axiosClient.get(API_BASE_URL, {
+  getAll(page = 0, size = 10) {
+    return axiosClient.get(API_BASE_URL, {
       params: { page, size },
     });
-
-    return response.data;
   }
 
-  async getAllNoPaging(): Promise<SystemRule[]> {
-    const response = await axiosClient.get<SystemRule[]>(`${API_BASE_URL}/all`);
-    return response.data;
+  getAllNoPaging() {
+    return axiosClient.get<SystemRule[]>(`${API_BASE_URL}/all`);
   }
 
-  async getById(id: number): Promise<SystemRule> {
-    const response = await axiosClient.get<SystemRule>(`${API_BASE_URL}/${id}`);
-    return response.data;
+  getById(id: number) {
+    return axiosClient.get<SystemRule>(`${API_BASE_URL}/${id}`);
   }
 
-  async create(payload: SystemRulePayload): Promise<SystemRule> {
-    const response = await axiosClient.post<SystemRule>(API_BASE_URL, payload);
-    return response.data;
+  getTeamById(id: number) {
+    return axiosClient.get<SystemRule>(`${API_BASE_URL}/${id}`);
   }
 
-  async update(id: number, payload: SystemRulePayload): Promise<SystemRule> {
-    const response = await axiosClient.put<SystemRule>(
-      `${API_BASE_URL}/${id}`,
-      payload,
-    );
-
-    return response.data;
+  create(payload: SystemRulePayload) {
+    return axiosClient.post<SystemRule>(API_BASE_URL, payload);
   }
 
-  async delete(id: number): Promise<void> {
-    await axiosClient.delete(`${API_BASE_URL}/${id}`);
+  update(id: number, payload: SystemRulePayload) {
+    return axiosClient.put<SystemRule>(`${API_BASE_URL}/${id}`, payload);
+  }
+
+  delete(id: number) {
+    return axiosClient.delete(`${API_BASE_URL}/${id}`);
   }
 }
 

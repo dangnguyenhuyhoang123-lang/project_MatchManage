@@ -116,8 +116,10 @@ function validateForm(form: FormState) {
   const maxPlayers = Number(form.maxPlayers);
   const winPoints = Number(form.winPoints);
   const drawPoints = Number(form.drawPoints);
+  const losePoints = Number(form.losePoints);
   const maxSubstitution = Number(form.maxSubstitution);
   const maxForeignPlayers = Number(form.maxForeignPlayers);
+  const minRegistrationPlayers = Number(form.minRegistrationPlayers);
 
   if (!form.ruleName.trim()) {
     errors.ruleName = "Tên bộ luật không được để trống.";
@@ -137,6 +139,15 @@ function validateForm(form: FormState) {
   }
 
   if (
+    form.minRegistrationPlayers &&
+    form.maxPlayers &&
+    minRegistrationPlayers > maxPlayers
+  ) {
+    errors.minRegistrationPlayers =
+      "Số cầu thủ đăng ký tối thiểu không được lớn hơn số cầu thủ tối đa.";
+  }
+
+  if (
     form.maxForeignPlayers &&
     form.maxPlayers &&
     maxForeignPlayers > maxPlayers
@@ -151,6 +162,10 @@ function validateForm(form: FormState) {
     winPoints <= drawPoints
   ) {
     errors.winPoints = "Điểm thắng phải lớn hơn điểm hòa.";
+  }
+
+  if (form.losePoints && (!Number.isFinite(losePoints) || losePoints < 0)) {
+    errors.losePoints = "Điểm thua phải lớn hơn hoặc bằng 0.";
   }
 
   if (!Number.isFinite(maxSubstitution) || maxSubstitution < 0) {
@@ -203,13 +218,30 @@ const SystemRulesPage: React.FC = () => {
     const loadRules = async () => {
       try {
         setLoading(true);
-        const data = await SystemRuleService.getAll(0, 100);
+
+        const response = await SystemRuleService.getAllNoPaging();
+
+        const ruleList = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.data)
+            ? response.data
+            : Array.isArray(response?.content)
+              ? response.content
+              : Array.isArray(response?.data?.content)
+                ? response.data.content
+                : [];
+
+        console.log("System rules raw response:", response);
+        console.log("System rules parsed list:", ruleList);
 
         if (mounted) {
-          setRules(data.content || []);
+          setRules(ruleList);
         }
       } catch (error) {
         console.error("Lỗi khi tải luật giải đấu:", error);
+        if (mounted) {
+          setRules([]);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -285,12 +317,18 @@ const SystemRulesPage: React.FC = () => {
       setSubmitting(true);
 
       if (editingRule) {
-        const updatedRule = await SystemRuleService.update(editingRule.id, payload);
+        const response = await SystemRuleService.update(
+          editingRule.id,
+          payload,
+        );
+        const updatedRule = response.data ?? response;
         setRules((prev) =>
           prev.map((rule) => (rule.id === editingRule.id ? updatedRule : rule)),
         );
       } else {
-        const createdRule = await SystemRuleService.create(payload);
+        const response = await SystemRuleService.create(payload);
+        const createdRule = response.data ?? response;
+
         setRules((prev) => [createdRule, ...prev]);
       }
 
@@ -310,9 +348,27 @@ const SystemRulesPage: React.FC = () => {
     try {
       await SystemRuleService.delete(rule.id);
       setRules((prev) => prev.filter((item) => item.id !== rule.id));
-    } catch (error) {
+    } catch (error: any) {
       console.error("Lỗi khi xóa bộ luật:", error);
-      alert("Đã xảy ra lỗi khi xóa bộ luật.");
+      const apiMsg = String(
+        error?.response?.data?.message || error?.response?.data || "",
+      );
+      if (
+        apiMsg.includes("season") ||
+        apiMsg.includes("Season") ||
+        apiMsg.includes("foreign key") ||
+        apiMsg.includes("constraint") ||
+        error?.response?.status === 409 ||
+        error?.response?.status === 500
+      ) {
+        alert(
+          `Không thể xóa bộ luật "${rule.ruleName}" vì nó đang được sử dụng bởi một hoặc nhiều mùa giải. Gợi ý: Bạn có thể chuyển trạng thái của bộ luật này sang INACTIVE để ngưng áp dụng thay vì xóa.`,
+        );
+      } else {
+        alert(
+          "Không thể xóa bộ luật này. Vui lòng kiểm tra xem nó có đang được liên kết với mùa giải nào không.",
+        );
+      }
     }
   };
 

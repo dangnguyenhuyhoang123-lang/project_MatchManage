@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Modal } from "../../../../components/Modal";
 import { AppLayout } from "../../../../layouts/AppLayout";
@@ -7,6 +7,8 @@ import MatchResultUpdate from "./MatchResultUpdate";
 import MatchService from "../../../../services/MatchService";
 import LeagueService from "../../../../services/LeagueService";
 import { PhanTrang } from "../../../../utils/PhanTrang";
+import { useRealtimeEvent } from "../../../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../../services/websocket/NotificationSocketService";
 
 type LeagueOption = {
   id: number;
@@ -14,8 +16,8 @@ type LeagueOption = {
 };
 
 type SeasonOption = {
-  id: number;
-  name: string;
+  id?: number;
+  name?: string;
   year?: string;
 };
 
@@ -78,7 +80,7 @@ const MatchResults: React.FC = () => {
   }, [selectedLeague]);
 
   // 3. Fetch matches
-  const loadMatches = async (page = 1) => {
+  const loadMatches = useCallback(async (page = 1) => {
     setLoading(true);
     try {
       const res = await MatchService.getAllMatches(page - 1, 10, {
@@ -93,11 +95,28 @@ const MatchResults: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedSeason, searchQuery]);
 
   useEffect(() => {
     loadMatches(1);
-  }, [selectedSeason, searchQuery]);
+  }, [loadMatches]);
+
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (
+        event.action === "REFETCH_MATCHES" ||
+        event.action === "REFETCH_MATCH_DETAIL" ||
+        event.action === "REFETCH_MATCH_STATS" ||
+        event.referenceType === "MATCH" ||
+        event.referenceType === "MATCH_STATS"
+      ) {
+        loadMatches(currentPage);
+      }
+    },
+    [currentPage, loadMatches],
+  );
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   const handleEditMatch = (match: any) => {
     setSelectedMatch(match);
@@ -194,7 +213,7 @@ const MatchResults: React.FC = () => {
                 >
                   <option value="">Tất cả Mùa giải</option>
                   {seasons.map((s) => (
-                    <option key={s.id} value={s.id}>
+                    <option key={s.id ?? s.name ?? s.year} value={s.id ?? ""}>
                       {s.name || s.year}
                     </option>
                   ))}

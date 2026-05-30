@@ -18,6 +18,13 @@ interface KetQuaInterface {
   tongSoTran: number;
 }
 
+export type MatchTeamSeasonDTO = {
+  matchId: number;
+  teamId: number;
+  seasonId: number;
+  teamSeasonId: number;
+};
+
 class MatchService {
   getAllMatches(page: number, size: number, filters?: any) {
     return axiosClient.get(`${API_BASE_URL}/getAllMatches`, {
@@ -199,6 +206,16 @@ class MatchService {
       homeTeam: responseData.homeTeam,
       awayTeam: responseData.awayTeam,
     });
+  }
+
+  getTeamSeasonByMatchAndTeam(matchId: number, teamId: number) {
+    return axiosClient.get<MatchTeamSeasonDTO>(
+      `${API_BASE_URL}/${matchId}/teams/${teamId}/team-season`,
+    );
+  }
+
+  predictMatch(matchId: number) {
+    return axiosClient.post<MatchModel>(`${API_BASE_URL}/${matchId}/predict`);
   }
 }
 

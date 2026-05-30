@@ -256,6 +256,29 @@ const CoachRegistration: React.FC<Props> = ({
     (roleCounts.assistant ?? 0) >= 1 &&
     (roleCounts.doctor ?? 0) >= 1;
 
+  const duplicateCoaches = useMemo(() => {
+    const ids = new Set<any>();
+    const dupes: string[] = [];
+    selectedStaffs.forEach((c) => {
+      const id = getStaffKey(c);
+      if (ids.has(id)) {
+        dupes.push(c.name);
+      } else {
+        ids.add(id);
+      }
+    });
+    return dupes;
+  }, [selectedStaffs]);
+
+  const hasEmptyRole = useMemo(() => {
+    return selectedStaffs.some((c) => !c.role);
+  }, [selectedStaffs]);
+
+  const isValid =
+    hasRequiredStaff &&
+    duplicateCoaches.length === 0 &&
+    !hasEmptyRole;
+
   const openAddModal = () => {
     setSelectedStaffKeys([]);
     setIsModalOpen(true);
@@ -287,23 +310,68 @@ const CoachRegistration: React.FC<Props> = ({
     onCoachesChange?.(nextStaffs);
   };
 
+  const handleRoleChange = (key: string | number, newRole: string) => {
+    const nextStaffs = selectedStaffs.map((staff) => {
+      if (getStaffKey(staff) === key) {
+        return { ...staff, role: newRole };
+      }
+      return staff;
+    });
+    setSelectedStaffs(nextStaffs);
+    onCoachesChange?.(nextStaffs);
+  };
+
   return (
     <>
-      <div className="mb-8 flex items-start gap-4 rounded-xl border border-[#fbc02d]/30 bg-[#fff9c4]/40 p-5">
-        <span className="material-symbols-outlined text-2xl text-[#f57f17]">
-          warning
-        </span>
-        <div>
-          <h3 className="text-sm font-bold text-[#f57f17]">
-            Cần chọn ban huấn luyện đăng ký
-          </h3>
-          <p className="mt-1 text-xs text-[#f57f17]/80">
-            Danh sách hiện có{" "}
-            <span className="font-bold">{selectedStaffs.length}/8</span> thành
-            viên. Cần có HLV trưởng, trợ lý và bác sĩ đội bóng.
-          </p>
+      {(!isValid || selectedStaffs.length === 0) ? (
+        <div className="mb-8 flex items-start gap-4 rounded-xl border border-red-200 bg-red-50 p-5">
+          <span className="material-symbols-outlined text-2xl text-red-600">
+            error
+          </span>
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-red-800">
+              Yêu cầu ban huấn luyện chưa hoàn thành
+            </h3>
+            <ul className="list-disc list-inside text-xs text-red-700 space-y-1">
+              {selectedStaffs.length === 0 && (
+                <li>Danh sách ban huấn luyện trống. Vui lòng thêm thành viên ban huấn luyện.</li>
+              )}
+              {selectedStaffs.length > 0 && selectedStaffs.length < 3 && (
+                <li>Thiếu thành viên: Cần tối thiểu 3 thành viên (hiện có {selectedStaffs.length}).</li>
+              )}
+              {(roleCounts.headCoach ?? 0) < 1 && (
+                <li>Thiếu HLV trưởng: Phải đăng ký ít nhất 01 Huấn luyện viên trưởng.</li>
+              )}
+              {(roleCounts.assistant ?? 0) < 1 && (
+                <li>Thiếu trợ lý: Phải đăng ký ít nhất 01 Trợ lý huấn luyện viên.</li>
+              )}
+              {(roleCounts.doctor ?? 0) < 1 && (
+                <li>Thiếu bác sĩ: Phải đăng ký ít nhất 01 Bác sĩ đội bóng.</li>
+              )}
+              {hasEmptyRole && (
+                <li>Có thành viên chưa được phân vai trò. Vui lòng điền đầy đủ vai trò.</li>
+              )}
+              {duplicateCoaches.length > 0 && (
+                <li>Trùng lặp thành viên: {duplicateCoaches.join(", ")} bị chọn trùng.</li>
+              )}
+            </ul>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="mb-8 flex items-start gap-4 rounded-xl border border-green-200 bg-green-50 p-5">
+          <span className="material-symbols-outlined text-2xl text-green-600">
+            check_circle
+          </span>
+          <div>
+            <h3 className="text-sm font-bold text-green-800">
+              Ban huấn luyện đã sẵn sàng
+            </h3>
+            <p className="mt-1 text-xs text-green-700/80">
+              Đã chọn đầy đủ các vị trí bắt buộc (HLV trưởng, trợ lý, bác sĩ) và không có vi phạm.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-12 gap-8 pb-24">
         <div className="col-span-12 xl:col-span-7">
@@ -362,6 +430,7 @@ const CoachRegistration: React.FC<Props> = ({
                   key={getStaffKey(staff)}
                   staff={staff}
                   onRemove={() => removeStaff(getStaffKey(staff))}
+                  onRoleChange={(newRole) => handleRoleChange(getStaffKey(staff), newRole)}
                 />
               ))
             )}
@@ -493,7 +562,7 @@ const CoachRegistration: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => setStep?.(3)}
-              disabled={!hasRequiredStaff}
+              disabled={!isValid}
               className="rounded-full bg-green-700 px-10 py-3 text-sm font-bold text-white shadow-lg shadow-green-700/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
             >
               Tiếp tục
@@ -615,11 +684,12 @@ const CoachRegistration: React.FC<Props> = ({
 type StaffCardProps = {
   staff: Staff;
   onRemove: () => void;
+  onRoleChange: (role: string) => void;
 };
 
-const StaffCard = ({ staff, onRemove }: StaffCardProps) => (
+const StaffCard = ({ staff, onRemove, onRoleChange }: StaffCardProps) => (
   <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-white p-4 transition-all hover:scale-[1.01]">
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-4 flex-1">
       {staff.avatar ? (
         <img
           src={staff.avatar}
@@ -635,13 +705,6 @@ const StaffCard = ({ staff, onRemove }: StaffCardProps) => (
       <div>
         <h4 className="font-bold text-gray-900">{staff.name}</h4>
         <div className="mt-1 flex items-center gap-3">
-          <span
-            className={`rounded px-2 py-0.5 text-[10px] font-bold ${getBadgeClass(
-              staff.role,
-            )}`}
-          >
-            {getRoleLabel(staff.role)}
-          </span>
           <span className="text-[11px] text-gray-400">
             ID: {staff.coachId ?? staff.idCode ?? "N/A"}
           </span>
@@ -650,6 +713,19 @@ const StaffCard = ({ staff, onRemove }: StaffCardProps) => (
     </div>
 
     <div className="flex items-center gap-4">
+      <select
+        value={staff.role}
+        onChange={(e) => onRoleChange(e.target.value)}
+        className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-green-700/20"
+      >
+        <option value="">-- Chọn vai trò --</option>
+        {coachRoles.map((r) => (
+          <option key={r.value} value={r.value}>
+            {r.label}
+          </option>
+        ))}
+      </select>
+
       <span className="material-symbols-outlined text-[#0d631b]">
         check_circle
       </span>

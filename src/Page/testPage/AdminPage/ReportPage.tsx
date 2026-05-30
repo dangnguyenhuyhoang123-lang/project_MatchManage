@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AppLayout } from "../../../layouts/AppLayout";
 import LeagueService from "../../../services/LeagueService";
 import StandingService from "../../../services/StandingService";
 import MatchService from "../../../services/MatchService";
+import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../services/websocket/NotificationSocketService";
 
 // --- Interfaces ---
 interface PlayerScorer {
@@ -34,8 +36,8 @@ type LeagueOption = {
 };
 
 type SeasonOption = {
-  id: number;
-  name: string;
+  id?: number;
+  name?: string;
   year?: string;
 };
 
@@ -63,6 +65,7 @@ export default function ReportPage() {
 
   const [topScorers, setTopScorers] = useState<PlayerScorer[]>([]);
   const [awards, setAwards] = useState<AwardItem[]>([]);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // 1. Fetch leagues list on mount
   useEffect(() => {
@@ -173,7 +176,7 @@ export default function ReportPage() {
         const totalFinished = finishedMatches.length || 1;
         const homeWinPct = Math.round((homeWins / totalFinished) * 100);
         const drawPct = Math.round((draws / totalFinished) * 100);
-        const awayWinPct = 100 - homeWinPct - drawPct;
+        const awayWinPct = Math.round((awayWins / totalFinished) * 100);
 
         // Allocate goals into time frames realistically
         const timeFactors = [0.12, 0.15, 0.18, 0.16, 0.19, 0.20];
@@ -259,7 +262,23 @@ export default function ReportPage() {
     };
 
     fetchReportData();
-  }, [selectedSeason]);
+  }, [selectedSeason, reloadKey]);
+
+  const handleRealtimeEvent = useCallback((event: RealtimeEventDTO) => {
+    if (
+      event.action === "REFETCH_STANDINGS" ||
+      event.action === "REFETCH_MATCHES" ||
+      event.action === "REFETCH_MATCH_DETAIL" ||
+      event.action === "REFETCH_MATCH_STATS" ||
+      event.referenceType === "STANDING" ||
+      event.referenceType === "MATCH" ||
+      event.referenceType === "MATCH_STATS"
+    ) {
+      setReloadKey((current) => current + 1);
+    }
+  }, []);
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   const exportToCSV = () => {
     if (standings.length === 0) {
@@ -323,7 +342,10 @@ export default function ReportPage() {
             >
               <option value="">-- Chọn Mùa giải --</option>
               {seasons.map((season) => (
-                <option key={season.id} value={season.id}>
+                <option
+                  key={season.id ?? season.name ?? season.year}
+                  value={season.id ?? ""}
+                >
                   {season.name || season.year}
                 </option>
               ))}

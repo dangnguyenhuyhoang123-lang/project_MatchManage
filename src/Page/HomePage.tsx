@@ -224,7 +224,7 @@ const HomePage = () => {
             </div>
 
             <Link
-              to="/matches"
+              to="/leagues"
               className="text-sm font-semibold text-gray-600 hover:text-[#1a6e38] flex items-center gap-2 group"
             >
               Xem tất cả lịch thi đấu

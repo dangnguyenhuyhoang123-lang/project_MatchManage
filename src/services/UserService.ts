@@ -1,7 +1,16 @@
 import axiosClient from "./axiosClient";
 import CurrentUser from "../utils/CurrentUser";
+import type { AuthUser } from "../types/AuthUser";
 
 const API_BASE_URL = "/user-account";
+
+export type UpdateProfilePayload = {
+  username: string;
+  fullName: string;
+  displayName: string;
+  email: string;
+  avatar?: string;
+};
 
 export type UpdateUserRolesPayload = {
   roles: string[];
@@ -14,7 +23,7 @@ export type CreateUserPayload = {
   fullName: string;
   displayName: string;
   email: string;
-  phone: string;
+  avatar?: string;
   status?: boolean;
   roles: string[];
   teamId?: number | null;
@@ -23,6 +32,24 @@ export type CreateUserPayload = {
 export type UpdateUserStatusPayload = {
   status: boolean;
 };
+
+function extractMessage(errorData: unknown, fallback: string) {
+  if (typeof errorData === "string" && errorData.trim()) {
+    return errorData;
+  }
+
+  if (
+    errorData &&
+    typeof errorData === "object" &&
+    "message" in errorData &&
+    typeof (errorData as { message?: unknown }).message === "string"
+  ) {
+    return (errorData as { message: string }).message;
+  }
+
+  return fallback;
+}
+
 class UserService {
   getAllUsers(page = 0, size = 10) {
     return axiosClient.get(API_BASE_URL, {
@@ -33,8 +60,46 @@ class UserService {
     });
   }
 
-  getCurrentUser() {
-    return axiosClient.get(`${API_BASE_URL}/me`);
+  async getCurrentUser() {
+    const response = await axiosClient.get<AuthUser>(`${API_BASE_URL}/me`);
+    return response.data;
+  }
+
+  async updateCurrentUserProfile(payload: UpdateProfilePayload) {
+    const endpoints = [
+      { url: `${API_BASE_URL}/me`, method: "put" },
+      { url: `${API_BASE_URL}/profile`, method: "put" },
+      { url: `${API_BASE_URL}/me`, method: "patch" },
+      { url: `${API_BASE_URL}/profile`, method: "patch" },
+    ] as const;
+
+    let lastErrorMessage = "Không thể cập nhật thông tin người dùng.";
+
+    for (const endpoint of endpoints) {
+      const response = await axiosClient.request<AuthUser>({
+        method: endpoint.method,
+        url: endpoint.url,
+        data: payload,
+        validateStatus: () => true,
+      });
+
+      if (response.status >= 200 && response.status < 300) {
+        const updatedUser = response.data || (await this.getCurrentUser());
+        CurrentUser.setUser(updatedUser);
+        return updatedUser;
+      }
+
+      const errorData = response.data as unknown;
+
+      if (response.status !== 404) {
+        lastErrorMessage = extractMessage(
+          errorData,
+          response.statusText || lastErrorMessage,
+        );
+      }
+    }
+
+    throw new Error(lastErrorMessage);
   }
 
   async login(username: string, password: string) {
@@ -44,9 +109,7 @@ class UserService {
     });
 
     try {
-      const currentUserResponse = await this.getCurrentUser();
-      const currentUser = currentUserResponse.data || response.data;
-
+      const currentUser = await this.getCurrentUser();
       CurrentUser.setUser(currentUser);
 
       return {
@@ -74,8 +137,20 @@ class UserService {
     return axiosClient.put(`${API_BASE_URL}/${userId}/roles`, payload);
   }
 
-  updateUser(userId: number, payload: any) {
-    return axiosClient.put(`${API_BASE_URL}/${userId}/info`, payload);
+  async updateUser(
+    userId: number,
+    payload: Partial<CreateUserPayload> | UpdateProfilePayload,
+  ) {
+    const response = await axiosClient.put<AuthUser>(
+      `${API_BASE_URL}/${userId}/info`,
+      payload,
+    );
+
+    if (response.data) {
+      CurrentUser.setUser(response.data);
+    }
+
+    return response;
   }
 
   updateUserStatus(userId: number, payload: UpdateUserStatusPayload) {
@@ -85,9 +160,20 @@ class UserService {
   deleteUser(userId: number) {
     return axiosClient.delete(`${API_BASE_URL}/${userId}`);
   }
+
   logout() {
     CurrentUser.clear();
   }
 }
 
-export default new UserService();
+const userService = new UserService();
+
+export async function getCurrentUser() {
+  return userService.getCurrentUser();
+}
+
+export async function updateCurrentUserProfile(payload: UpdateProfilePayload) {
+  return userService.updateCurrentUserProfile(payload);
+}
+
+export default userService;

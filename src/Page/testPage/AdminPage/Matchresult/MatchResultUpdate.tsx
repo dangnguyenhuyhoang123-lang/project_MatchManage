@@ -1,4 +1,4 @@
-import { useState, useEffect, type FC } from "react";
+import { useCallback, useState, useEffect, type FC } from "react";
 import MatchService from "../../../../services/MatchService";
 import type { MatchEvent } from "../../../../model/Match/MatchEvents";
 import type { MatchStats } from "../../../../model/Match/MatchStats";
@@ -6,6 +6,8 @@ import MatchEventModal from "./MatchEventModal";
 
 import type { MatchLineupsResponse } from "../../../../model/Match/MatchLineup";
 import type { MatchEventUpsertRequest } from "../../../../model/Match/MatchEvents";
+import { useRealtimeEvent } from "../../../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../../services/websocket/NotificationSocketService";
 
 interface MatchResultUpdateProps {
   matchData: any;
@@ -101,6 +103,28 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
     setStats(statsData || []);
     setLineups(lineupsData);
   };
+
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (
+        event.referenceId === matchData?.id &&
+        (event.action === "REFETCH_MATCH_DETAIL" ||
+          event.action === "REFETCH_MATCH_EVENTS" ||
+          event.action === "REFETCH_MATCH_STATS" ||
+          event.action === "REFETCH_LINEUPS" ||
+          event.referenceType === "MATCH" ||
+          event.referenceType === "MATCH_EVENT" ||
+          event.referenceType === "MATCH_STATS" ||
+          event.referenceType === "MATCH_LINEUP")
+      ) {
+        reloadMatchData();
+      }
+    },
+    [matchData?.id, reloadMatchData],
+  );
+
+  useRealtimeEvent(handleRealtimeEvent);
+
   // const handleUpdate = async () => {
   //   if (!matchData?.id) return;
   //   setLoading(true);

@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import MatchService from "../services/MatchService";
 
@@ -15,6 +15,8 @@ import type {
 
 import { getTeamDetailPath } from "../utils/teamRoute";
 import { AnimatedPanel } from "../components/AnimationPanel/AnimatedPanel";
+import { useRealtimeEvent } from "../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../services/websocket/NotificationSocketService";
 
 type MatchDetailPlayer = MatchLineup & {
   teamId?: number;
@@ -316,6 +318,7 @@ const MatchDetail = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedLabel, setSelectedLabel] = useState("stats");
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const matchId = Number(id);
@@ -389,7 +392,30 @@ const MatchDetail = () => {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, reloadKey]);
+
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      const matchId = Number(id);
+      if (event.referenceId && event.referenceId !== matchId) return;
+
+      if (
+        event.action === "REFETCH_MATCH_DETAIL" ||
+        event.action === "REFETCH_MATCH_EVENTS" ||
+        event.action === "REFETCH_MATCH_STATS" ||
+        event.action === "REFETCH_LINEUPS" ||
+        event.referenceType === "MATCH" ||
+        event.referenceType === "MATCH_EVENT" ||
+        event.referenceType === "MATCH_STATS" ||
+        event.referenceType === "MATCH_LINEUP"
+      ) {
+        setReloadKey((current) => current + 1);
+      }
+    },
+    [id],
+  );
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   if (loading) {
     return (

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import AddMatchModal from "./AddMatchModal";
@@ -12,12 +12,15 @@ import { MatchModel } from "../../../../model/Match/MatchModel";
 import MatchService from "../../../../services/MatchService";
 import LeagueService from "../../../../services/LeagueService";
 import RoundService from "../../../../services/RoundService";
+import { useRealtimeEvent } from "../../../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../../services/websocket/NotificationSocketService";
 
 export default function MatchSchedule() {
   const [open, setOpen] = useState(false);
   const [matches, setMatches] = useState<MatchModel[]>([]);
   const [editingMatch, setEditingMatch] = useState<MatchModel | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [predictingIds, setPredictingIds] = useState<Set<number>>(new Set());
 
   const handleSaveMatch = async (payload: any) => {
     try {
@@ -44,6 +47,35 @@ export default function MatchSchedule() {
         console.error("Lỗi khi xóa trận đấu:", error);
         alert("Có lỗi xảy ra khi xóa trận đấu!");
       }
+    }
+  };
+
+  const handlePredictMatch = async (match: MatchModel) => {
+    if (!match.id) return;
+
+    setPredictingIds((current) => new Set(current).add(match.id!));
+
+    try {
+      const response = await MatchService.predictMatch(match.id);
+      const predictedMatch = response.data;
+
+      setMatches((current) =>
+        current.map((item) =>
+          item.id === match.id
+            ? new MatchModel({ ...item, ...predictedMatch })
+            : item,
+        ),
+      );
+      fetchMatches(trangHienTai);
+    } catch (error) {
+      console.error("Lỗi khi dự đoán trận đấu:", error);
+      alert("Không thể dự đoán trận đấu. Vui lòng thử lại!");
+    } finally {
+      setPredictingIds((current) => {
+        const next = new Set(current);
+        next.delete(match.id!);
+        return next;
+      });
     }
   };
 
@@ -118,7 +150,7 @@ export default function MatchSchedule() {
   });
 
   /* ================= FETCH ================= */
-  const fetchMatches = async (page = 1) => {
+  const fetchMatches = useCallback(async (page = 1) => {
     setIsLoading(true);
     try {
       const res = await MatchService.getAllMatches(
@@ -142,11 +174,25 @@ export default function MatchSchedule() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filters, selectedSeason, selectedRound]);
 
   useEffect(() => {
     fetchMatches(trangHienTai);
-  }, [trangHienTai, filters, selectedSeason, selectedRound]);
+  }, [trangHienTai, fetchMatches]);
+
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (
+        event.action === "REFETCH_MATCHES" ||
+        event.referenceType === "MATCH"
+      ) {
+        fetchMatches(trangHienTai);
+      }
+    },
+    [fetchMatches, trangHienTai],
+  );
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   /* ================= FILTER ================= */
   const handleFilterChange = (
@@ -279,8 +325,9 @@ export default function MatchSchedule() {
             {/* HEADER */}
             <div className="grid grid-cols-12 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 pt-4 border-t border-gray-200/60">
               <div className="col-span-2">Thời gian</div>
-              <div className="col-span-4 text-center">Trận đấu</div>
-              <div className="col-span-3">Sân</div>
+              <div className="col-span-3 text-center">Trận đấu</div>
+              <div className="col-span-2">Sân</div>
+              <div className="col-span-2 text-center">Dự đoán</div>
               <div className="col-span-2 text-right">Trạng thái</div>
               <div className="col-span-1"></div>
             </div>
@@ -302,6 +349,8 @@ export default function MatchSchedule() {
                     setOpen(true);
                   }}
                   onDelete={handleDeleteMatch}
+                  onPredict={handlePredictMatch}
+                  isPredicting={match.id ? predictingIds.has(match.id) : false}
                 />
               ))
             ) : (
@@ -357,20 +406,29 @@ export default function MatchSchedule() {
   );
 }
 
+function hasPredictedScore(match: MatchModel) {
+  return match.predictedHomeScore != null && match.predictedAwayScore != null;
+}
+
 /* ================= ROW ================= */
 function MatchRow({
   match,
   onEdit,
   onDelete,
+  onPredict,
+  isPredicting,
 }: {
   match: MatchModel;
   onEdit: (m: MatchModel) => void;
   onDelete: (id: number) => void;
+  onPredict: (m: MatchModel) => void;
+  isPredicting: boolean;
 }) {
   const navigate = useNavigate();
   const date = new Date(match.matchDate);
 
   const isConflict = String(match.status) === "CONFLICT";
+  const hasPrediction = hasPredictedScore(match);
 
   const renderStatus = (status: string) => {
     switch (status) {
@@ -420,7 +478,7 @@ function MatchRow({
       </div>
 
       {/* MATCH */}
-      <div className="col-span-4 flex items-center justify-center gap-6">
+      <div className="col-span-3 flex items-center justify-center gap-6">
         {/* HOME */}
         <div className="flex flex-col items-center gap-1 w-24">
           <img
@@ -447,7 +505,7 @@ function MatchRow({
       </div>
 
       {/* STADIUM */}
-      <div className="col-span-3 flex items-center gap-2">
+      <div className="col-span-2 flex items-center gap-2">
         <span className="material-symbols-outlined text-gray-400">
           location_on
         </span>
@@ -456,6 +514,31 @@ function MatchRow({
         >
           {match.league?.name}
         </span>
+      </div>
+
+      {/* PREDICTION */}
+      <div
+        className="col-span-2 flex justify-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {hasPrediction ? (
+          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-xs font-black text-indigo-700">
+            <span className="material-symbols-outlined text-sm">psychology</span>
+            {match.predictedHomeScore} - {match.predictedAwayScore}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onPredict(match)}
+            disabled={isPredicting || !match.id}
+            className="inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-black text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <span className="material-symbols-outlined text-sm">
+              {isPredicting ? "hourglass_top" : "analytics"}
+            </span>
+            {isPredicting ? "Đang dự đoán" : "Dự đoán"}
+          </button>
+        )}
       </div>
 
       {/* STATUS */}

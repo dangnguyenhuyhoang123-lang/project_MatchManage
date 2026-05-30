@@ -139,13 +139,13 @@ export const Header_HomePage = () => {
               </Link>
             )}
 
-            <button
+            {/* <button
               type="button"
               className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
               aria-label="Thông báo"
             >
               <Bell size={20} className="text-gray-600" />
-            </button>
+            </button> */}
 
             <div className="relative">
               <button
@@ -170,8 +170,9 @@ export const Header_HomePage = () => {
 
                 <ChevronDown
                   size={18}
-                  className={`hidden text-gray-400 transition-transform md:block ${open ? "rotate-180" : ""
-                    }`}
+                  className={`hidden text-gray-400 transition-transform md:block ${
+                    open ? "rotate-180" : ""
+                  }`}
                 />
               </button>
 
