@@ -1,0 +1,36 @@
+import axiosClient from "./axiosClient";
+
+const API_BASE_URL = "/match-referees";
+
+export type MatchRefereeAssignRequest = {
+  matchId: number;
+  refereeId: number;
+  role: string;
+};
+
+export type MatchRefereeResponse = {
+  id: number;
+  matchId: number;
+  refereeId: number;
+  refereeName: string;
+  refereeNationality?: string | null;
+  role: string;
+};
+
+class MatchRefereeService {
+  assign(payload: MatchRefereeAssignRequest) {
+    return axiosClient.post<MatchRefereeResponse>(API_BASE_URL, payload);
+  }
+
+  getByMatch(matchId: number) {
+    return axiosClient.get<MatchRefereeResponse[]>(
+      `${API_BASE_URL}/match/${matchId}`,
+    );
+  }
+
+  remove(id: number) {
+    return axiosClient.delete(`${API_BASE_URL}/${id}`);
+  }
+}
+
+export default new MatchRefereeService();

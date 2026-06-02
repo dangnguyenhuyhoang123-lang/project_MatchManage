@@ -68,7 +68,7 @@ const FinalConfirmation: React.FC<Props> = ({ setStep, draft }) => {
 
   const canSubmit = missingItems.length === 0 && isConfirmed && !isSubmitting;
 
-  const payload = useMemo<FullRegistrationDTO | null>(() => {
+  const payload = useMemo(() => {
     if (!draft.season?.id) {
       return null;
     }
@@ -77,12 +77,19 @@ const FinalConfirmation: React.FC<Props> = ({ setStep, draft }) => {
       seasonID: draft.season.id,
       teamInfo: {
         id: draft.team.id,
+        homeKitColor: draft.team.homeKitColor,
+        awayKitColor: draft.team.awayKitColor,
+        homeKitImageUrl: draft.team.homeKitImageUrl,
+        awayKitImageUrl: draft.team.awayKitImageUrl,
       },
       stadiumInfo: {
         name: draft.stadium.name.trim(),
         address: draft.stadium.address.trim(),
         capacity: Number(draft.stadium.capacity) || 0,
         grass: draft.stadium.grass,
+        country: draft.stadium.country || "Việt Nam",
+        fifaStarRating: Number(draft.stadium.fifaStarRating) || 2,
+        certificateUrl: draft.stadium.certificateUrl || null,
       },
       listPlayerInfo: allPlayers
         .filter((player) => Number.isFinite(Number(player.id)))
@@ -99,7 +106,6 @@ const FinalConfirmation: React.FC<Props> = ({ setStep, draft }) => {
         })),
     };
   }, [allPlayers, draft]);
-
   const completionPercent = Math.round(((5 - missingItems.length) / 5) * 100);
 
   const handleSubmit = async () => {

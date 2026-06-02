@@ -1,10 +1,15 @@
 export type RegistrationStatus = "PENDING" | "APPROVED" | "REJECTED";
-
+export type FeeStatus = "UNPAID" | "PAID" | "WAIVED";
 export type GrassType = "Standard" | "Synthetic" | "Premium";
 
 export interface TeamRegistrationDTO {
   id: number;
   note?: string;
+
+  homeKitColor?: string | null;
+  awayKitColor?: string | null;
+  homeKitImageUrl?: string | null;
+  awayKitImageUrl?: string | null;
 }
 
 export interface StadiumRegistrationDTO {
@@ -12,6 +17,10 @@ export interface StadiumRegistrationDTO {
   address: string;
   capacity: number;
   grass: GrassType;
+
+  country: string;
+  fifaStarRating: number;
+  certificateUrl?: string | null;
 }
 
 export interface PlayerRegistrationDTO {
@@ -44,6 +53,11 @@ export interface RegistrationSummaryDTO {
   coachCount: number;
   submittedAt: string;
   note?: string;
+
+  feeAmount?: number | null;
+  feeStatus?: FeeStatus | null;
+  paymentProofUrl?: string | null;
+  paidAt?: string | null;
 }
 
 export interface RegistrationPlayerViewDTO {
@@ -78,10 +92,25 @@ export interface RegistrationDetailDTO {
   region?: string;
   owner?: string;
   description?: string;
+
   stadiumName: string;
   stadiumAddress: string;
   stadiumCapacity: number;
   stadiumGrass: GrassType;
+  stadiumCountry?: string | null;
+  fifaStarRating?: number | null;
+  certificateUrl?: string | null;
+
+  homeKitColor?: string | null;
+  awayKitColor?: string | null;
+  homeKitImageUrl?: string | null;
+  awayKitImageUrl?: string | null;
+
+  feeAmount?: number | null;
+  feeStatus?: FeeStatus | null;
+  paymentProofUrl?: string | null;
+  paidAt?: string | null;
+
   status: RegistrationStatus;
   note?: string;
   submittedAt: string;

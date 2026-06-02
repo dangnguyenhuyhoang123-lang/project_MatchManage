@@ -47,6 +47,10 @@ export type StadiumDraft = {
   capacity: number;
   grass: GrassType;
   image?: string;
+
+  country: string;
+  fifaStarRating: number;
+  certificateUrl?: string;
 };
 
 export type RegistrationDraft = {
@@ -54,6 +58,11 @@ export type RegistrationDraft = {
   team: {
     id: number;
     name: string;
+
+    homeKitColor?: string;
+    awayKitColor?: string;
+    homeKitImageUrl?: string;
+    awayKitImageUrl?: string;
   };
   coaches: SelectedCoach[];
   mainPlayers: SelectedPlayer[];
@@ -290,9 +299,7 @@ const RegisterFormMatch: React.FC = () => {
               onClick={() => goToStep(s.step)}
               disabled={!isAllowed}
               className={`flex min-w-[160px] flex-1 items-center gap-4 text-left ${
-                isAllowed
-                  ? "cursor-pointer"
-                  : "cursor-not-allowed opacity-50"
+                isAllowed ? "cursor-pointer" : "cursor-not-allowed opacity-50"
               }`}
             >
               <div

@@ -4,15 +4,12 @@ const API_BASE_URL = "/system-rules";
 
 export type SystemRule = {
   id: number;
-
   ruleName: string;
   description: string | null;
 
   maxTeams: number | null;
-
   minAge: number | null;
   maxAge: number | null;
-
   minPlayers: number | null;
   maxPlayers: number | null;
 
@@ -26,6 +23,9 @@ export type SystemRule = {
   maxSubstitution: number | null;
   minRegistrationPlayers: number | null;
   maxForeignPlayers: number | null;
+
+  maxForeignPlayersOnField: number | null;
+  maxGoalMinute: number | null;
 };
 
 export type SystemRulePayload = {
@@ -33,10 +33,8 @@ export type SystemRulePayload = {
   description: string | null;
 
   maxTeams: number | null;
-
   minAge: number | null;
   maxAge: number | null;
-
   minPlayers: number | null;
   maxPlayers: number | null;
 
@@ -50,6 +48,9 @@ export type SystemRulePayload = {
   maxSubstitution: number | null;
   minRegistrationPlayers: number | null;
   maxForeignPlayers: number | null;
+
+  maxForeignPlayersOnField: number | null;
+  maxGoalMinute: number | null;
 };
 
 class SystemRuleService {

@@ -15,6 +15,12 @@ class StandingService {
   getStandingById(id: number) {
     return axiosClient.get(`${API_BASE_URL}/getStanding/${id}`);
   }
+
+  recalculateBySeason(seasonId: number) {
+    return axiosClient.post(`${API_BASE_URL}/recalculate`, null, {
+      params: { seasonId },
+    });
+  }
 }
 
 export default new StandingService();
