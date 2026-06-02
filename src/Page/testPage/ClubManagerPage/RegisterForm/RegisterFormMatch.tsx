@@ -88,7 +88,7 @@ const defaultDraft: RegistrationDraft = {
     image:
       "https://images.unsplash.com/photo-1577223625816-7546f13df25d?q=80&w=1600&auto=format&fit=crop",
     country: "Việt Nam",
-    fifaStarRating: 0,
+    fifaStarRating: 2,
   },
 };
 
@@ -195,7 +195,8 @@ function getCompletedSteps(draft: RegistrationDraft): Record<number, boolean> {
     4:
       Boolean(draft.stadium.name.trim()) &&
       Boolean(draft.stadium.address.trim()) &&
-      Number(draft.stadium.capacity) > 0,
+      Number(draft.stadium.capacity) >= 10000 &&
+      Number(draft.stadium.fifaStarRating) >= 2,
     5: false,
   };
 }
@@ -398,7 +399,21 @@ const RegisterFormMatch: React.FC = () => {
           }
         />
       )}
-      {step === 5 && <FinalConfirmation setStep={goToStep} draft={draft} />}
+      {step === 5 && (
+        <FinalConfirmation
+          setStep={goToStep}
+          draft={draft}
+          onTeamChange={(team) =>
+            setDraft((prev) => ({
+              ...prev,
+              team: {
+                ...prev.team,
+                ...team,
+              },
+            }))
+          }
+        />
+      )}
     </AppLayout>
   );
 };

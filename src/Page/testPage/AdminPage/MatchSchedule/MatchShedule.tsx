@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import AddMatchModal from "./AddMatchModal";
+import MatchRefereeAssignmentModal from "../../../../components/match/MatchRefereeAssignmentModal";
 import { Modal } from "../../../../components/Modal";
 import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import { AppLayout } from "../../../../layouts/AppLayout";
@@ -19,6 +20,7 @@ export default function MatchSchedule() {
   const [open, setOpen] = useState(false);
   const [matches, setMatches] = useState<MatchModel[]>([]);
   const [editingMatch, setEditingMatch] = useState<MatchModel | null>(null);
+  const [refereeMatchId, setRefereeMatchId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [predictingIds, setPredictingIds] = useState<Set<number>>(new Set());
 
@@ -350,6 +352,7 @@ export default function MatchSchedule() {
                   }}
                   onDelete={handleDeleteMatch}
                   onPredict={handlePredictMatch}
+                  onAssignReferee={(matchId) => setRefereeMatchId(matchId)}
                   isPredicting={match.id ? predictingIds.has(match.id) : false}
                 />
               ))
@@ -401,6 +404,12 @@ export default function MatchSchedule() {
             />
           )}
         </Modal>
+        <MatchRefereeAssignmentModal
+          open={refereeMatchId !== null}
+          matchId={refereeMatchId}
+          onClose={() => setRefereeMatchId(null)}
+          onChanged={() => fetchMatches(trangHienTai)}
+        />
       </div>
     </AppLayout>
   );
@@ -416,12 +425,14 @@ function MatchRow({
   onEdit,
   onDelete,
   onPredict,
+  onAssignReferee,
   isPredicting,
 }: {
   match: MatchModel;
   onEdit: (m: MatchModel) => void;
   onDelete: (id: number) => void;
   onPredict: (m: MatchModel) => void;
+  onAssignReferee: (id: number) => void;
   isPredicting: boolean;
 }) {
   const navigate = useNavigate();
@@ -551,6 +562,14 @@ function MatchRow({
           className="p-1.5 hover:bg-gray-100 rounded-full"
         >
           <span className="material-symbols-outlined text-sm">edit</span>
+        </button>
+
+        <button
+          onClick={() => match.id && onAssignReferee(match.id)}
+          className="p-1.5 hover:bg-green-50 rounded-full text-green-700"
+          title="Phân công trọng tài"
+        >
+          <span className="material-symbols-outlined text-sm">sports</span>
         </button>
 
         <button

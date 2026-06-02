@@ -9,19 +9,13 @@ import {
   createAdminMatch,
   deleteAdminMatch,
   getAdminMatches,
+  type AdminMatchFilterParams,
   type MatchAdminOptions,
   type MatchFormValues,
   updateAdminMatch,
 } from "../../services/AdminMatchAPI";
 import LoadingSpinner from "../../components/Spinner/LoadingSpinner";
 
-type MatchFilters = {
-  status?: string;
-  search?: string;
-  seasonId?: number;
-  roundId?: number;
-  teamId?: number;
-};
 const toDatetimeLocalValue = (date: Date) => {
   const offset = date.getTimezoneOffset();
   const localDate = new Date(date.getTime() - offset * 60 * 1000);
@@ -61,7 +55,7 @@ const MatchManagementPage = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [matches, setMatches] = useState<MatchModel[]>([]);
-  const [options, setOptions] = useState<MatchAdminOptions>({
+  const [options] = useState<MatchAdminOptions>({
     teams: [],
     leagues: [],
     seasons: [],
@@ -77,7 +71,7 @@ const MatchManagementPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [filters, setFilters] = useState<MatchFilters>({});
+  const [filters, setFilters] = useState<AdminMatchFilterParams>({});
 
   useEffect(() => {
     if (!loading && !user) {
@@ -332,15 +326,7 @@ const MatchManagementPage = () => {
     }
   };
 
-  type MatchFilters = {
-    status?: string;
-    search?: string;
-    seasonId?: number;
-    roundId?: number;
-    teamId?: number;
-  };
-
-  const handleFilterChange = (newFilters: MatchFilters) => {
+  const handleFilterChange = (newFilters: AdminMatchFilterParams) => {
     setFilters(newFilters);
   };
   if (loading || isPageLoading) {

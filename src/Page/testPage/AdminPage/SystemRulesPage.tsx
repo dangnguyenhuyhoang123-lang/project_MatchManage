@@ -127,6 +127,8 @@ function validateForm(form: FormState) {
   const losePoints = Number(form.losePoints);
   const maxSubstitution = Number(form.maxSubstitution);
   const maxForeignPlayers = Number(form.maxForeignPlayers);
+  const maxForeignPlayersOnField = Number(form.maxForeignPlayersOnField);
+  const maxGoalMinute = Number(form.maxGoalMinute);
   const minRegistrationPlayers = Number(form.minRegistrationPlayers);
 
   if (!form.ruleName.trim()) {
@@ -167,7 +169,9 @@ function validateForm(form: FormState) {
   if (
     !Number.isFinite(winPoints) ||
     !Number.isFinite(drawPoints) ||
-    winPoints <= drawPoints
+    !Number.isFinite(losePoints) ||
+    winPoints <= drawPoints ||
+    drawPoints <= losePoints
   ) {
     errors.winPoints = "Điểm thắng phải lớn hơn điểm hòa.";
   }
@@ -178,6 +182,20 @@ function validateForm(form: FormState) {
 
   if (!Number.isFinite(maxSubstitution) || maxSubstitution < 0) {
     errors.maxSubstitution = "Số lượt thay người phải lớn hơn hoặc bằng 0.";
+  }
+
+  if (
+    form.maxForeignPlayersOnField &&
+    (!Number.isFinite(maxForeignPlayersOnField) ||
+      maxForeignPlayersOnField < 0 ||
+      maxForeignPlayersOnField > maxForeignPlayers)
+  ) {
+    errors.maxForeignPlayersOnField =
+      "Số ngoại binh trên sân không được vượt quá số ngoại binh tối đa.";
+  }
+
+  if (!Number.isFinite(maxGoalMinute) || maxGoalMinute <= 0) {
+    errors.maxGoalMinute = "Phút tối đa ghi bàn phải lớn hơn 0.";
   }
 
   return errors;
@@ -569,6 +587,16 @@ function RuleCard({
           icon="public"
           label="Ngoại binh tối đa"
           value={formatValue(rule.maxForeignPlayers)}
+        />
+        <InfoItem
+          icon="sports"
+          label="Ngoại binh tối đa trên sân"
+          value={formatValue(rule.maxForeignPlayersOnField)}
+        />
+        <InfoItem
+          icon="timer"
+          label="Phút tối đa ghi bàn"
+          value={formatValue(rule.maxGoalMinute)}
         />
         <InfoItem
           icon="assignment"

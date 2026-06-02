@@ -5,6 +5,7 @@ import type {
   RegistrationStatus,
   RegistrationSummaryDTO,
 } from "../../../model/Registration";
+import type { SystemRule } from "../../../services/SystemRuleService";
 import LoadingSpinner from "../../../components/Spinner/LoadingSpinner";
 import RegistrationService from "../../../services/RegistrationService";
 import SeasonService from "../../../services/SeasonService";
@@ -112,6 +113,30 @@ const formatSubmittedAt = (value?: string) => {
   };
 };
 
+const formatMoney = (value?: number | null) => {
+  if (value == null) return "--";
+
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+const formatOptionalDateTime = (value?: string | null) => {
+  if (!value) return "--";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+
+  return parsed.toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 const calculateAge = (dateValue?: string) => {
   if (!dateValue) {
     return "--";
@@ -149,7 +174,10 @@ const getClubInitials = (name: string) => {
     .join("");
 };
 
-const getRegistrationValidationErrors = (detail: RegistrationDetailDTO, rule: any) => {
+const getRegistrationValidationErrors = (
+  detail: RegistrationDetailDTO,
+  rule: SystemRule | null,
+) => {
   const errors: string[] = [];
 
   if (!rule) return errors;
@@ -158,7 +186,10 @@ const getRegistrationValidationErrors = (detail: RegistrationDetailDTO, rule: an
   const maxPlayersReq = rule.maxPlayers || 30;
   const minAgeReq = rule.minAge || 16;
   const maxAgeReq = rule.maxAge || 40;
-  const maxForeignReq = rule.maxForeignPlayers !== null && rule.maxForeignPlayers !== undefined ? rule.maxForeignPlayers : 3;
+  const maxForeignReq =
+    rule.maxForeignPlayers !== null && rule.maxForeignPlayers !== undefined
+      ? rule.maxForeignPlayers
+      : 3;
 
   // 1. Player Count
   const totalPlayers = detail.players.length;
@@ -284,7 +315,7 @@ const AdminRegistrationManager: React.FC = () => {
   const [registrations, setRegistrations] = useState<RegistrationSummaryDTO[]>(
     [],
   );
-  const [selectedRule, setSelectedRule] = useState<any | null>(null);
+  const [selectedRule, setSelectedRule] = useState<SystemRule | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterStatus>("ALL");
   const [filters, setFilters] = useState<Filters>({
     teamName: "",
@@ -422,7 +453,7 @@ const AdminRegistrationManager: React.FC = () => {
         const systemRuleId = seasonRes.data?.systemRuleId;
         if (systemRuleId) {
           const ruleRes = await SystemRuleService.getById(systemRuleId);
-          const errors = getRegistrationValidationErrors(detail, ruleRes);
+          const errors = getRegistrationValidationErrors(detail, ruleRes.data);
           if (errors.length > 0) {
             alert(`Không thể duyệt hồ sơ do vi phạm các điều luật:\n- ${errors.join("\n- ")}`);
             return;
@@ -430,7 +461,16 @@ const AdminRegistrationManager: React.FC = () => {
         }
       }
 
+      if (detail.feeStatus !== "PAID") {
+        alert("Hồ sơ chưa xác nhận lệ phí, không thể duyệt.");
+        return;
+      }
+
       await RegistrationService.approveRegistration(id);
+      if (selectedRegistrationDetail?.id === id) {
+        const detailResponse = await RegistrationService.getRegistrationById(id);
+        setSelectedRegistrationDetail(detailResponse.data);
+      }
       await loadRegistrations();
     } catch (error) {
       console.error("Lá»—i khi duyá»‡t há»“ sÆ¡:", error);
@@ -451,6 +491,10 @@ const AdminRegistrationManager: React.FC = () => {
 
     try {
       await RegistrationService.rejectRegistration(id, note);
+      if (selectedRegistrationDetail?.id === id) {
+        const detailResponse = await RegistrationService.getRegistrationById(id);
+        setSelectedRegistrationDetail(detailResponse.data);
+      }
       await loadRegistrations();
     } catch (error) {
       console.error("Lá»—i khi Từ chối há»“ sÆ¡:", error);
@@ -477,7 +521,7 @@ const AdminRegistrationManager: React.FC = () => {
         const systemRuleId = seasonRes.data?.systemRuleId;
         if (systemRuleId) {
           const ruleRes = await SystemRuleService.getById(systemRuleId);
-          setSelectedRule(ruleRes);
+          setSelectedRule(ruleRes.data);
         }
       }
     } catch (error) {
@@ -493,6 +537,34 @@ const AdminRegistrationManager: React.FC = () => {
     setSelectedRegistrationDetail(null);
     setSelectedRule(null);
     setDetailErrorMessage("");
+  };
+
+  const handleConfirmPayment = async (
+    id: number,
+    paymentProofUrl?: string | null,
+  ) => {
+    const proofUrl = window.prompt(
+      "Nhập URL chứng từ thanh toán nếu cần cập nhật:",
+      paymentProofUrl ?? "",
+    );
+
+    if (proofUrl === null) {
+      return;
+    }
+
+    setProcessingId(id);
+
+    try {
+      await RegistrationService.markRegistrationPaid(id, proofUrl);
+      await loadRegistrations();
+      const detailResponse = await RegistrationService.getRegistrationById(id);
+      setSelectedRegistrationDetail(detailResponse.data);
+    } catch (error) {
+      console.error("Cannot confirm registration payment", error);
+      alert("Không thể xác nhận lệ phí hồ sơ. Vui lòng thử lại.");
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   const handleExport = () => {
@@ -720,6 +792,7 @@ const AdminRegistrationManager: React.FC = () => {
                 isProcessing={processingId === registration.id}
                 onApprove={handleApprove}
                 onReject={handleReject}
+                onConfirmPayment={handleConfirmPayment}
                 onView={handleViewDetail}
               />
             ))
@@ -748,6 +821,7 @@ const AdminRegistrationManager: React.FC = () => {
           onClose={closeDetailModal}
           onApprove={handleApprove}
           onReject={handleReject}
+          onConfirmPayment={handleConfirmPayment}
           isProcessing={processingId !== null}
         />
       )}
@@ -794,6 +868,7 @@ type RegistrationRowProps = {
   isProcessing: boolean;
   onApprove: (id: number) => void;
   onReject: (id: number) => void;
+  onConfirmPayment: (id: number, paymentProofUrl?: string | null) => void;
   onView: (registration: RegistrationSummaryDTO) => void;
 };
 
@@ -802,6 +877,7 @@ const RegistrationRow = ({
   isProcessing,
   onApprove,
   onReject,
+  onConfirmPayment,
   onView,
 }: RegistrationRowProps) => {
   const submittedAt = formatSubmittedAt(registration.submittedAt);
@@ -858,11 +934,22 @@ const RegistrationRow = ({
 
         {isPending && (
           <>
+            {registration.feeStatus !== "PAID" && (
+              <IconButton
+                label="Xác nhận lệ phí"
+                icon="payments"
+                className="bg-amber-50 hover:bg-amber-100 text-amber-700 disabled:opacity-50"
+                disabled={isProcessing}
+                onClick={() =>
+                  onConfirmPayment(registration.id, registration.paymentProofUrl)
+                }
+              />
+            )}
             <IconButton
               label="Cháº¥p nháº­n"
               icon="check"
               className="bg-[#008C2F] hover:bg-green-800 text-white disabled:opacity-50"
-              disabled={isProcessing}
+              disabled={isProcessing || registration.feeStatus !== "PAID"}
               onClick={() => onApprove(registration.id)}
             />
 
@@ -915,6 +1002,7 @@ type RegistrationDetailModalProps = {
   onClose: () => void;
   onApprove: (id: number) => void;
   onReject: (id: number) => void;
+  onConfirmPayment: (id: number, paymentProofUrl?: string | null) => void;
   isProcessing: boolean;
 };
 
@@ -926,12 +1014,18 @@ const RegistrationDetailModal = ({
   onClose,
   onApprove,
   onReject,
+  onConfirmPayment,
   isProcessing,
 }: RegistrationDetailModalProps) => {
   const validationErrors = useMemo(() => {
     if (!detail || !rule) return [];
     return getRegistrationValidationErrors(detail, rule);
   }, [detail, rule]);
+  const canApprove =
+    Boolean(detail) &&
+    detail?.status === "PENDING" &&
+    detail?.feeStatus === "PAID" &&
+    validationErrors.length === 0;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-6">
@@ -1028,6 +1122,57 @@ const RegistrationDetailModal = ({
                       </p>
                     </div>
                   )}
+
+                  <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <InfoCard
+                      label="Lệ phí"
+                      value={formatMoney(detail.feeAmount)}
+                    />
+                    <InfoCard
+                      label="Trạng thái lệ phí"
+                      value={detail.feeStatus ?? "--"}
+                    />
+                    <InfoCard
+                      label="Ngày xác nhận lệ phí"
+                      value={formatOptionalDateTime(detail.paidAt)}
+                    />
+                    <InfoCard
+                      label="Chứng từ thanh toán"
+                      value={
+                        detail.paymentProofUrl ? (
+                          <a
+                            href={detail.paymentProofUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-green-700 underline"
+                          >
+                            Xem chứng từ
+                          </a>
+                        ) : (
+                          "--"
+                        )
+                      }
+                    />
+                  </div>
+
+                  {detail.status === "PENDING" && detail.feeStatus !== "PAID" && (
+                    <div className="mt-5 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm font-bold text-amber-700">
+                      Hồ sơ chưa xác nhận lệ phí, không thể duyệt.
+                    </div>
+                  )}
+
+                  <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <KitPreview
+                      title="Áo chính thức"
+                      color={detail.homeKitColor}
+                      imageUrl={detail.homeKitImageUrl}
+                    />
+                    <KitPreview
+                      title="Áo dự bị"
+                      color={detail.awayKitColor}
+                      imageUrl={detail.awayKitImageUrl}
+                    />
+                  </div>
                 </div>
 
                 <div className="rounded-3xl bg-white p-6 border border-gray-100 shadow-sm">
@@ -1127,14 +1272,27 @@ const RegistrationDetailModal = ({
                     )}
 
                     {detail.status === "PENDING" && (
-                      <div className="flex gap-3 pt-2 border-t border-gray-100">
+                      <div className="flex flex-col gap-3 pt-2 border-t border-gray-100 sm:flex-row">
+                        {detail.feeStatus !== "PAID" && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onConfirmPayment(detail.id, detail.paymentProofUrl)
+                            }
+                            disabled={isProcessing}
+                            className="flex-1 bg-amber-50 text-amber-700 text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 hover:bg-amber-100 transition-colors disabled:opacity-50"
+                          >
+                            <span className="material-symbols-outlined text-sm">payments</span>
+                            Xác nhận lệ phí
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => {
                             onApprove(detail.id);
                             onClose();
                           }}
-                          disabled={validationErrors.length > 0 || isProcessing}
+                          disabled={!canApprove || isProcessing}
                           className="flex-1 bg-[#008C2F] text-white text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-800 transition-colors"
                         >
                           <span className="material-symbols-outlined text-sm">check</span>
@@ -1159,14 +1317,32 @@ const RegistrationDetailModal = ({
 
                 {detail.status === "PENDING" && !rule && (
                   <div className="rounded-3xl bg-white p-6 border border-gray-100 shadow-sm space-y-4">
-                    <div className="flex gap-3">
+                    {detail.feeStatus !== "PAID" && (
+                      <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm font-bold text-amber-700">
+                        Hồ sơ chưa xác nhận lệ phí, không thể duyệt.
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      {detail.feeStatus !== "PAID" && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onConfirmPayment(detail.id, detail.paymentProofUrl)
+                          }
+                          disabled={isProcessing}
+                          className="flex-1 bg-amber-50 text-amber-700 text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 hover:bg-amber-100 transition-colors disabled:opacity-50"
+                        >
+                          <span className="material-symbols-outlined text-sm">payments</span>
+                          Xác nhận lệ phí
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => {
                           onApprove(detail.id);
                           onClose();
                         }}
-                        disabled={isProcessing}
+                        disabled={!canApprove || isProcessing}
                         className="flex-1 bg-[#008C2F] text-white text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 hover:bg-green-800 transition-colors"
                       >
                         <span className="material-symbols-outlined text-sm">check</span>
@@ -1213,6 +1389,35 @@ const RegistrationDetailModal = ({
                     <InfoCard
                       label="Mặt cỏ"
                       value={grassLabels[detail.stadiumGrass]}
+                    />
+                    <InfoCard
+                      label="Quốc gia"
+                      value={detail.stadiumCountry ?? "--"}
+                    />
+                    <InfoCard
+                      label="Chuẩn sao FIFA"
+                      value={
+                        detail.fifaStarRating != null
+                          ? `${detail.fifaStarRating} sao`
+                          : "--"
+                      }
+                    />
+                    <InfoCard
+                      label="Chứng nhận sân"
+                      value={
+                        detail.certificateUrl ? (
+                          <a
+                            href={detail.certificateUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-green-700 underline"
+                          >
+                            Xem chứng nhận
+                          </a>
+                        ) : (
+                          "--"
+                        )
+                      }
                     />
                   </div>
                 </div>
@@ -1302,6 +1507,39 @@ const InfoCard = ({
       {label}
     </p>
     <p className="mt-1 text-sm font-black text-gray-900">{value}</p>
+  </div>
+);
+
+const KitPreview = ({
+  title,
+  color,
+  imageUrl,
+}: {
+  title: string;
+  color?: string | null;
+  imageUrl?: string | null;
+}) => (
+  <div className="rounded-2xl bg-[#f5f3ef] p-4">
+    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+      {title}
+    </p>
+    {imageUrl ? (
+      <img
+        src={imageUrl}
+        alt={title}
+        className="mt-3 h-36 w-full rounded-xl object-cover bg-white"
+      />
+    ) : (
+      <div className="mt-3 flex items-center gap-3">
+        <span
+          className="h-10 w-10 rounded-xl border border-gray-200 bg-white"
+          style={{ backgroundColor: color || "#ffffff" }}
+        />
+        <span className="text-sm font-black text-gray-900">
+          {color || "Chưa cập nhật màu áo"}
+        </span>
+      </div>
+    )}
   </div>
 );
 

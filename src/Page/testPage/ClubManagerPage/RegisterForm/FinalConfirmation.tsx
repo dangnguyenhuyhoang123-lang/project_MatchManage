@@ -8,6 +8,9 @@ import type { RealtimeEventDTO } from "../../../../services/websocket/Notificati
 type Props = {
   setStep: (step: number) => void;
   draft: RegistrationDraft;
+  onTeamChange: (
+    team: Partial<RegistrationDraft["team"]>,
+  ) => void;
 };
 
 const roleLabels: Record<string, string> = {
@@ -30,7 +33,23 @@ const getPlayerShirtNumber = (player: SelectedPlayer) =>
 const getPlayerPosition = (player: SelectedPlayer) =>
   player.position || "Cầu thủ";
 
-const FinalConfirmation: React.FC<Props> = ({ setStep, draft }) => {
+const isVietnamCountry = (value?: string) => {
+  const normalized = (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase()
+    .trim();
+
+  return ["viet nam", "vietnam", "vn"].includes(normalized);
+};
+
+const FinalConfirmation: React.FC<Props> = ({
+  setStep,
+  draft,
+  onTeamChange,
+}) => {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedSummary, setSubmittedSummary] =
@@ -48,6 +67,10 @@ const FinalConfirmation: React.FC<Props> = ({ setStep, draft }) => {
       missing.push("Chưa chọn mùa giải");
     }
 
+    if (!draft.team?.id) {
+      missing.push("Chưa chọn đội đăng ký");
+    }
+
     if (draft.coaches.length < 3) {
       missing.push("Ban huấn luyện chưa đủ tối thiểu 3 thành viên");
     }
@@ -58,6 +81,18 @@ const FinalConfirmation: React.FC<Props> = ({ setStep, draft }) => {
 
     if (!draft.stadium.name.trim() || !draft.stadium.address.trim()) {
       missing.push("Thông tin sân vận động chưa đầy đủ");
+    }
+
+    if (Number(draft.stadium.capacity) < 10000) {
+      missing.push("Sân phải có sức chứa tối thiểu 10.000 người");
+    }
+
+    if (Number(draft.stadium.fifaStarRating) < 2) {
+      missing.push("Chuẩn sao sân phải tối thiểu 2");
+    }
+
+    if (!isVietnamCountry(draft.stadium.country)) {
+      missing.push("Quốc gia sân phải là Việt Nam/Vietnam/Viet Nam/VN");
     }
 
     return missing;
@@ -233,6 +268,38 @@ const FinalConfirmation: React.FC<Props> = ({ setStep, draft }) => {
                   : "bg-rose-50 text-rose-600"
               }
             />
+          </div>
+
+          <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-6 md:p-8">
+            <div className="mb-5">
+              <h3 className="text-xl font-black text-gray-900 font-['Be_Vietnam_Pro']">
+                Áo đấu
+              </h3>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <KitInput
+                label="Màu áo chính thức"
+                value={draft.team.homeKitColor ?? ""}
+                onChange={(value) => onTeamChange({ homeKitColor: value })}
+              />
+              <KitInput
+                label="Màu áo dự bị"
+                value={draft.team.awayKitColor ?? ""}
+                onChange={(value) => onTeamChange({ awayKitColor: value })}
+              />
+              <KitInput
+                label="URL ảnh áo chính thức"
+                value={draft.team.homeKitImageUrl ?? ""}
+                type="url"
+                onChange={(value) => onTeamChange({ homeKitImageUrl: value })}
+              />
+              <KitInput
+                label="URL ảnh áo dự bị"
+                value={draft.team.awayKitImageUrl ?? ""}
+                type="url"
+                onChange={(value) => onTeamChange({ awayKitImageUrl: value })}
+              />
+            </div>
           </div>
 
           <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-6 md:p-8">
@@ -620,6 +687,31 @@ const InfoPill = ({ label, value }: { label: string; value: string }) => (
     </p>
     <p className="mt-1 font-black text-gray-900">{value}</p>
   </div>
+);
+
+const KitInput = ({
+  label,
+  value,
+  type = "text",
+  onChange,
+}: {
+  label: string;
+  value: string;
+  type?: "text" | "url";
+  onChange: (value: string) => void;
+}) => (
+  <label className="block">
+    <span className="mb-2 block text-xs font-black uppercase tracking-widest text-gray-400">
+      {label}
+    </span>
+    <input
+      type={type}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className="w-full rounded-2xl border border-transparent bg-[#f5f3ef] px-4 py-3 text-sm font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-green-700/20"
+      placeholder={type === "url" ? "https://..." : undefined}
+    />
+  </label>
 );
 
 export default FinalConfirmation;

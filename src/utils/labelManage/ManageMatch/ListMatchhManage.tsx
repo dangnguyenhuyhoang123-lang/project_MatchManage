@@ -1,6 +1,9 @@
 import { useState, type ChangeEvent } from "react";
 import type { MatchModel } from "../../../model/Match/MatchModel";
-import type { MatchAdminOptions } from "../../../services/AdminMatchAPI";
+import type {
+  AdminMatchFilterParams,
+  MatchAdminOptions,
+} from "../../../services/AdminMatchAPI";
 
 type ListMatchManageProps = {
   matches: MatchModel[];
@@ -8,7 +11,7 @@ type ListMatchManageProps = {
   formatStatusLabel: (status: string) => string;
   handleDelete: (id: number) => void;
   handleEdit: (match: MatchModel) => void;
-  onFilterChange: (filters: { leagueName?: string; season?: string }) => void;
+  onFilterChange: (filters: AdminMatchFilterParams) => void;
   isLoading?: boolean;
 };
 export const ListMatchManage = ({
@@ -41,8 +44,8 @@ export const ListMatchManage = ({
     setSelectedLeague(value);
 
     onFilterChange({
-      leagueName: value || undefined,
-      season: selectedSeason || undefined,
+      search: value || undefined,
+      seasonId: selectedSeason ? Number(selectedSeason) : undefined,
     });
   };
 
@@ -51,8 +54,8 @@ export const ListMatchManage = ({
     setSelectedSeason(value);
 
     onFilterChange({
-      leagueName: selectedLeague || undefined,
-      season: value || undefined,
+      search: selectedLeague || undefined,
+      seasonId: value ? Number(value) : undefined,
     });
   };
   // const handleLeagueFilterChange = (
@@ -115,7 +118,7 @@ export const ListMatchManage = ({
           >
             <option value="">Tat ca mua giai</option>
             {options.seasons.map((season) => (
-              <option key={season.id} value={season.label}>
+              <option key={season.id} value={season.id}>
                 {season.label}
               </option>
             ))}

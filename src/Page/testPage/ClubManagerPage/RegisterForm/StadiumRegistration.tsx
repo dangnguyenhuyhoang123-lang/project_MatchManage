@@ -45,8 +45,13 @@ const StadiumRegistration: React.FC<Props> = ({
   const [stadiumImage, setStadiumImage] = useState(
     stadium.image || defaultStadiumImage,
   );
-  const [country] = useState(stadium.country || "Việt Nam");
-  const [fifaStarRating] = useState(stadium.fifaStarRating ?? 0);
+  const [country, setCountry] = useState(stadium.country || "Việt Nam");
+  const [fifaStarRating, setFifaStarRating] = useState(
+    Math.max(stadium.fifaStarRating ?? 2, 2),
+  );
+  const [certificateUrl, setCertificateUrl] = useState(
+    stadium.certificateUrl || "",
+  );
   const fifaPercent = useMemo(() => {
     return Math.min(Math.round((capacity / 86000) * 100), 100);
   }, [capacity]);
@@ -61,6 +66,7 @@ const StadiumRegistration: React.FC<Props> = ({
       image: stadiumImage,
       country,
       fifaStarRating,
+      certificateUrl: certificateUrl.trim() || undefined,
     });
   };
 
@@ -189,6 +195,41 @@ const StadiumRegistration: React.FC<Props> = ({
                     onChange={(event) => setAddress(event.target.value)}
                   />
                 </div>
+              </div>
+
+              <InputGroup label="Quốc gia sân">
+                <input
+                  className="w-full bg-[#f5f3ef] border-none rounded-2xl p-4 focus:ring-2 focus:ring-green-700/20 transition-all text-gray-900 font-medium outline-none"
+                  type="text"
+                  value={country}
+                  onChange={(event) => setCountry(event.target.value)}
+                />
+              </InputGroup>
+
+              <InputGroup label="Chuẩn sao sân">
+                <input
+                  className="w-full bg-[#f5f3ef] border-none rounded-2xl p-4 focus:ring-2 focus:ring-green-700/20 transition-all text-gray-900 font-medium outline-none"
+                  type="number"
+                  min={2}
+                  max={5}
+                  value={fifaStarRating}
+                  onChange={(event) =>
+                    setFifaStarRating(Number(event.target.value))
+                  }
+                />
+              </InputGroup>
+
+              <div className="col-span-2 flex flex-col gap-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
+                  URL chứng nhận sân
+                </label>
+                <input
+                  className="w-full bg-[#f5f3ef] border-none rounded-2xl p-4 focus:ring-2 focus:ring-green-700/20 transition-all text-gray-900 font-medium outline-none"
+                  type="url"
+                  value={certificateUrl}
+                  onChange={(event) => setCertificateUrl(event.target.value)}
+                  placeholder="https://..."
+                />
               </div>
             </div>
           </section>
@@ -361,7 +402,13 @@ const StadiumRegistration: React.FC<Props> = ({
             <button
               type="button"
               onClick={handleNext}
-              disabled={!stadiumName.trim() || !address.trim() || capacity <= 0}
+              disabled={
+                !stadiumName.trim() ||
+                !address.trim() ||
+                !country.trim() ||
+                capacity < 10000 ||
+                fifaStarRating < 2
+              }
               className="px-10 py-3 rounded-full bg-green-700 text-white font-bold shadow-lg shadow-green-700/20 hover:scale-105 active:scale-95 transition-all text-sm disabled:opacity-50"
             >
               Tiếp tục

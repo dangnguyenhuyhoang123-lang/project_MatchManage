@@ -6,6 +6,7 @@ import type { TeamLineupResponse } from "../../../../model/Lineup";
 import type { PlayerSeason } from "../../../../model/PlayerSeason";
 import LineupService from "../../../../services/LineupService";
 import PlayerSeasonService from "../../../../services/PlayerSeasonService";
+import PlayerSuspensionService from "../../../../services/PlayerSuspensionService";
 import { useRealtimeEvent } from "../../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../../services/websocket/NotificationSocketService";
 type PositionGroup = "GK" | "DF" | "MF" | "FW";
@@ -141,6 +142,10 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
     createEmptySlotMap("4-3-3"),
   );
   const [players, setPlayers] = useState<SlotPlayer[]>([]);
+  const [benchPlayers, setBenchPlayers] = useState<SlotPlayer[]>([]);
+  const [suspendedPlayerIds, setSuspendedPlayerIds] = useState<Set<number>>(
+    () => new Set(),
+  );
   const [selectedSlotKey, setSelectedSlotKey] = useState<string | null>(null);
   const [positionFilter, setPositionFilter] = useState<PlayerFilter>("ALL");
   const [loading, setLoading] = useState(true);
@@ -174,21 +179,29 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
         ) {
           throw new Error("Invalid teamSeasonId");
         }
-        const [registeredPlayers, lineupData] = await Promise.all([
+        const [registeredPlayers, lineupData, suspensionRes] = await Promise.all([
           PlayerSeasonService.getPlayerSeasonsByTeamSeason(
             normalizedTeamSeasonId,
           ),
           loadLineup(match.id, teamId),
+          PlayerSuspensionService.getActiveByMatch(match.id),
         ]);
 
-        console.log(registeredPlayers);
         if (!mounted) return;
+        const suspendedIds = new Set(
+          (Array.isArray(suspensionRes.data) ? suspensionRes.data : []).map(
+            (item) => item.playerId,
+          ),
+        );
+        setSuspendedPlayerIds(suspendedIds);
         setPlayers(
           extractPlayerSeasons(registeredPlayers)
             .filter((playerSeason) =>
               hasTeamSeasonId(playerSeason, normalizedTeamSeasonId),
             )
-            .map(normalizeRegisteredPlayer)
+            .map((playerSeason) =>
+              normalizeRegisteredPlayer(playerSeason, suspendedIds),
+            )
             .filter((player: SlotPlayer | null): player is SlotPlayer =>
               Boolean(player),
             ),
@@ -202,6 +215,7 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
           const initialFormation = "4-3-3";
           setFormation(initialFormation);
           setSlotMap(createEmptySlotMap(initialFormation));
+          setBenchPlayers([]);
           setSelectedSlotKey(null);
 
           if (isReadOnly) {
@@ -245,11 +259,11 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
   const selectedPlayerIds = useMemo(
     () =>
       new Set(
-        Object.values(slotMap)
+        [...Object.values(slotMap), ...benchPlayers]
           .filter(Boolean)
           .map((player) => player!.id),
       ),
-    [slotMap],
+    [benchPlayers, slotMap],
   );
 
   const filteredPlayers = useMemo(() => {
@@ -321,12 +335,48 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
     setSlotMap((current) => ({ ...current, [slotKey]: null }));
   };
 
+  const toggleBenchPlayer = (player: SlotPlayer) => {
+    if (isReadOnly || player.status !== "available") return;
+
+    setBenchPlayers((current) => {
+      if (current.some((item) => item.id === player.id)) {
+        return current.filter((item) => item.id !== player.id);
+      }
+
+      if (selectedPlayerIds.has(player.id)) {
+        setNotice("Cầu thủ đã có trong đội hình chính hoặc danh sách dự bị.");
+        return current;
+      }
+
+      if (current.length >= 5) {
+        setNotice("Chỉ được chọn đúng 5 cầu thủ dự bị.");
+        return current;
+      }
+
+      setNotice("");
+      return [...current, player];
+    });
+  };
+
   const saveLineup = async () => {
     const missingSlots = slots.filter((item) => !slotMap[item.key]);
     if (missingSlots.length > 0) {
       setNotice(
         `Cần chọn đủ 11 cầu thủ. Còn thiếu ${missingSlots.length} vị trí.`,
       );
+      return;
+    }
+
+    if (benchPlayers.length !== 5) {
+      setNotice(`Cần chọn đúng 5 cầu thủ dự bị. Hiện có ${benchPlayers.length}/5.`);
+      return;
+    }
+
+    const suspendedSelected = [...Object.values(slotMap), ...benchPlayers]
+      .filter(Boolean)
+      .find((player) => suspendedPlayerIds.has(player!.id));
+    if (suspendedSelected) {
+      setNotice("Đội hình có cầu thủ bị treo giò. Vui lòng bỏ cầu thủ đó trước khi lưu.");
       return;
     }
 
@@ -337,24 +387,36 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
       await LineupService.submitLineup(match.id, teamId, {
         formationName: formation,
         description: `Đội hình ${formation} của ${teamName}`,
-        lineups: slots.map((item, index) => {
-          const player = slotMap[item.key]!;
-          return {
+        lineups: [
+          ...slots.map((item, index) => {
+            const player = slotMap[item.key]!;
+            return {
+              playerId: player.id,
+              position: item.label,
+              shirtNumber: player.shirtNumber,
+              isStarting: true,
+              lineupOrder: index + 1,
+              role: item.position,
+            };
+          }),
+          ...benchPlayers.map((player, index) => ({
             playerId: player.id,
-            position: item.label,
+            position: player.position,
             shirtNumber: player.shirtNumber,
-            isStarting: true,
-            lineupOrder: index + 1,
-            role: item.position,
-          };
-        }),
+            isStarting: false,
+            lineupOrder: slots.length + index + 1,
+            role: player.position,
+          })),
+        ],
       });
 
       onSaved?.();
       onClose();
     } catch (err) {
       console.error("Cannot submit lineup", err);
-      setError("Không thể lưu đội hình. Vui lòng kiểm tra API lineups.");
+      setError(
+        "Không thể lưu đội hình. Vui lòng kiểm tra cầu thủ bị treo giò hoặc dữ liệu đội hình.",
+      );
     } finally {
       setSaving(false);
     }
@@ -370,6 +432,20 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
     const sortedPlayers = [...rawLineups]
       .filter((player) => player.isStarting !== false)
       .sort((a, b) => (a.lineupOrder ?? 0) - (b.lineupOrder ?? 0));
+
+    const nextBenchPlayers: SlotPlayer[] = [...rawLineups]
+      .filter((player) => player.isStarting === false)
+      .sort((a, b) => (a.lineupOrder ?? 0) - (b.lineupOrder ?? 0))
+      .map((lineupPlayer) => ({
+        id: lineupPlayer.playerId,
+        name: lineupPlayer.playerName,
+        avatar: lineupPlayer.avatar,
+        shirtNumber: lineupPlayer.shirtNumber,
+        position: normalizePosition(lineupPlayer.role ?? lineupPlayer.position ?? ""),
+        status: suspendedPlayerIds.has(lineupPlayer.playerId)
+          ? "redCard"
+          : "available",
+      }));
 
     sortedPlayers.forEach((lineupPlayer) => {
       const targetSlot =
@@ -390,6 +466,7 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
 
     setFormation(nextFormation);
     setSlotMap(nextMap);
+    setBenchPlayers(nextBenchPlayers);
     setSelectedSlotKey(null);
   };
 
@@ -403,6 +480,7 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
 
       setHasExistingLineup(false);
       setSlotMap(createEmptySlotMap(formation));
+      setBenchPlayers([]);
 
       onSaved?.();
       setNotice("Đã xóa đội hình thành công.");
@@ -462,10 +540,12 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
               allCount={players.length}
               positionFilter={positionFilter}
               selectedPlayerIds={selectedPlayerIds}
+              benchPlayers={benchPlayers}
               selectedSlot={selectedSlot}
               isReadOnly={isReadOnly}
               onFilterChange={setPositionFilter}
               onSelectPlayer={assignPlayer}
+              onToggleBenchPlayer={toggleBenchPlayer}
             />
           </aside>
         </div>
@@ -788,19 +868,23 @@ function AvailablePlayersPanel({
   allCount,
   positionFilter,
   selectedPlayerIds,
+  benchPlayers,
   selectedSlot,
   isReadOnly,
   onFilterChange,
   onSelectPlayer,
+  onToggleBenchPlayer,
 }: {
   players: SlotPlayer[];
   allCount: number;
   positionFilter: PlayerFilter;
   selectedPlayerIds: Set<number>;
+  benchPlayers: SlotPlayer[];
   selectedSlot?: FormationSlot | null;
   isReadOnly: boolean;
   onFilterChange: (filter: PlayerFilter) => void;
   onSelectPlayer: (player: SlotPlayer) => void;
+  onToggleBenchPlayer: (player: SlotPlayer) => void;
 }) {
   return (
     <section className="flex h-[620px] min-h-[620px] flex-col rounded-[2rem] bg-[#f5f3ef] p-6">
@@ -849,14 +933,51 @@ function AvailablePlayersPanel({
               key={player.id}
               player={player}
               selected={selectedPlayerIds.has(player.id)}
+              benchSelected={benchPlayers.some((item) => item.id === player.id)}
               disabled={
                 isReadOnly ||
                 player.status !== "available" ||
                 selectedPlayerIds.has(player.id)
               }
               onSelect={() => onSelectPlayer(player)}
+              onToggleBench={() => onToggleBenchPlayer(player)}
             />
           ))
+        )}
+      </div>
+
+      <div className="mt-5 rounded-[1.5rem] bg-white p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-xs font-black uppercase tracking-widest text-gray-400">
+            Dự bị
+          </p>
+          <span className="rounded-full bg-amber-50 px-3 py-1 text-[10px] font-black text-amber-700">
+            {benchPlayers.length}/5
+          </span>
+        </div>
+        {benchPlayers.length === 0 ? (
+          <p className="text-xs font-bold text-gray-400">
+            Chưa chọn cầu thủ dự bị.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {benchPlayers.map((player) => (
+              <button
+                key={player.id}
+                type="button"
+                onClick={() => onToggleBenchPlayer(player)}
+                disabled={isReadOnly}
+                className="flex w-full items-center justify-between rounded-xl bg-[#f5f3ef] px-3 py-2 text-left text-xs font-bold text-gray-700 disabled:cursor-not-allowed"
+              >
+                <span className="truncate">{player.name}</span>
+                {!isReadOnly && (
+                  <span className="material-symbols-outlined text-sm text-red-500">
+                    close
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         )}
       </div>
 
@@ -889,21 +1010,33 @@ function StatusLegend({
 function AvailablePlayerRow({
   player,
   selected,
+  benchSelected,
   disabled,
   onSelect,
+  onToggleBench,
 }: {
   player: SlotPlayer;
   selected: boolean;
+  benchSelected: boolean;
   disabled: boolean;
   onSelect: () => void;
+  onToggleBench: () => void;
 }) {
   const status = getPlayerStatusMeta(player.status);
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      disabled={disabled}
+    <div
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      onClick={() => {
+        if (!disabled) onSelect();
+      }}
+      onKeyDown={(event) => {
+        if (!disabled && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          onSelect();
+        }
+      }}
       className={`group flex w-full items-center gap-3 rounded-[1.5rem] bg-white p-3 text-left transition hover:shadow-md disabled:cursor-not-allowed ${
         selected ? "border-l-4 border-indigo-300" : ""
       } ${disabled && !selected ? "opacity-60" : ""}`}
@@ -940,20 +1073,33 @@ function AvailablePlayerRow({
         </p>
       </div>
 
-      <span
-        className={`material-symbols-outlined transition ${
-          disabled
-            ? "text-gray-300"
-            : "text-gray-300 group-hover:text-[#008C2F]"
-        }`}
-      >
-        {selected
-          ? "check_circle"
-          : disabled
-            ? "do_not_disturb_on"
-            : "add_circle"}
-      </span>
-    </button>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleBench();
+          }}
+          disabled={disabled && !benchSelected}
+          className="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-black text-amber-700 disabled:opacity-40"
+        >
+          {benchSelected ? "Bỏ DB" : "Dự bị"}
+        </button>
+        <span
+          className={`material-symbols-outlined transition ${
+            disabled
+              ? "text-gray-300"
+              : "text-gray-300 group-hover:text-[#008C2F]"
+          }`}
+        >
+          {selected
+            ? "check_circle"
+            : disabled
+              ? "do_not_disturb_on"
+              : "add_circle"}
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -1005,6 +1151,7 @@ function hasTeamSeasonId(
 
 function normalizeRegisteredPlayer(
   playerSeason: PlayerSeason | any,
+  suspendedPlayerIds: Set<number> = new Set(),
 ): SlotPlayer | null {
   const player = playerSeason?.player ?? {};
   const playerId = Number(
@@ -1026,12 +1173,14 @@ function normalizeRegisteredPlayer(
         player?.detailPosition ??
         "",
     ),
-    status: normalizePlayerStatus(
-      playerSeason?.playerStatus ??
-        playerSeason?.status ??
-        player?.status ??
-        "ACTIVE",
-    ),
+    status: suspendedPlayerIds.has(playerId)
+      ? "redCard"
+      : normalizePlayerStatus(
+          playerSeason?.playerStatus ??
+            playerSeason?.status ??
+            player?.status ??
+            "ACTIVE",
+        ),
   };
 }
 

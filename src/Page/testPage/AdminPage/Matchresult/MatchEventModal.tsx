@@ -26,6 +26,8 @@ type MatchEventModalProps = {
   awayTeamName: string;
 
   lineups?: MatchLineupsResponse | null;
+  allowedGoalTypes?: GoalType[];
+  maxGoalMinute?: number | null;
 };
 
 type EventFormState = {
@@ -62,6 +64,8 @@ export default function MatchEventModal({
   awayTeamId,
   awayTeamName,
   lineups,
+  allowedGoalTypes,
+  maxGoalMinute,
 }: MatchEventModalProps) {
   const [eventForm, setEventForm] = useState<EventFormState>(initialForm);
 
@@ -142,6 +146,25 @@ export default function MatchEventModal({
 
     if (eventForm.extraMinute != null && eventForm.extraMinute < 0) {
       alert("Phút bù giờ không hợp lệ.");
+      return false;
+    }
+
+    if (
+      eventForm.eventType === "GOAL" &&
+      maxGoalMinute != null &&
+      eventForm.minute > maxGoalMinute
+    ) {
+      alert(`Phút ghi bàn không được vượt quá ${maxGoalMinute}.`);
+      return false;
+    }
+
+    if (
+      eventForm.eventType === "GOAL" &&
+      allowedGoalTypes &&
+      allowedGoalTypes.length > 0 &&
+      !allowedGoalTypes.includes(eventForm.goalType)
+    ) {
+      alert("Loại bàn thắng không nằm trong quy định mùa giải.");
       return false;
     }
 

@@ -1,5 +1,8 @@
 import { useCallback, useState, useEffect, type FC } from "react";
 import MatchService from "../../../../services/MatchService";
+import SystemRuleService, {
+  type SystemRule,
+} from "../../../../services/SystemRuleService";
 import type { MatchEvent } from "../../../../model/Match/MatchEvents";
 import type { MatchStats } from "../../../../model/Match/MatchStats";
 import MatchEventModal from "./MatchEventModal";
@@ -35,6 +38,7 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [lineups, setLineups] = useState<MatchLineupsResponse | null>(null);
+  const [systemRule, setSystemRule] = useState<SystemRule | null>(null);
   // const [eventForm, setEventForm] = useState({
   //   eventType: "GOAL" as "GOAL" | "YELLOW_CARD" | "RED_CARD" | "SUBSTITUTION",
   //   goalType: "NORMAL" as "NORMAL" | "PENALTY" | "OWN_GOAL",
@@ -77,6 +81,7 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
       try {
         setIsLoadingData(true);
         await reloadMatchData();
+        await loadSystemRule();
       } catch (error) {
         console.error("Lỗi khi tải dữ liệu trận đấu:", error);
       } finally {
@@ -102,6 +107,22 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
     setEvents(eventsData || []);
     setStats(statsData || []);
     setLineups(lineupsData);
+  };
+
+  const loadSystemRule = async () => {
+    const systemRuleId = Number(matchData?.season?.systemRuleId);
+    if (!Number.isFinite(systemRuleId) || systemRuleId <= 0) {
+      setSystemRule(null);
+      return;
+    }
+
+    try {
+      const response = await SystemRuleService.getById(systemRuleId);
+      setSystemRule(response.data);
+    } catch (error) {
+      console.error("Cannot load system rule for match result", error);
+      setSystemRule(null);
+    }
   };
 
   const handleRealtimeEvent = useCallback(
@@ -509,6 +530,15 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
         awayTeamId={awayTeamId}
         awayTeamName={awayTeamName}
         lineups={lineups}
+        allowedGoalTypes={
+          systemRule?.allowedGoalTypes
+            ?.split(",")
+            .map((item) => item.trim())
+            .filter((item): item is "NORMAL" | "PENALTY" | "OWN_GOAL" =>
+              ["NORMAL", "PENALTY", "OWN_GOAL"].includes(item),
+            )
+        }
+        maxGoalMinute={systemRule?.maxGoalMinute ?? null}
       />
     </div>
   );
