@@ -1,4 +1,4 @@
-import { MatchEvent } from "../../model/Match/MatchEvents";
+import type { MatchEvent } from "../../model/Match/MatchEvents";
 import type { Player } from "../../model/Player";
 import PlayerService from "../../services/PlayerService";
 import { useState, useEffect } from "react";
@@ -119,7 +119,11 @@ export const EventItem = ({
                 <p className="font-semibold text-sm text-gray-900">
                   {player?.name}
                 </p>
-                <p className="text-xs text-gray-500">{event.description}</p>
+                <p className="text-xs text-gray-500">
+                  {event.note && (
+                    <p className="text-xs text-gray-500">{event.note}</p>
+                  )}
+                </p>
               </div>
 
               <img
@@ -156,7 +160,7 @@ export const EventItem = ({
                 <p className="font-semibold text-sm text-gray-900">
                   {player?.name}
                 </p>
-                <p className="text-xs text-gray-500">{event.description}</p>
+                <p className="text-xs text-gray-500">{event.note}</p>
               </div>
             </div>
           )}

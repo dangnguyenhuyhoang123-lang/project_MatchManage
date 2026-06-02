@@ -177,7 +177,13 @@ function isHeadCoach(role: string) {
   );
 }
 
-function StaffHeader({ total, team }: { total: number; team: TeamModel }) {
+function StaffHeader({
+  total,
+  team,
+}: {
+  total: number;
+  team: TeamModel | null;
+}) {
   const teamName = team?.name ?? "câu lạc bộ";
   return (
     <section className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end">

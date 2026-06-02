@@ -1,8 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import type {
-  FullRegistrationDTO,
-  RegistrationSummaryDTO,
-} from "../../../../model/Registration";
+import type { RegistrationSummaryDTO } from "../../../../model/Registration";
 import RegistrationService from "../../../../services/RegistrationService";
 import type { RegistrationDraft, SelectedPlayer } from "./RegisterFormMatch";
 import { useRealtimeEvent } from "../../../../hooks/useRealtimeEvent";

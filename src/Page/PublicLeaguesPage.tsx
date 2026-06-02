@@ -1,16 +1,11 @@
 import { useEffect, useState, useMemo } from "react";
 import {
-  ChevronDown,
   Trophy,
   MoreHorizontal,
-  Calendar,
   MapPin,
   Shield,
   Zap,
-  Award,
   Filter,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -108,12 +103,6 @@ export const PublicLeaguesPage = () => {
     return groups;
   }, [matches]);
 
-  const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setPage(newPage);
-    }
-  };
-
   return (
     <div>
       <div className="pt-12">
@@ -174,7 +163,7 @@ export const PublicLeaguesPage = () => {
                         Mùa giải hiện tại
                       </p>
                       <p className="font-bold text-lg">
-                        {featuredLeagues[0].seasons[0]?.name || "Đang cập nhật"}
+                        {featuredLeagues[0].seasons[0]?.year || "Đang cập nhật"}
                       </p>
                     </div>
                     <div>
@@ -365,7 +354,7 @@ function MatchCard({
     >
       <div className="text-sm font-bold text-gray-500 tracking-wider mb-6 text-center md:text-left uppercase group-hover:text-[#1a6e38] transition-colors">
         {match.league?.name || "Giải đấu"}{" "}
-        {match.season?.name ? `• ${match.season.name}` : ""}
+        {match.season?.year ? `• ${match.season.year}` : ""}
       </div>
       <div className="flex flex-col md:flex-row items-center justify-between gap-6 md:gap-0">
         {/* Home Team */}

@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import type { SystemRule } from "../../../model/SystemRule";
-import SystemRuleService from "../../../services/SystemRuleService";
-
-type SystemRulePayload = Omit<SystemRule, "id">;
+import SystemRuleService, {
+  type SystemRule,
+  type SystemRulePayload,
+} from "../../../services/SystemRuleService";
 
 type FormState = {
   ruleName: string;
@@ -18,6 +18,8 @@ type FormState = {
   maxSubstitution: string;
   minRegistrationPlayers: string;
   maxForeignPlayers: string;
+  maxForeignPlayersOnField: string;
+  maxGoalMinute: string;
   status: "ACTIVE" | "INACTIVE";
   allowedGoalTypes: string[];
 };
@@ -44,6 +46,8 @@ const emptyForm: FormState = {
   maxSubstitution: "5",
   minRegistrationPlayers: "",
   maxForeignPlayers: "0",
+  maxForeignPlayersOnField: "0",
+  maxGoalMinute: "90",
   status: "ACTIVE",
   allowedGoalTypes: ["NORMAL", "PENALTY", "OWN_GOAL"],
 };
@@ -82,6 +86,8 @@ function buildFormFromRule(rule: SystemRule): FormState {
     maxSubstitution: toInputValue(rule.maxSubstitution),
     minRegistrationPlayers: toInputValue(rule.minRegistrationPlayers),
     maxForeignPlayers: toInputValue(rule.maxForeignPlayers),
+    maxForeignPlayersOnField: toInputValue(rule.maxForeignPlayersOnField),
+    maxGoalMinute: toInputValue(rule.maxGoalMinute),
     status: rule.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
     allowedGoalTypes: parseGoalTypes(rule.allowedGoalTypes),
   };
@@ -102,6 +108,8 @@ function buildPayload(form: FormState): SystemRulePayload {
     maxSubstitution: toNullableNumber(form.maxSubstitution),
     minRegistrationPlayers: toNullableNumber(form.minRegistrationPlayers),
     maxForeignPlayers: toNullableNumber(form.maxForeignPlayers),
+    maxForeignPlayersOnField: toNullableNumber(form.maxForeignPlayersOnField),
+    maxGoalMinute: toNullableNumber(form.maxGoalMinute),
     status: form.status,
     allowedGoalTypes: form.allowedGoalTypes.join(",") || null,
   };
@@ -213,45 +221,27 @@ const SystemRulesPage: React.FC = () => {
   }, [rules]);
 
   useEffect(() => {
-    let mounted = true;
-
     const loadRules = async () => {
       try {
         setLoading(true);
 
-        const response = await SystemRuleService.getAllNoPaging();
+        const response = await SystemRuleService.getAll();
+        const rules = Array.isArray(response.data)
+          ? response.data
+          : Array.isArray(response.data.content)
+            ? response.data.content
+            : [];
 
-        const ruleList = Array.isArray(response)
-          ? response
-          : Array.isArray(response?.data)
-            ? response.data
-            : Array.isArray(response?.content)
-              ? response.content
-              : Array.isArray(response?.data?.content)
-                ? response.data.content
-                : [];
-
-        console.log("System rules raw response:", response);
-        console.log("System rules parsed list:", ruleList);
-
-        if (mounted) {
-          setRules(ruleList);
-        }
+        setRules(rules);
       } catch (error) {
-        console.error("Lỗi khi tải luật giải đấu:", error);
-        if (mounted) {
-          setRules([]);
-        }
+        console.error("Cannot load system rules", error);
+        setRules([]);
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
     };
 
     loadRules();
-
-    return () => {
-      mounted = false;
-    };
   }, []);
 
   const openCreateModal = () => {
@@ -826,6 +816,21 @@ function RuleModal({
               value={form.maxForeignPlayers}
               error={errors.maxForeignPlayers}
               onChange={(value) => onFieldChange("maxForeignPlayers", value)}
+            />
+            <NumberField
+              label="Số ngoại binh tối đa trên sân"
+              value={form.maxForeignPlayersOnField}
+              error={errors.maxForeignPlayersOnField}
+              onChange={(value) =>
+                onFieldChange("maxForeignPlayersOnField", value)
+              }
+            />
+
+            <NumberField
+              label="Phút tối đa ghi bàn"
+              value={form.maxGoalMinute}
+              error={errors.maxGoalMinute}
+              onChange={(value) => onFieldChange("maxGoalMinute", value)}
             />
           </div>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { MatchEvent } from "../../model/Match/MatchEvents";
-import { Player } from "../../model/Player";
+import type { MatchEvent } from "../../model/Match/MatchEvents";
+import type { Player } from "../../model/Player";
 
 import PlayerService from "../../services/PlayerService";
 export const SubstitutionEvent = ({
@@ -16,16 +16,16 @@ export const SubstitutionEvent = ({
   const [playerOut, setPlayerOut] = useState<Player | null>(null);
 
   useEffect(() => {
-    if (!event.playerInId || !event.playerOutId) return;
+    if (!event.playerInId || !event.playerId) return;
 
     Promise.all([
       PlayerService.getPlayerById(event.playerInId),
-      PlayerService.getPlayerById(event.playerOutId),
+      PlayerService.getPlayerById(event.playerId),
     ]).then(([pIn, pOut]) => {
       setPlayerIn(pIn);
       setPlayerOut(pOut);
     });
-  }, [event.playerInId, event.playerOutId]);
+  }, [event.playerInId, event.playerId]);
 
   return (
     <div

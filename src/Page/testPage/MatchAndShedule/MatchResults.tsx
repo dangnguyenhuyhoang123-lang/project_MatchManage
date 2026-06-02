@@ -89,7 +89,12 @@ const MatchResults: React.FC = () => {
       </div>
 
       <Modal open={open} onClose={() => setOpen(false)}>
-        {/* <MatchResultUpdateModal onClose={() => setOpen(false)} /> */}
+        <div className="p-6">
+          <h2 className="text-xl font-bold">Cập nhật kết quả trận đấu</h2>
+          <p className="mt-2 text-sm text-gray-500">
+            Chức năng này đang được cấu hình.
+          </p>
+        </div>
       </Modal>
     </AppLayout>
   );

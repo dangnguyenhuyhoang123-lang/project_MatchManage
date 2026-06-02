@@ -45,7 +45,8 @@ const StadiumRegistration: React.FC<Props> = ({
   const [stadiumImage, setStadiumImage] = useState(
     stadium.image || defaultStadiumImage,
   );
-
+  const [country] = useState(stadium.country || "Việt Nam");
+  const [fifaStarRating] = useState(stadium.fifaStarRating ?? 0);
   const fifaPercent = useMemo(() => {
     return Math.min(Math.round((capacity / 86000) * 100), 100);
   }, [capacity]);
@@ -58,6 +59,8 @@ const StadiumRegistration: React.FC<Props> = ({
       capacity,
       grass: grassType,
       image: stadiumImage,
+      country,
+      fifaStarRating,
     });
   };
 

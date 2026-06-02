@@ -154,19 +154,19 @@ const getRoleLabel = (role: string) => {
   return matchedRole?.label ?? role;
 };
 
-const getBadgeClass = (role: string) => {
-  const roleKey = getRoleKey(role);
+// const getBadgeClass = (role: string) => {
+//   const roleKey = getRoleKey(role);
 
-  if (roleKey === "headCoach") {
-    return "bg-green-50 text-green-700";
-  }
+//   if (roleKey === "headCoach") {
+//     return "bg-green-50 text-green-700";
+//   }
 
-  if (roleKey === "doctor") {
-    return "bg-rose-50 text-rose-600";
-  }
+//   if (roleKey === "doctor") {
+//     return "bg-rose-50 text-rose-600";
+//   }
 
-  return "bg-blue-50 text-blue-700";
-};
+//   return "bg-blue-50 text-blue-700";
+// };
 
 const formatDate = (date?: string) => {
   if (!date) {
@@ -275,9 +275,7 @@ const CoachRegistration: React.FC<Props> = ({
   }, [selectedStaffs]);
 
   const isValid =
-    hasRequiredStaff &&
-    duplicateCoaches.length === 0 &&
-    !hasEmptyRole;
+    hasRequiredStaff && duplicateCoaches.length === 0 && !hasEmptyRole;
 
   const openAddModal = () => {
     setSelectedStaffKeys([]);
@@ -323,7 +321,7 @@ const CoachRegistration: React.FC<Props> = ({
 
   return (
     <>
-      {(!isValid || selectedStaffs.length === 0) ? (
+      {!isValid || selectedStaffs.length === 0 ? (
         <div className="mb-8 flex items-start gap-4 rounded-xl border border-red-200 bg-red-50 p-5">
           <span className="material-symbols-outlined text-2xl text-red-600">
             error
@@ -334,25 +332,42 @@ const CoachRegistration: React.FC<Props> = ({
             </h3>
             <ul className="list-disc list-inside text-xs text-red-700 space-y-1">
               {selectedStaffs.length === 0 && (
-                <li>Danh sách ban huấn luyện trống. Vui lòng thêm thành viên ban huấn luyện.</li>
+                <li>
+                  Danh sách ban huấn luyện trống. Vui lòng thêm thành viên ban
+                  huấn luyện.
+                </li>
               )}
               {selectedStaffs.length > 0 && selectedStaffs.length < 3 && (
-                <li>Thiếu thành viên: Cần tối thiểu 3 thành viên (hiện có {selectedStaffs.length}).</li>
+                <li>
+                  Thiếu thành viên: Cần tối thiểu 3 thành viên (hiện có{" "}
+                  {selectedStaffs.length}).
+                </li>
               )}
               {(roleCounts.headCoach ?? 0) < 1 && (
-                <li>Thiếu HLV trưởng: Phải đăng ký ít nhất 01 Huấn luyện viên trưởng.</li>
+                <li>
+                  Thiếu HLV trưởng: Phải đăng ký ít nhất 01 Huấn luyện viên
+                  trưởng.
+                </li>
               )}
               {(roleCounts.assistant ?? 0) < 1 && (
-                <li>Thiếu trợ lý: Phải đăng ký ít nhất 01 Trợ lý huấn luyện viên.</li>
+                <li>
+                  Thiếu trợ lý: Phải đăng ký ít nhất 01 Trợ lý huấn luyện viên.
+                </li>
               )}
               {(roleCounts.doctor ?? 0) < 1 && (
                 <li>Thiếu bác sĩ: Phải đăng ký ít nhất 01 Bác sĩ đội bóng.</li>
               )}
               {hasEmptyRole && (
-                <li>Có thành viên chưa được phân vai trò. Vui lòng điền đầy đủ vai trò.</li>
+                <li>
+                  Có thành viên chưa được phân vai trò. Vui lòng điền đầy đủ vai
+                  trò.
+                </li>
               )}
               {duplicateCoaches.length > 0 && (
-                <li>Trùng lặp thành viên: {duplicateCoaches.join(", ")} bị chọn trùng.</li>
+                <li>
+                  Trùng lặp thành viên: {duplicateCoaches.join(", ")} bị chọn
+                  trùng.
+                </li>
               )}
             </ul>
           </div>
@@ -367,7 +382,8 @@ const CoachRegistration: React.FC<Props> = ({
               Ban huấn luyện đã sẵn sàng
             </h3>
             <p className="mt-1 text-xs text-green-700/80">
-              Đã chọn đầy đủ các vị trí bắt buộc (HLV trưởng, trợ lý, bác sĩ) và không có vi phạm.
+              Đã chọn đầy đủ các vị trí bắt buộc (HLV trưởng, trợ lý, bác sĩ) và
+              không có vi phạm.
             </p>
           </div>
         </div>
@@ -430,7 +446,9 @@ const CoachRegistration: React.FC<Props> = ({
                   key={getStaffKey(staff)}
                   staff={staff}
                   onRemove={() => removeStaff(getStaffKey(staff))}
-                  onRoleChange={(newRole) => handleRoleChange(getStaffKey(staff), newRole)}
+                  onRoleChange={(newRole) =>
+                    handleRoleChange(getStaffKey(staff), newRole)
+                  }
                 />
               ))
             )}

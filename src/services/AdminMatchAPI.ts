@@ -75,3 +75,20 @@ export async function updateAdminMatch(id: number, payload: unknown) {
 export async function deleteAdminMatch(id: number) {
   await MatchService.deleteMatch(id);
 }
+
+export function createEmptyMatchFormValues() {
+  return {
+    id: undefined,
+    leagueId: "",
+    seasonId: "",
+    roundId: "",
+    homeTeamId: "",
+    awayTeamId: "",
+    stadiumId: "",
+    refereeId: "",
+    matchDate: "",
+    status: "SCHEDULED",
+    homeScore: 0,
+    awayScore: 0,
+  };
+}

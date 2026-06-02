@@ -87,6 +87,8 @@ const defaultDraft: RegistrationDraft = {
     grass: "Standard",
     image:
       "https://images.unsplash.com/photo-1577223625816-7546f13df25d?q=80&w=1600&auto=format&fit=crop",
+    country: "Việt Nam",
+    fifaStarRating: 0,
   },
 };
 

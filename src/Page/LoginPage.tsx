@@ -27,7 +27,7 @@ const LoginPage = () => {
         setUser(loginData);
       } else {
         const userResponse = await UserService.getCurrentUser();
-        setUser(userResponse.data);
+        setUser(userResponse);
       }
 
       // alert("Đăng ký thành công");

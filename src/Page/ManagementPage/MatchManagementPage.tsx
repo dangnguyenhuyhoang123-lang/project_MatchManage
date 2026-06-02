@@ -7,7 +7,6 @@ import { MatchForm } from "../../utils/labelManage/ManageMatch/MatchForm";
 import { useAuth } from "../../utils/useAuth";
 import {
   createAdminMatch,
-  createEmptyMatchFormValues,
   deleteAdminMatch,
   getAdminMatches,
   type MatchAdminOptions,
@@ -16,6 +15,13 @@ import {
 } from "../../services/AdminMatchAPI";
 import LoadingSpinner from "../../components/Spinner/LoadingSpinner";
 
+type MatchFilters = {
+  status?: string;
+  search?: string;
+  seasonId?: number;
+  roundId?: number;
+  teamId?: number;
+};
 const toDatetimeLocalValue = (date: Date) => {
   const offset = date.getTimezoneOffset();
   const localDate = new Date(date.getTime() - offset * 60 * 1000);
@@ -32,6 +38,17 @@ const toFormValues = (match: MatchModel): MatchFormValues => ({
   awayTeamId: match.awayTeam?.id != null ? String(match.awayTeam.id) : "",
   leagueId: match.league?.id != null ? String(match.league.id) : "",
   seasonId: match.season?.id != null ? String(match.season.id) : "",
+});
+
+const createEmptyMatchFormValues = (): MatchFormValues => ({
+  matchDate: "",
+  status: MatchStatus.SCHEDULED,
+  homeScore: "",
+  awayScore: "",
+  homeTeamId: "",
+  awayTeamId: "",
+  leagueId: "",
+  seasonId: "",
 });
 
 const formatStatusLabel = (status: string) =>
@@ -60,10 +77,7 @@ const MatchManagementPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [filters, setFilters] = useState<{
-    leagueName?: string;
-    season?: string;
-  }>({});
+  const [filters, setFilters] = useState<MatchFilters>({});
 
   useEffect(() => {
     if (!loading && !user) {
@@ -97,15 +111,21 @@ const MatchManagementPage = () => {
           setIsListLoading(true);
         }
 
-        const response = await getAdminMatches(filters);
+        const response = await getAdminMatches({
+          page: 0,
+          size: 20,
+          ...filters,
+        });
 
         if (!isMounted) return;
 
-        setMatches(response.matches);
+        const matchList = Array.isArray(response?.content)
+          ? response.content
+          : Array.isArray(response)
+            ? response
+            : [];
 
-        if (options.teams.length === 0) {
-          setOptions(response.options);
-        }
+        setMatches(matchList);
       } catch (err) {
         if (isMounted) setError("Khong the tai du lieu");
       } finally {
@@ -198,9 +218,19 @@ const MatchManagementPage = () => {
   };
 
   const reloadMatches = async () => {
-    const response = await getAdminMatches();
-    setMatches(response.matches);
-    setOptions(response.options);
+    const response = await getAdminMatches({
+      page: 0,
+      size: 20,
+      ...filters,
+    });
+
+    const matchList = Array.isArray(response?.content)
+      ? response.content
+      : Array.isArray(response)
+        ? response
+        : [];
+
+    setMatches(matchList);
   };
 
   const validateForm = () => {
@@ -235,14 +265,24 @@ const MatchManagementPage = () => {
       validateForm();
       setIsSubmitting(true);
 
+      const payload = {
+        matchDate: formData.matchDate,
+        status: formData.status,
+        homeScore:
+          formData.homeScore.trim() === "" ? null : Number(formData.homeScore),
+        awayScore:
+          formData.awayScore.trim() === "" ? null : Number(formData.awayScore),
+        homeTeamId: Number(formData.homeTeamId),
+        awayTeamId: Number(formData.awayTeamId),
+        leagueId: Number(formData.leagueId),
+        seasonId: Number(formData.seasonId),
+      };
+
       if (editingId) {
-        await updateAdminMatch({
-          ...formData,
-          id: editingId,
-        });
+        await updateAdminMatch(editingId, payload);
         setMessage("Cap nhat tran dau thanh cong.");
       } else {
-        await createAdminMatch(formData);
+        await createAdminMatch(payload);
         setMessage("Them tran dau thanh cong.");
       }
 
@@ -292,10 +332,15 @@ const MatchManagementPage = () => {
     }
   };
 
-  const handleFilterChange = (newFilters: {
-    leagueName?: string;
-    season?: string;
-  }) => {
+  type MatchFilters = {
+    status?: string;
+    search?: string;
+    seasonId?: number;
+    roundId?: number;
+    teamId?: number;
+  };
+
+  const handleFilterChange = (newFilters: MatchFilters) => {
     setFilters(newFilters);
   };
   if (loading || isPageLoading) {
