@@ -20,7 +20,7 @@ class SeasonService {
   }
 
   getSeasonById(id: number) {
-    return axiosClient.get(`${API_BASE_URL}/getSeasonById/${id}`);
+    return axiosClient.get(`${API_BASE_URL}/getSeason/${id}`);
   }
 
   getTeamsBySeason(id: number) {

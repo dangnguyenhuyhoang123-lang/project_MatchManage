@@ -7,13 +7,16 @@ export type SystemRule = {
   maxAge: number | null;
   minPlayers: number | null;
   maxPlayers: number | null;
+  minRegistrationPlayers: number | null;
   winPoints: number | null;
   drawPoints: number | null;
   losePoints: number | null;
   allowedGoalTypes: string | null;
   status: "ACTIVE" | "INACTIVE" | string;
   maxSubstitution: number | null;
-  minRegistrationPlayers: number | null;
+  minCoaches: number | null;
+  maxCoaches: number | null;
   maxForeignPlayers: number | null;
+  maxForeignPlayersOnField: number | null;
   rankingCriteriaOrder: string | null;
 };

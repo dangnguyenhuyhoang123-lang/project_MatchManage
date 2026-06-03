@@ -133,7 +133,7 @@ const PlayerRegistration: React.FC<Props> = ({
 
   const totalSelected = mainPlayers.length + subPlayers.length;
 
-  const minPlayersReq = rule?.minRegistrationPlayers || rule?.minPlayers || 14;
+  const minPlayersReq = rule?.minPlayers || 14;
   const maxPlayersReq = rule?.maxPlayers || 30;
   const minAgeReq = rule?.minAge || 16;
   const maxAgeReq = rule?.maxAge || 40;

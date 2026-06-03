@@ -6,12 +6,12 @@ import { MatchStatus } from "../../../../model/enum";
 import MatchService from "../../../../services/MatchService";
 import TeamService from "../../../../services/TeamService";
 import { useCurrentClubId } from "../InfoClubManage/clubInfoHelpers";
-import MatchLineupModal, {
-  type MatchLineupModalMatch,
-} from "./MatchLineupModal";
+import MatchLineupModal from "./MatchLineupModal";
 import { useNavigate } from "react-router-dom";
 import { useRealtimeEvent } from "../../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../../services/websocket/NotificationSocketService";
+import { MatchModel } from "../../../../model/Match/MatchModel";
+import { TeamModel } from "../../../../model/TeamModel";
 
 // Team constants are now dynamically fetched or imported
 
@@ -47,10 +47,9 @@ const MatchManagePageClub: React.FC = () => {
   const [selectedTeamSeasonId, setSelectedTeamSeasonId] = useState<
     number | null
   >(null);
-  const [matches, setMatches] = useState<MatchLineupModalMatch[]>([]);
+  const [matches, setMatches] = useState<MatchModel[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("SCHEDULED");
-  const [selectedMatch, setSelectedMatch] =
-    useState<MatchLineupModalMatch | null>(null);
+  const [selectedMatch, setSelectedMatch] = useState<MatchModel | null>(null);
   const [modalMode, setModalMode] = useState<"edit" | "view">("edit");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -76,13 +75,13 @@ const MatchManagePageClub: React.FC = () => {
 
       const normalized = extractMatches(response.data)
         .map(normalizeMatch)
-        .filter(Boolean) as MatchLineupModalMatch[];
+        .filter(Boolean) as MatchModel[];
 
       setMatches(
         normalized.filter(
           (match) =>
-            match.homeTeamId === currentClubId ||
-            match.awayTeamId === currentClubId,
+            getHomeTeamId(match) === currentClubId ||
+            getAwayTeamId(match) === currentClubId,
         ),
       );
     } catch (err) {
@@ -149,8 +148,8 @@ const MatchManagePageClub: React.FC = () => {
     [matches, currentClubId],
   );
 
-  const openLineupModal = async (match: MatchLineupModalMatch) => {
-    if (!currentClubId) {
+  const openLineupModal = async (match: MatchModel) => {
+    if (!currentClubId || !match.id) {
       setError("Không xác định được câu lạc bộ hiện tại.");
       return;
     }
@@ -237,7 +236,7 @@ function PageHeader({
   nextMatch,
   teamName,
 }: {
-  nextMatch?: MatchLineupModalMatch;
+  nextMatch?: MatchModel;
   teamName: string;
 }) {
   const countdown = getCountdown(nextMatch?.matchDate);
@@ -276,7 +275,7 @@ function PageHeader({
                 <TimeUnit value={countdown.minutes} unit="P" />
               </div>
               <p className="mt-1 text-xs font-semibold text-gray-500">
-                {nextMatch.homeTeamName} vs {nextMatch.awayTeamName}
+                {getHomeTeamName(nextMatch)} vs {getAwayTeamName(nextMatch)}
               </p>
             </>
           ) : (
@@ -342,8 +341,8 @@ function MatchCardItem({
   match,
   onOpen,
 }: {
-  match: MatchLineupModalMatch;
-  onOpen: (match: MatchLineupModalMatch) => void;
+  match: MatchModel;
+  onOpen: (match: MatchModel) => void;
 }) {
   const navigate = useNavigate();
   const isEditable = match.status === MatchStatus.SCHEDULED;
@@ -365,7 +364,7 @@ function MatchCardItem({
                 "bg-[#f5f3ef] text-gray-500")
           }`}
         >
-          {match.competition}
+          {getMatchCompetition(match)}
         </span>
 
         <span className="flex items-center gap-1 text-sm font-semibold text-gray-500">
@@ -377,7 +376,7 @@ function MatchCardItem({
       </div>
 
       <div className="mb-7 flex items-center justify-between">
-        <TeamBlock name={match.homeTeamName} logo={match.homeTeamLogo} />
+        <TeamBlock name={getHomeTeamName(match)} logo={getHomeTeamLogo(match)} />
 
         <div className="flex w-1/3 flex-col items-center justify-center">
           {match.status === MatchStatus.FINISHED ? (
@@ -392,11 +391,11 @@ function MatchCardItem({
 
           <span className="mt-2 flex items-center gap-1 text-center text-xs font-semibold text-gray-400">
             <span className="material-symbols-outlined text-xs">stadium</span>
-            {match.stadium || "Chưa cập nhật sân"}
+            {getMatchStadium(match) || "Chưa cập nhật sân"}
           </span>
         </div>
 
-        <TeamBlock name={match.awayTeamName} logo={match.awayTeamLogo} />
+        <TeamBlock name={getAwayTeamName(match)} logo={getAwayTeamLogo(match)} />
       </div>
 
       <div className="flex items-center justify-between border-t border-gray-100 pt-4">
@@ -544,7 +543,7 @@ function extractMatches(data: any): any[] {
   return [];
 }
 
-function normalizeMatch(raw: any): MatchLineupModalMatch | null {
+function normalizeMatch(raw: any): MatchModel | null {
   const id = Number(raw?.id ?? raw?.matchId);
   if (!id) return null;
 
@@ -557,36 +556,83 @@ function normalizeMatch(raw: any): MatchLineupModalMatch | null {
     awayTeam?.id ?? raw?.awayTeamId ?? raw?.away_team_id,
   );
 
-  return {
+  if (!homeTeamId || !awayTeamId || homeTeamId === awayTeamId) return null;
+
+  return new MatchModel({
     id,
     status: (raw?.status ?? MatchStatus.SCHEDULED) as MatchStatus,
     matchDate: raw?.matchDate ?? raw?.dateTime ?? raw?.date ?? "",
-    competition:
-      raw?.round?.name ??
-      raw?.league?.name ??
-      raw?.season?.name ??
-      "Giải đấu chưa cập nhật",
-    stadium:
-      raw?.stadium?.name ??
-      raw?.stadiumName ??
-      homeTeam?.stadiumName ??
-      homeTeam?.stadium ??
-      "",
-    homeTeamId,
-    awayTeamId,
-    homeTeamName: homeTeam?.name ?? raw?.homeTeamName ?? "Đội nhà",
-    awayTeamName: awayTeam?.name ?? raw?.awayTeamName ?? "Đội khách",
-    homeTeamLogo: homeTeam?.logo ?? raw?.homeTeamLogo ?? "",
-    awayTeamLogo: awayTeam?.logo ?? raw?.awayTeamLogo ?? "",
+    league: raw?.league,
+    season: raw?.season,
+    homeTeam: new TeamModel({
+      ...homeTeam,
+      id: homeTeamId,
+      name: homeTeam?.name ?? raw?.homeTeamName ?? "Đội nhà",
+      logo: homeTeam?.logo ?? raw?.homeTeamLogo ?? null,
+      stadiumName:
+        raw?.stadium?.name ??
+        raw?.stadiumName ??
+        homeTeam?.stadiumName ??
+        homeTeam?.stadium ??
+        null,
+    }),
+    awayTeam: new TeamModel({
+      ...awayTeam,
+      id: awayTeamId,
+      name: awayTeam?.name ?? raw?.awayTeamName ?? "Đội khách",
+      logo: awayTeam?.logo ?? raw?.awayTeamLogo ?? null,
+      stadiumName: awayTeam?.stadiumName ?? awayTeam?.stadium ?? null,
+    }),
     homeScore: raw?.homeScore,
     awayScore: raw?.awayScore,
-  };
+  });
 }
 
-function formatDateTime(value: string) {
+function getHomeTeamId(match: MatchModel) {
+  return Number(match.homeTeam?.id ?? 0);
+}
+
+function getAwayTeamId(match: MatchModel) {
+  return Number(match.awayTeam?.id ?? 0);
+}
+
+function getHomeTeamName(match: MatchModel) {
+  return match.homeTeam?.name || "Đội nhà";
+}
+
+function getAwayTeamName(match: MatchModel) {
+  return match.awayTeam?.name || "Đội khách";
+}
+
+function getHomeTeamLogo(match: MatchModel) {
+  return match.homeTeam?.logo || "";
+}
+
+function getAwayTeamLogo(match: MatchModel) {
+  return match.awayTeam?.logo || "";
+}
+
+function getMatchStadium(match: MatchModel) {
+  return match.homeTeam?.stadiumName || match.homeTeam?.stadium || "";
+}
+
+function getMatchCompetition(match: MatchModel) {
+  const season = match.season as
+    | (NonNullable<MatchModel["season"]> & { name?: string })
+    | undefined;
+
+  return (
+    match.league?.name ||
+    season?.name ||
+    season?.year ||
+    "Giải đấu chưa cập nhật"
+  );
+}
+
+function formatDateTime(value: string | Date) {
   if (!value) return "Chưa cập nhật";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
+  if (Number.isNaN(date.getTime())) return String(value);
 
   return new Intl.DateTimeFormat("vi-VN", {
     day: "2-digit",
@@ -597,7 +643,7 @@ function formatDateTime(value: string) {
   }).format(date);
 }
 
-function getCountdown(value?: string) {
+function getCountdown(value?: string | Date) {
   if (!value) return { days: "00", hours: "00", minutes: "00" };
   const diff = Math.max(new Date(value).getTime() - Date.now(), 0);
   const totalMinutes = Math.floor(diff / 60000);
@@ -612,7 +658,7 @@ function getCountdown(value?: string) {
   };
 }
 
-function buildStats(matches: MatchLineupModalMatch[], teamId?: number) {
+function buildStats(matches: MatchModel[], teamId?: number) {
   const finished = matches.filter(
     (match) =>
       match.status === MatchStatus.FINISHED &&
@@ -629,7 +675,7 @@ function buildStats(matches: MatchLineupModalMatch[], teamId?: number) {
   let goalsAgainst = 0;
 
   finished.forEach((match) => {
-    const isHome = match.homeTeamId === teamId;
+    const isHome = getHomeTeamId(match) === teamId;
     const forScore = Number(isHome ? match.homeScore : match.awayScore) || 0;
     const againstScore =
       Number(isHome ? match.awayScore : match.homeScore) || 0;

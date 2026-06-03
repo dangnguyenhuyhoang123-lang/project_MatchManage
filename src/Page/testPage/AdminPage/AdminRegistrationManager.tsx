@@ -196,10 +196,14 @@ const getRegistrationValidationErrors = (
   // 1. Player Count
   const totalPlayers = detail.players.length;
   if (totalPlayers < minPlayersReq) {
-    errors.push(`Số lượng cầu thủ (${totalPlayers}) ít hơn mức tối thiểu quy định (${minPlayersReq}).`);
+    errors.push(
+      `Số lượng cầu thủ (${totalPlayers}) ít hơn mức tối thiểu quy định (${minPlayersReq}).`,
+    );
   }
   if (totalPlayers > maxPlayersReq) {
-    errors.push(`Số lượng cầu thủ (${totalPlayers}) nhiều hơn mức tối đa quy định (${maxPlayersReq}).`);
+    errors.push(
+      `Số lượng cầu thủ (${totalPlayers}) nhiều hơn mức tối đa quy định (${maxPlayersReq}).`,
+    );
   }
 
   // 2. Player Age
@@ -211,19 +215,27 @@ const getRegistrationValidationErrors = (
   });
   if (invalidAgePlayers.length > 0) {
     errors.push(
-      `Độ tuổi không hợp lệ: Có ${invalidAgePlayers.length} cầu thủ không nằm trong độ tuổi quy định từ ${minAgeReq} đến ${maxAgeReq} tuổi (${invalidAgePlayers.map(p => `${p.name} - ${calculateAge(p.dateOfBirth)}t`).join(", ")}).`
+      `Độ tuổi không hợp lệ: Có ${invalidAgePlayers.length} cầu thủ không nằm trong độ tuổi quy định từ ${minAgeReq} đến ${maxAgeReq} tuổi (${invalidAgePlayers.map((p) => `${p.name} - ${calculateAge(p.dateOfBirth)}t`).join(", ")}).`,
     );
   }
 
   // 3. Foreign Players
   const isForeignPlayer = (nationality?: string) => {
     if (!nationality) return false;
-    const n = nationality.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    const n = nationality
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
     return n !== "viet nam" && n !== "vietnam";
   };
-  const foreignCount = detail.players.filter((p) => isForeignPlayer(p.nationality)).length;
+  const foreignCount = detail.players.filter((p) =>
+    isForeignPlayer(p.nationality),
+  ).length;
   if (foreignCount > maxForeignReq) {
-    errors.push(`Số lượng ngoại binh (${foreignCount}) vượt quá giới hạn tối đa cho phép (${maxForeignReq}).`);
+    errors.push(
+      `Số lượng ngoại binh (${foreignCount}) vượt quá giới hạn tối đa cho phép (${maxForeignReq}).`,
+    );
   }
 
   // 4. Duplicate Shirts
@@ -237,7 +249,9 @@ const getRegistrationValidationErrors = (
     .map(Number)
     .filter((num) => shirtCounts[num] > 1);
   if (duplicateShirts.length > 0) {
-    errors.push(`Trùng số áo: Các số áo ${duplicateShirts.join(", ")} bị đăng ký trùng lặp.`);
+    errors.push(
+      `Trùng số áo: Các số áo ${duplicateShirts.join(", ")} bị đăng ký trùng lặp.`,
+    );
   }
 
   // 5. Duplicate Players
@@ -253,7 +267,9 @@ const getRegistrationValidationErrors = (
     }
   });
   if (duplicatePlayerNames.length > 0) {
-    errors.push(`Trùng lặp cầu thủ: Cầu thủ ${duplicatePlayerNames.join(", ")} bị đăng ký trùng lặp.`);
+    errors.push(
+      `Trùng lặp cầu thủ: Cầu thủ ${duplicatePlayerNames.join(", ")} bị đăng ký trùng lặp.`,
+    );
   }
 
   // 6. Coaches Checks
@@ -272,17 +288,36 @@ const getRegistrationValidationErrors = (
 
     const getRoleKey = (role?: string) => {
       const normalizedRole = normalizeRoleText(role);
-      if (normalizedRole.includes("head_coach") || normalizedRole.includes("hlv truong") || normalizedRole.includes("huan luyen vien truong")) return "headCoach";
-      if (normalizedRole.includes("assistant") || normalizedRole.includes("tro ly") || normalizedRole.includes("troly")) return "assistant";
-      if (normalizedRole.includes("team_doctor") || normalizedRole.includes("doctor") || normalizedRole.includes("bac si") || normalizedRole.includes("y te")) return "doctor";
+      if (
+        normalizedRole.includes("head_coach") ||
+        normalizedRole.includes("hlv truong") ||
+        normalizedRole.includes("huan luyen vien truong")
+      )
+        return "headCoach";
+      if (
+        normalizedRole.includes("assistant") ||
+        normalizedRole.includes("tro ly") ||
+        normalizedRole.includes("troly")
+      )
+        return "assistant";
+      if (
+        normalizedRole.includes("team_doctor") ||
+        normalizedRole.includes("doctor") ||
+        normalizedRole.includes("bac si") ||
+        normalizedRole.includes("y te")
+      )
+        return "doctor";
       return "other";
     };
 
-    const roleCounts = detail.coaches.reduce<Record<string, number>>((counts, coach) => {
-      const roleKey = getRoleKey(coach.role);
-      counts[roleKey] = (counts[roleKey] || 0) + 1;
-      return counts;
-    }, {});
+    const roleCounts = detail.coaches.reduce<Record<string, number>>(
+      (counts, coach) => {
+        const roleKey = getRoleKey(coach.role);
+        counts[roleKey] = (counts[roleKey] || 0) + 1;
+        return counts;
+      },
+      {},
+    );
 
     if ((roleCounts.headCoach ?? 0) < 1) {
       errors.push(`Thiếu Huấn luyện viên trưởng.`);
@@ -306,7 +341,9 @@ const getRegistrationValidationErrors = (
       }
     });
     if (duplicateCoachNames.length > 0) {
-      errors.push(`Trùng lặp thành viên ban huấn luyện: ${duplicateCoachNames.join(", ")}.`);
+      errors.push(
+        `Trùng lặp thành viên ban huấn luyện: ${duplicateCoachNames.join(", ")}.`,
+      );
     }
   }
 
@@ -457,7 +494,8 @@ const AdminRegistrationManager: React.FC = () => {
     setProcessingId(pendingApproveId);
 
     try {
-      const detailRes = await RegistrationService.getRegistrationById(pendingApproveId);
+      const detailRes =
+        await RegistrationService.getRegistrationById(pendingApproveId);
       const detail = detailRes.data;
       if (detail?.seasonId) {
         const seasonRes = await SeasonService.getSeasonById(detail.seasonId);
@@ -466,7 +504,9 @@ const AdminRegistrationManager: React.FC = () => {
           const ruleRes = await SystemRuleService.getById(systemRuleId);
           const errors = getRegistrationValidationErrors(detail, ruleRes.data);
           if (errors.length > 0) {
-            toast.error(`Không thể duyệt hồ sơ do vi phạm các điều luật:\n- ${errors.join("\n- ")}`);
+            toast.error(
+              `Không thể duyệt hồ sơ do vi phạm các điều luật:\n- ${errors.join("\n- ")}`,
+            );
             return;
           }
         }
@@ -479,7 +519,8 @@ const AdminRegistrationManager: React.FC = () => {
 
       await RegistrationService.approveRegistration(pendingApproveId);
       if (selectedRegistrationDetail?.id === pendingApproveId) {
-        const detailResponse = await RegistrationService.getRegistrationById(pendingApproveId);
+        const detailResponse =
+          await RegistrationService.getRegistrationById(pendingApproveId);
         setSelectedRegistrationDetail(detailResponse.data);
       }
       await loadRegistrations();
@@ -506,7 +547,8 @@ const AdminRegistrationManager: React.FC = () => {
     try {
       await RegistrationService.rejectRegistration(pendingRejectId, rejectNote);
       if (selectedRegistrationDetail?.id === pendingRejectId) {
-        const detailResponse = await RegistrationService.getRegistrationById(pendingRejectId);
+        const detailResponse =
+          await RegistrationService.getRegistrationById(pendingRejectId);
         setSelectedRegistrationDetail(detailResponse.data);
       }
       await loadRegistrations();
@@ -534,7 +576,9 @@ const AdminRegistrationManager: React.FC = () => {
       );
       setSelectedRegistrationDetail(response.data);
       if (response.data?.seasonId) {
-        const seasonRes = await SeasonService.getSeasonById(response.data.seasonId);
+        const seasonRes = await SeasonService.getSeasonById(
+          response.data.seasonId,
+        );
         const systemRuleId = seasonRes.data?.systemRuleId;
         if (systemRuleId) {
           const ruleRes = await SystemRuleService.getById(systemRuleId);
@@ -964,7 +1008,9 @@ const ActionInputModal = ({
           onClick={onConfirm}
           disabled={loading}
           className={`rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 ${
-            danger ? "bg-red-600 hover:bg-red-700" : "bg-[#1B1C1A] hover:bg-black"
+            danger
+              ? "bg-red-600 hover:bg-red-700"
+              : "bg-[#1B1C1A] hover:bg-black"
           }`}
         >
           {loading ? "Đang xử lý..." : confirmText}
@@ -1078,12 +1124,15 @@ const RegistrationRow = ({
                 className="bg-amber-50 hover:bg-amber-100 text-amber-700 disabled:opacity-50"
                 disabled={isProcessing}
                 onClick={() =>
-                  onConfirmPayment(registration.id, registration.paymentProofUrl)
+                  onConfirmPayment(
+                    registration.id,
+                    registration.paymentProofUrl,
+                  )
                 }
               />
             )}
             <IconButton
-              label="Cháº¥p nháº­n"
+              label="Chấp nhận"
               icon="check"
               className="bg-[#008C2F] hover:bg-green-800 text-white disabled:opacity-50"
               disabled={isProcessing || registration.feeStatus !== "PAID"}
@@ -1292,11 +1341,12 @@ const RegistrationDetailModal = ({
                     />
                   </div>
 
-                  {detail.status === "PENDING" && detail.feeStatus !== "PAID" && (
-                    <div className="mt-5 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm font-bold text-amber-700">
-                      Hồ sơ chưa xác nhận lệ phí, không thể duyệt.
-                    </div>
-                  )}
+                  {detail.status === "PENDING" &&
+                    detail.feeStatus !== "PAID" && (
+                      <div className="mt-5 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm font-bold text-amber-700">
+                        Hồ sơ chưa xác nhận lệ phí, không thể duyệt.
+                      </div>
+                    )}
 
                   <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
                     <KitPreview
@@ -1379,15 +1429,19 @@ const RegistrationDetailModal = ({
                   <div className="rounded-3xl bg-white p-6 border border-gray-100 shadow-sm space-y-4">
                     <div className="flex items-center justify-between border-b border-gray-100 pb-3">
                       <h4 className="text-lg font-black text-gray-900 font-['Be_Vietnam_Pro'] flex items-center gap-2">
-                        <span className="material-symbols-outlined text-green-700">fact_check</span>
+                        <span className="material-symbols-outlined text-green-700">
+                          fact_check
+                        </span>
                         Kiểm tra bộ luật giải đấu
                       </h4>
                     </div>
-                    
+
                     {validationErrors.length > 0 ? (
                       <div className="rounded-2xl bg-red-50 border border-red-200 p-4 space-y-2">
                         <p className="text-xs font-black uppercase tracking-wider text-red-800 flex items-center gap-1.5 font-bold">
-                          <span className="material-symbols-outlined text-sm">cancel</span>
+                          <span className="material-symbols-outlined text-sm">
+                            cancel
+                          </span>
                           Phát hiện {validationErrors.length} lỗi vi phạm
                         </p>
                         <ul className="list-disc list-inside text-xs text-red-700 space-y-1.5">
@@ -1399,11 +1453,14 @@ const RegistrationDetailModal = ({
                     ) : (
                       <div className="rounded-2xl bg-green-50 border border-green-200 p-4">
                         <p className="text-xs font-black uppercase tracking-wider text-green-800 flex items-center gap-1.5 font-bold">
-                          <span className="material-symbols-outlined text-sm">check_circle</span>
+                          <span className="material-symbols-outlined text-sm">
+                            check_circle
+                          </span>
                           Hồ sơ hoàn toàn hợp lệ
                         </p>
                         <p className="mt-1 text-xs text-green-700">
-                          Đơn đăng ký tuân thủ đầy đủ các quy tắc quy định trong bộ luật của mùa giải này.
+                          Đơn đăng ký tuân thủ đầy đủ các quy tắc quy định trong
+                          bộ luật của mùa giải này.
                         </p>
                       </div>
                     )}
@@ -1414,12 +1471,17 @@ const RegistrationDetailModal = ({
                           <button
                             type="button"
                             onClick={() =>
-                              onConfirmPayment(detail.id, detail.paymentProofUrl)
+                              onConfirmPayment(
+                                detail.id,
+                                detail.paymentProofUrl,
+                              )
                             }
                             disabled={isProcessing}
                             className="flex-1 bg-amber-50 text-amber-700 text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 hover:bg-amber-100 transition-colors disabled:opacity-50"
                           >
-                            <span className="material-symbols-outlined text-sm">payments</span>
+                            <span className="material-symbols-outlined text-sm">
+                              payments
+                            </span>
                             Xác nhận lệ phí
                           </button>
                         )}
@@ -1432,7 +1494,9 @@ const RegistrationDetailModal = ({
                           disabled={!canApprove || isProcessing}
                           className="flex-1 bg-[#008C2F] text-white text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-800 transition-colors"
                         >
-                          <span className="material-symbols-outlined text-sm">check</span>
+                          <span className="material-symbols-outlined text-sm">
+                            check
+                          </span>
                           Duyệt hồ sơ
                         </button>
                         <button
@@ -1444,7 +1508,9 @@ const RegistrationDetailModal = ({
                           disabled={isProcessing}
                           className="flex-1 bg-red-50 text-red-600 text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 hover:bg-red-100 transition-colors"
                         >
-                          <span className="material-symbols-outlined text-sm">close</span>
+                          <span className="material-symbols-outlined text-sm">
+                            close
+                          </span>
                           Từ chối
                         </button>
                       </div>
@@ -1469,7 +1535,9 @@ const RegistrationDetailModal = ({
                           disabled={isProcessing}
                           className="flex-1 bg-amber-50 text-amber-700 text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 hover:bg-amber-100 transition-colors disabled:opacity-50"
                         >
-                          <span className="material-symbols-outlined text-sm">payments</span>
+                          <span className="material-symbols-outlined text-sm">
+                            payments
+                          </span>
                           Xác nhận lệ phí
                         </button>
                       )}
@@ -1482,7 +1550,9 @@ const RegistrationDetailModal = ({
                         disabled={!canApprove || isProcessing}
                         className="flex-1 bg-[#008C2F] text-white text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 hover:bg-green-800 transition-colors"
                       >
-                        <span className="material-symbols-outlined text-sm">check</span>
+                        <span className="material-symbols-outlined text-sm">
+                          check
+                        </span>
                         Duyệt hồ sơ
                       </button>
                       <button
@@ -1494,7 +1564,9 @@ const RegistrationDetailModal = ({
                         disabled={isProcessing}
                         className="flex-1 bg-red-50 text-red-600 text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 hover:bg-red-100 transition-colors"
                       >
-                        <span className="material-symbols-outlined text-sm">close</span>
+                        <span className="material-symbols-outlined text-sm">
+                          close
+                        </span>
                         Từ chối
                       </button>
                     </div>
@@ -1583,7 +1655,9 @@ const RegistrationDetailModal = ({
                           key={`${coach.idCode}-${coach.role}`}
                           className="rounded-2xl bg-[#f5f3ef] p-4"
                         >
-                          <p className="font-black text-gray-900">{coach.name}</p>
+                          <p className="font-black text-gray-900">
+                            {coach.name}
+                          </p>
                           <p className="mt-1 text-xs font-bold text-green-700">
                             {coach.role}
                           </p>
@@ -1617,7 +1691,7 @@ const RegistrationDetailModal = ({
       </div>
     </div>
   );
-}
+};
 
 const StatusBadge = ({ status }: { status: RegistrationStatus }) => {
   const meta = statusMeta[status];

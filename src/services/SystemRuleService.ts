@@ -12,6 +12,7 @@ export type SystemRule = {
   maxAge: number | null;
   minPlayers: number | null;
   maxPlayers: number | null;
+  minRegistrationPlayers?: number | null;
 
   winPoints: number | null;
   drawPoints: number | null;
@@ -21,7 +22,8 @@ export type SystemRule = {
   status: "ACTIVE" | "INACTIVE" | string;
 
   maxSubstitution: number | null;
-  minRegistrationPlayers: number | null;
+  minCoaches: number | null;
+  maxCoaches: number | null;
   maxForeignPlayers: number | null;
 
   maxForeignPlayersOnField: number | null;
@@ -39,6 +41,7 @@ export type SystemRulePayload = {
   maxAge: number | null;
   minPlayers: number | null;
   maxPlayers: number | null;
+  minRegistrationPlayers?: number | null;
 
   winPoints: number | null;
   drawPoints: number | null;
@@ -48,7 +51,8 @@ export type SystemRulePayload = {
   status: "ACTIVE" | "INACTIVE";
 
   maxSubstitution: number | null;
-  minRegistrationPlayers: number | null;
+  minCoaches: number | null;
+  maxCoaches: number | null;
   maxForeignPlayers: number | null;
 
   maxForeignPlayersOnField: number | null;

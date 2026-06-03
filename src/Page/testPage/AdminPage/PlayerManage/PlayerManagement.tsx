@@ -46,6 +46,54 @@ const STATUS_COLORS: Record<string, string> = {
 const getPlayerTeamName = (player: Player) => player.teamName || "Chưa gán đội";
 const getStatusLabel = (status: string) => STATUS_LABELS[status] ?? status;
 const normalizeKeyword = (value: string) => value.trim().toLowerCase();
+const normalizeText = (value?: string | null) =>
+  (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+
+const normalizePositionGroup = (position?: string | null) => {
+  const value = normalizeText(position);
+
+  if (!value) return "";
+  if (["GK", "GOALKEEPER", "THUMON"].some((item) => value.includes(item))) {
+    return "GK";
+  }
+  if (
+    [
+      "DF",
+      "DEF",
+      "DEFENDER",
+      "HAUVE",
+      "TRUNGVE",
+      "CB",
+      "LB",
+      "RB",
+      "BACK",
+    ].some((item) => value.includes(item))
+  ) {
+    return "DF";
+  }
+  if (
+    ["MF", "MID", "MIDFIELDER", "TIENVE", "CM", "DM", "AM"].some((item) =>
+      value.includes(item),
+    )
+  ) {
+    return "MF";
+  }
+  if (
+    ["FW", "FORWARD", "TIENDAO", "STRIKER", "ST", "CF", "LW", "RW"].some(
+      (item) => value.includes(item),
+    )
+  ) {
+    return "FW";
+  }
+
+  return value;
+};
 
 const PlayerManagement: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -120,7 +168,9 @@ const PlayerManagement: React.FC = () => {
 
       const matchesPosition =
         filters.position === "Tất cả vị trí" ||
-        player.position === filters.position;
+        normalizePositionGroup(
+          `${player.position ?? ""} ${player.detailPosition ?? ""}`,
+        ) === filters.position;
 
       const matchesStatus =
         filters.status === "Tất cả trạng thái" ||
@@ -140,17 +190,12 @@ const PlayerManagement: React.FC = () => {
         filters.position !== "Tất cả vị trí" ||
         filters.status !== "Tất cả trạng thái"
       ) {
-        const baseResponse = await PlayerService.getAllPlayersNormalized(
-          0,
-          1,
-          filters,
-        );
+        const baseResponse = await PlayerService.getAllPlayersNormalized(0, 1);
         const totalElements = baseResponse.totalElements ?? 0;
         const fetchSize = Math.max(totalElements, 1);
         const fullResponse = await PlayerService.getAllPlayersNormalized(
           0,
           fetchSize,
-          filters,
         );
 
         const clientFilteredPlayers = filterPlayersOnClient(

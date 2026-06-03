@@ -18,7 +18,8 @@ type FormState = {
   drawPoints: string;
   losePoints: string;
   maxSubstitution: string;
-  minRegistrationPlayers: string;
+  minCoaches: string;
+  maxCoaches: string;
   maxForeignPlayers: string;
   maxForeignPlayersOnField: string;
   maxGoalMinute: string;
@@ -48,7 +49,8 @@ const emptyForm: FormState = {
   drawPoints: "1",
   losePoints: "0",
   maxSubstitution: "5",
-  minRegistrationPlayers: "",
+  minCoaches: "3",
+  maxCoaches: "",
   maxForeignPlayers: "0",
   maxForeignPlayersOnField: "0",
   maxGoalMinute: "90",
@@ -139,7 +141,8 @@ function buildFormFromRule(rule: SystemRule): FormState {
     drawPoints: toInputValue(rule.drawPoints),
     losePoints: toInputValue(rule.losePoints),
     maxSubstitution: toInputValue(rule.maxSubstitution),
-    minRegistrationPlayers: toInputValue(rule.minRegistrationPlayers),
+    minCoaches: toInputValue(rule.minCoaches),
+    maxCoaches: toInputValue(rule.maxCoaches),
     maxForeignPlayers: toInputValue(rule.maxForeignPlayers),
     maxForeignPlayersOnField: toInputValue(rule.maxForeignPlayersOnField),
     maxGoalMinute: toInputValue(rule.maxGoalMinute),
@@ -162,7 +165,8 @@ function buildPayload(form: FormState): SystemRulePayload {
     drawPoints: toNullableNumber(form.drawPoints),
     losePoints: toNullableNumber(form.losePoints),
     maxSubstitution: toNullableNumber(form.maxSubstitution),
-    minRegistrationPlayers: toNullableNumber(form.minRegistrationPlayers),
+    minCoaches: toNullableNumber(form.minCoaches),
+    maxCoaches: toNullableNumber(form.maxCoaches),
     maxForeignPlayers: toNullableNumber(form.maxForeignPlayers),
     maxForeignPlayersOnField: toNullableNumber(form.maxForeignPlayersOnField),
     maxGoalMinute: toNullableNumber(form.maxGoalMinute),
@@ -215,7 +219,8 @@ function validateForm(form: FormState) {
   const maxForeignPlayers = Number(form.maxForeignPlayers);
   const maxForeignPlayersOnField = Number(form.maxForeignPlayersOnField);
   const maxGoalMinute = Number(form.maxGoalMinute);
-  const minRegistrationPlayers = Number(form.minRegistrationPlayers);
+  const minCoaches = Number(form.minCoaches);
+  const maxCoaches = Number(form.maxCoaches);
 
   if (!form.ruleName.trim()) {
     errors.ruleName = "Tên bộ luật không được để trống.";
@@ -234,13 +239,17 @@ function validateForm(form: FormState) {
       "Số cầu thủ tối đa phải lớn hơn hoặc bằng số cầu thủ tối thiểu.";
   }
 
-  if (
-    form.minRegistrationPlayers &&
-    form.maxPlayers &&
-    minRegistrationPlayers > maxPlayers
-  ) {
-    errors.minRegistrationPlayers =
-      "Số cầu thủ đăng ký tối thiểu không được lớn hơn số cầu thủ tối đa.";
+  if (form.minCoaches && (!Number.isFinite(minCoaches) || minCoaches < 0)) {
+    errors.minCoaches = "Số lượng ban huấn luyện tối thiểu không được âm.";
+  }
+
+  if (form.maxCoaches && (!Number.isFinite(maxCoaches) || maxCoaches < 0)) {
+    errors.maxCoaches = "Số lượng ban huấn luyện tối đa không được âm.";
+  }
+
+  if (form.minCoaches && form.maxCoaches && minCoaches > maxCoaches) {
+    errors.maxCoaches =
+      "Số lượng ban huấn luyện tối đa phải lớn hơn hoặc bằng tối thiểu.";
   }
 
   if (
@@ -712,9 +721,9 @@ function RuleCard({
           value={formatValue(rule.maxGoalMinute)}
         />
         <InfoItem
-          icon="assignment"
-          label="Cầu thủ đăng ký tối thiểu"
-          value={formatValue(rule.minRegistrationPlayers)}
+          icon="groups_3"
+          label="Ban huấn luyện tối thiểu/tối đa"
+          value={formatRange(rule.minCoaches, rule.maxCoaches)}
         />
         <InfoItem
           icon="leaderboard"
@@ -831,7 +840,7 @@ function RuleModal({
         <div className="flex items-start justify-between border-b border-gray-100 p-6">
           <div>
             <p className="mb-1 text-xs font-black uppercase tracking-widest text-[#008C2F]">
-              {isEdit ? "Edit rule" : "New rule"}
+              {isEdit ? "Chỉnh sửa luật" : "Thêm mới luật"}
             </p>
             <h2 className="text-2xl font-black">
               {isEdit ? "Cập nhật bộ luật" : "Thêm bộ luật"}
@@ -951,11 +960,16 @@ function RuleModal({
               onChange={(value) => onFieldChange("maxSubstitution", value)}
             />
             <NumberField
-              label="Cầu thủ đăng ký tối thiểu"
-              value={form.minRegistrationPlayers}
-              onChange={(value) =>
-                onFieldChange("minRegistrationPlayers", value)
-              }
+              label="Ban huấn luyện tối thiểu"
+              value={form.minCoaches}
+              error={errors.minCoaches}
+              onChange={(value) => onFieldChange("minCoaches", value)}
+            />
+            <NumberField
+              label="Ban huấn luyện tối đa"
+              value={form.maxCoaches}
+              error={errors.maxCoaches}
+              onChange={(value) => onFieldChange("maxCoaches", value)}
             />
             <NumberField
               label="Ngoại binh tối đa"
@@ -1010,12 +1024,6 @@ function RuleModal({
                   <span className="font-black text-gray-700">
                     {DEFAULT_RANKING_CRITERIA}
                   </span>
-                </p>
-
-                <p className="mt-2 text-xs font-semibold leading-5 text-gray-500">
-                  Hiện tại backend của bạn xử lý chính các tiêu chí POINTS,
-                  GOAL_DIFFERENCE, GOALS_FOR. HEAD_TO_HEAD và DRAW_LOT có thể
-                  được lưu để mở rộng khi xếp hạng cuối mùa.
                 </p>
               </div>
             </div>

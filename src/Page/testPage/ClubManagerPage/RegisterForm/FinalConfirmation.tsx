@@ -93,8 +93,15 @@ const FinalConfirmation: React.FC<Props> = ({
       missing.push("Chưa chọn đội đăng ký");
     }
 
-    if (draft.coaches.length < 3) {
-      missing.push("Ban huấn luyện chưa đủ tối thiểu 3 thành viên");
+    const minCoaches = rule?.minCoaches ?? 3;
+    const maxCoaches = rule?.maxCoaches ?? null;
+
+    if (draft.coaches.length < minCoaches) {
+      missing.push(`Ban huấn luyện chưa đủ tối thiểu ${minCoaches} thành viên`);
+    }
+
+    if (maxCoaches != null && draft.coaches.length > maxCoaches) {
+      missing.push(`Ban huấn luyện vượt quá tối đa ${maxCoaches} thành viên`);
     }
 
     const headCoachCount = draft.coaches.filter((coach) =>
@@ -105,7 +112,7 @@ const FinalConfirmation: React.FC<Props> = ({
       missing.push("Ban huấn luyện phải có đúng 01 HLV trưởng");
     }
 
-    const minPlayers = rule?.minRegistrationPlayers ?? rule?.minPlayers ?? 16;
+    const minPlayers = rule?.minPlayers ?? 16;
 
     if (allPlayers.length < minPlayers) {
       missing.push(`Danh sách cầu thủ chưa đủ tối thiểu ${minPlayers} người`);
@@ -128,7 +135,7 @@ const FinalConfirmation: React.FC<Props> = ({
     }
 
     return missing;
-  }, [allPlayers.length, draft]);
+  }, [allPlayers.length, draft, rule]);
 
   const canSubmit = missingItems.length === 0 && isConfirmed && !isSubmitting;
 
@@ -498,8 +505,8 @@ const FinalConfirmation: React.FC<Props> = ({
                   passed: Boolean(draft.season?.id),
                 },
                 {
-                  text: "Ban huấn luyện đủ tối thiểu 3 thành viên",
-                  passed: draft.coaches.length >= 3,
+                  text: `Ban huấn luyện đủ tối thiểu ${rule?.minCoaches ?? 3} thành viên`,
+                  passed: draft.coaches.length >= (rule?.minCoaches ?? 3),
                 },
                 {
                   text: "Ban huấn luyện có đúng 01 HLV trưởng",

@@ -6,7 +6,9 @@ import FinalConfirmation from "./FinalConfirmation";
 import PlayerRegistration from "./PlayerRegistration";
 import RegistrationPortal from "./RegistrationPortal";
 import StadiumRegistration from "./StadiumRegistration";
-import SystemRuleService from "../../../../services/SystemRuleService";
+import SystemRuleService, {
+  type SystemRule,
+} from "../../../../services/SystemRuleService";
 import TeamService from "../../../../services/TeamService";
 import { useCurrentClubId } from "../InfoClubManage/clubInfoHelpers";
 
@@ -175,7 +177,10 @@ function getCoachRoleKey(role?: string) {
   return "other";
 }
 
-function getCompletedSteps(draft: RegistrationDraft): Record<number, boolean> {
+function getCompletedSteps(
+  draft: RegistrationDraft,
+  rule?: SystemRule | null,
+): Record<number, boolean> {
   const coachRoleCounts = draft.coaches.reduce<Record<string, number>>(
     (counts, coach) => {
       const roleKey = getCoachRoleKey(coach.role);
@@ -185,15 +190,17 @@ function getCompletedSteps(draft: RegistrationDraft): Record<number, boolean> {
     {},
   );
   const totalPlayers = draft.mainPlayers.length + draft.subPlayers.length;
+  const minCoaches = rule?.minCoaches ?? 3;
+  const minPlayers = rule?.minPlayers ?? 14;
 
   return {
     1: Boolean(draft.season?.id),
     2:
-      draft.coaches.length >= 3 &&
-      (coachRoleCounts.headCoach ?? 0) >= 1 &&
+      draft.coaches.length >= minCoaches &&
+      (coachRoleCounts.headCoach ?? 0) === 1 &&
       (coachRoleCounts.assistant ?? 0) >= 1 &&
       (coachRoleCounts.doctor ?? 0) >= 1,
-    3: totalPlayers >= 14,
+    3: totalPlayers >= minPlayers,
     4:
       Boolean(draft.stadium.name.trim()) &&
       Boolean(draft.stadium.address.trim()) &&
@@ -218,7 +225,7 @@ const RegisterFormMatch: React.FC = () => {
   const [step, setStep] = useState(1);
   const [draft, setDraft] = useState<RegistrationDraft>(() => readSavedDraft());
   const [draftMessage, setDraftMessage] = useState("");
-  const [rule, setRule] = useState<any | null>(null);
+  const [rule, setRule] = useState<SystemRule | null>(null);
 
   useEffect(() => {
     if (authLoading || !currentClubId) return;
@@ -266,7 +273,10 @@ const RegisterFormMatch: React.FC = () => {
 
   const selectedSeasonLabel =
     draft.season?.name || draft.season?.year || draft.season?.leagueName;
-  const completedSteps = useMemo(() => getCompletedSteps(draft), [draft]);
+  const completedSteps = useMemo(
+    () => getCompletedSteps(draft, rule),
+    [draft, rule],
+  );
   const highestAllowedStep = useMemo(
     () => getHighestAllowedStep(completedSteps),
     [completedSteps],
@@ -416,6 +426,7 @@ const RegisterFormMatch: React.FC = () => {
       {step === 2 && (
         <CoachRegistration
           setStep={goToStep}
+          rule={rule}
           selectedCoaches={draft.coaches}
           onCoachesChange={(coaches) =>
             setDraft((prev) => ({

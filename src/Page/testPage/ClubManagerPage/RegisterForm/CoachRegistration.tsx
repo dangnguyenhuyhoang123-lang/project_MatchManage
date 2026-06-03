@@ -6,11 +6,13 @@ import type { Coach } from "../../../../model/CoachModel";
 import CoachService from "../../../../services/CoachService";
 import { useCurrentClubId } from "../InfoClubManage/clubInfoHelpers";
 import type { SelectedCoach } from "./RegisterFormMatch";
+import type { SystemRule } from "../../../../services/SystemRuleService";
 
 type Props = {
   setStep?: (step: number) => void;
   selectedCoaches?: SelectedCoach[];
   onCoachesChange?: (coaches: SelectedCoach[]) => void;
+  rule?: SystemRule | null;
 };
 
 type Staff = {
@@ -155,6 +157,7 @@ const CoachRegistration: React.FC<Props> = ({
   setStep,
   selectedCoaches = [],
   onCoachesChange,
+  rule,
 }) => {
   const { currentClubId, authLoading } = useCurrentClubId();
   const [availableStaffs, setAvailableStaffs] = useState<Staff[]>([]);
@@ -227,10 +230,13 @@ const CoachRegistration: React.FC<Props> = ({
     }, {});
   }, [selectedStaffs]);
 
+  const minCoaches = rule?.minCoaches ?? 3;
+  const maxCoaches = rule?.maxCoaches ?? 8;
   const hasExactlyOneHeadCoach = (roleCounts.headCoach ?? 0) === 1;
 
   const hasRequiredStaff =
-    selectedStaffs.length >= 3 &&
+    selectedStaffs.length >= minCoaches &&
+    selectedStaffs.length <= maxCoaches &&
     hasExactlyOneHeadCoach &&
     (roleCounts.assistant ?? 0) >= 1 &&
     (roleCounts.doctor ?? 0) >= 1;
@@ -337,10 +343,17 @@ const CoachRegistration: React.FC<Props> = ({
                   huấn luyện.
                 </li>
               )}
-              {selectedStaffs.length > 0 && selectedStaffs.length < 3 && (
+              {selectedStaffs.length > 0 &&
+                selectedStaffs.length < minCoaches && (
+                  <li>
+                    Thiếu thành viên: Cần tối thiểu {minCoaches} thành viên
+                    (hiện có {selectedStaffs.length}).
+                  </li>
+                )}
+              {selectedStaffs.length > maxCoaches && (
                 <li>
-                  Thiếu thành viên: Cần tối thiểu 3 thành viên (hiện có{" "}
-                  {selectedStaffs.length}).
+                  Vượt quá số lượng tối đa: Chỉ được đăng ký tối đa {maxCoaches}{" "}
+                  thành viên ban huấn luyện.
                 </li>
               )}
               {(roleCounts.headCoach ?? 0) < 1 && (
@@ -479,10 +492,16 @@ const CoachRegistration: React.FC<Props> = ({
             </h3>
 
             <ul className="space-y-5">
-              <CheckItem passed={selectedStaffs.length >= 3}>
+              <CheckItem
+                passed={
+                  selectedStaffs.length >= minCoaches &&
+                  selectedStaffs.length <= maxCoaches
+                }
+              >
                 <p className="text-sm font-bold">Số lượng tối thiểu</p>
                 <p className="text-[11px] text-gray-400">
-                  {selectedStaffs.length}/8 thành viên (cần tối thiểu 3)
+                  {selectedStaffs.length}/{maxCoaches} thành viên (cần tối thiểu{" "}
+                  {minCoaches})
                 </p>
               </CheckItem>
 
