@@ -132,7 +132,7 @@ export const Header_HomePage = () => {
           <>
             {(isAdmin || isClubManager) && (
               <Link
-                to={isAdmin ? "/admin/dashboard" : "/club/dashboard"}
+                to={isAdmin ? "/admin/leagues" : "/club/dashboard"}
                 className="hidden h-10 items-center justify-center rounded-full bg-[#1a6e38] px-5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-green-800 sm:inline-flex"
               >
                 {isAdmin ? "Trang quản trị" : "Quản lý CLB"}
@@ -198,7 +198,7 @@ export const Header_HomePage = () => {
                     <div className="py-2">
                       {(isAdmin || isClubManager) && (
                         <DropdownLink
-                          to={isAdmin ? "/admin/dashboard" : "/club/dashboard"}
+                          to={isAdmin ? "/admin/leagues" : "/club/dashboard"}
                           onClick={() => setOpen(false)}
                           icon={<LayoutDashboard size={18} />}
                           label={isAdmin ? "Trang quản trị" : "Quản lý CLB"}

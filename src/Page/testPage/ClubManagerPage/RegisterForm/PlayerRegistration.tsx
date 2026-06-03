@@ -3,6 +3,7 @@ import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import PlayerService from "../../../../services/PlayerService";
 import { Modal } from "../../../../components/Modal";
 import type { SelectedPlayer } from "./RegisterFormMatch";
+import { useCurrentClubId } from "../InfoClubManage/clubInfoHelpers";
 
 type Props = {
   setStep: (step: number) => void;
@@ -22,6 +23,7 @@ const PlayerRegistration: React.FC<Props> = ({
   subPlayers: initialSubPlayers = [],
   onPlayersChange,
 }) => {
+  const { currentClubId, authLoading } = useCurrentClubId();
   const [mainPlayers, setMainPlayers] =
     useState<SelectedPlayer[]>(initialMainPlayers);
   const [subPlayers, setSubPlayers] =
@@ -35,28 +37,42 @@ const PlayerRegistration: React.FC<Props> = ({
 
   useEffect(() => {
     const fetchTeamPlayers = async () => {
+      if (authLoading) return;
+
+      if (!currentClubId) {
+        setAvailablePlayers([]);
+        setErrorMessage(
+          "Không xác định được câu lạc bộ của người dùng đang đăng nhập.",
+        );
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       setErrorMessage("");
 
       try {
-        const response = await PlayerService.getAllPlayersNormalized(0, 100, {
-          teamId: 1,
-        });
-        const filtered = (response.content || []).filter(
-          (p: any) => p.teamId === 1 || p.teamId === "1" || !p.teamId,
+        // Registration phải lấy Player gốc theo CLB, không lấy PlayerSeason.
+        // PlayerSeason chỉ được backend tạo sau khi ADMIN duyệt hồ sơ.
+        const response = await PlayerService.getPlayersByTeamNormalized(
+          currentClubId,
+          0,
+          500,
         );
-        setAvailablePlayers(filtered);
+        setAvailablePlayers(response.content || []);
       } catch (error) {
         console.error("Lỗi lấy cầu thủ của đội bóng:", error);
         setAvailablePlayers([]);
-        setErrorMessage("Không thể tải danh sách cầu thủ thuộc biên chế câu lạc bộ.");
+        setErrorMessage(
+          "Không thể tải danh sách cầu thủ thuộc biên chế câu lạc bộ.",
+        );
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchTeamPlayers();
-  }, []);
+  }, [authLoading, currentClubId]);
 
   const calculateAge = (dob?: string) => {
     if (!dob) return "--";
@@ -121,7 +137,10 @@ const PlayerRegistration: React.FC<Props> = ({
   const maxPlayersReq = rule?.maxPlayers || 30;
   const minAgeReq = rule?.minAge || 16;
   const maxAgeReq = rule?.maxAge || 40;
-  const maxForeignReq = rule?.maxForeignPlayers !== null && rule?.maxForeignPlayers !== undefined ? rule.maxForeignPlayers : 3;
+  const maxForeignReq =
+    rule?.maxForeignPlayers !== null && rule?.maxForeignPlayers !== undefined
+      ? rule.maxForeignPlayers
+      : 3;
 
   // Age check
   const invalidAgePlayers = [...mainPlayers, ...subPlayers].filter((p) => {
@@ -134,10 +153,16 @@ const PlayerRegistration: React.FC<Props> = ({
   // Foreign check
   const isForeignPlayer = (nationality?: string) => {
     if (!nationality) return false;
-    const n = nationality.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    const n = nationality
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
     return n !== "viet nam" && n !== "vietnam";
   };
-  const foreignPlayers = [...mainPlayers, ...subPlayers].filter((p: any) => isForeignPlayer(p.nationality));
+  const foreignPlayers = [...mainPlayers, ...subPlayers].filter((p: any) =>
+    isForeignPlayer(p.nationality),
+  );
 
   // Jersey check
   const duplicateShirts = useMemo(() => {
@@ -187,30 +212,44 @@ const PlayerRegistration: React.FC<Props> = ({
             </h3>
             <ul className="list-disc list-inside text-xs text-red-700 space-y-1">
               {totalSelected < minPlayersReq && (
-                <li>Thiếu cầu thủ: Đã chọn {totalSelected} cầu thủ (cần tối thiểu {minPlayersReq}).</li>
+                <li>
+                  Thiếu cầu thủ: Đã chọn {totalSelected} cầu thủ (cần tối thiểu{" "}
+                  {minPlayersReq}).
+                </li>
               )}
               {totalSelected > maxPlayersReq && (
-                <li>Vượt quá giới hạn: Đã chọn {totalSelected} cầu thủ (tối đa cho phép {maxPlayersReq}).</li>
+                <li>
+                  Vượt quá giới hạn: Đã chọn {totalSelected} cầu thủ (tối đa cho
+                  phép {maxPlayersReq}).
+                </li>
               )}
               {invalidAgePlayers.length > 0 && (
                 <li>
-                  Độ tuổi không hợp lệ: {invalidAgePlayers.map(p => `${p.name} (${calculateAge(p.dateOfBirth)} tuổi)`).join(", ")}{" "}
+                  Độ tuổi không hợp lệ:{" "}
+                  {invalidAgePlayers
+                    .map(
+                      (p) => `${p.name} (${calculateAge(p.dateOfBirth)} tuổi)`,
+                    )
+                    .join(", ")}{" "}
                   (yêu cầu từ {minAgeReq} đến {maxAgeReq} tuổi).
                 </li>
               )}
               {foreignPlayers.length > maxForeignReq && (
                 <li>
-                  Vượt số lượng ngoại binh: Đã chọn {foreignPlayers.length} ngoại binh (tối đa cho phép {maxForeignReq}).
+                  Vượt số lượng ngoại binh: Đã chọn {foreignPlayers.length}{" "}
+                  ngoại binh (tối đa cho phép {maxForeignReq}).
                 </li>
               )}
               {duplicateShirts.length > 0 && (
                 <li>
-                  Trùng số áo: Số áo {duplicateShirts.join(", ")} bị trùng lặp. Vui lòng kiểm tra lại.
+                  Trùng số áo: Số áo {duplicateShirts.join(", ")} bị trùng lặp.
+                  Vui lòng kiểm tra lại.
                 </li>
               )}
               {duplicatePlayers.length > 0 && (
                 <li>
-                  Trùng cầu thủ: Cầu thủ {duplicatePlayers.join(", ")} được chọn nhiều lần.
+                  Trùng cầu thủ: Cầu thủ {duplicatePlayers.join(", ")} được chọn
+                  nhiều lần.
                 </li>
               )}
             </ul>
@@ -226,7 +265,8 @@ const PlayerRegistration: React.FC<Props> = ({
               Danh sách cầu thủ hợp lệ
             </h3>
             <p className="mt-1 text-xs text-green-700/80">
-              Đã chọn {totalSelected} cầu thủ, tất cả đều thỏa mãn quy định của giải đấu.
+              Đã chọn {totalSelected} cầu thủ, tất cả đều thỏa mãn quy định của
+              giải đấu.
             </p>
           </div>
         </div>
@@ -383,7 +423,9 @@ const PlayerRegistration: React.FC<Props> = ({
           {rule && (
             <section className="rounded-2xl border border-green-100 bg-green-50/20 p-5 shadow-sm">
               <h3 className="mb-3 flex items-center gap-2 font-bold text-green-800 text-sm">
-                <span className="material-symbols-outlined text-base">gavel</span>
+                <span className="material-symbols-outlined text-base">
+                  gavel
+                </span>
                 Quy định đăng ký mùa giải
               </h3>
               <ul className="space-y-2 text-xs text-green-700">
@@ -397,7 +439,9 @@ const PlayerRegistration: React.FC<Props> = ({
                 </li>
                 <li className="flex justify-between">
                   <span>Độ tuổi quy định:</span>
-                  <span className="font-bold">{minAgeReq} - {maxAgeReq} tuổi</span>
+                  <span className="font-bold">
+                    {minAgeReq} - {maxAgeReq} tuổi
+                  </span>
                 </li>
                 <li className="flex justify-between">
                   <span>Số ngoại binh tối đa:</span>
@@ -419,15 +463,22 @@ const PlayerRegistration: React.FC<Props> = ({
               <li className="flex items-start gap-3">
                 <span
                   className={`material-symbols-outlined ${
-                    totalSelected >= minPlayersReq && totalSelected <= maxPlayersReq ? "text-[#0d631b]" : "text-red-500"
+                    totalSelected >= minPlayersReq &&
+                    totalSelected <= maxPlayersReq
+                      ? "text-[#0d631b]"
+                      : "text-red-500"
                   }`}
                 >
-                  {totalSelected >= minPlayersReq && totalSelected <= maxPlayersReq ? "check_circle" : "cancel"}
+                  {totalSelected >= minPlayersReq &&
+                  totalSelected <= maxPlayersReq
+                    ? "check_circle"
+                    : "cancel"}
                 </span>
                 <div>
                   <p className="text-sm font-bold">Số lượng cầu thủ</p>
                   <p className="text-[11px] text-gray-400">
-                    {totalSelected} cầu thủ (yêu cầu {minPlayersReq} - {maxPlayersReq})
+                    {totalSelected} cầu thủ (yêu cầu {minPlayersReq} -{" "}
+                    {maxPlayersReq})
                   </p>
                 </div>
               </li>
@@ -435,7 +486,9 @@ const PlayerRegistration: React.FC<Props> = ({
               <li className="flex items-start gap-3">
                 <span
                   className={`material-symbols-outlined ${
-                    invalidAgePlayers.length === 0 ? "text-[#0d631b]" : "text-red-500"
+                    invalidAgePlayers.length === 0
+                      ? "text-[#0d631b]"
+                      : "text-red-500"
                   }`}
                 >
                   {invalidAgePlayers.length === 0 ? "check_circle" : "cancel"}
@@ -443,7 +496,9 @@ const PlayerRegistration: React.FC<Props> = ({
                 <div>
                   <p className="text-sm font-bold">Độ tuổi hợp lệ</p>
                   <p className="text-[11px] text-gray-400">
-                    {invalidAgePlayers.length === 0 ? "Tất cả hợp lệ" : `${invalidAgePlayers.length} cầu thủ sai độ tuổi`}
+                    {invalidAgePlayers.length === 0
+                      ? "Tất cả hợp lệ"
+                      : `${invalidAgePlayers.length} cầu thủ sai độ tuổi`}
                   </p>
                 </div>
               </li>
@@ -451,10 +506,14 @@ const PlayerRegistration: React.FC<Props> = ({
               <li className="flex items-start gap-3">
                 <span
                   className={`material-symbols-outlined ${
-                    foreignPlayers.length <= maxForeignReq ? "text-[#0d631b]" : "text-red-500"
+                    foreignPlayers.length <= maxForeignReq
+                      ? "text-[#0d631b]"
+                      : "text-red-500"
                   }`}
                 >
-                  {foreignPlayers.length <= maxForeignReq ? "check_circle" : "cancel"}
+                  {foreignPlayers.length <= maxForeignReq
+                    ? "check_circle"
+                    : "cancel"}
                 </span>
                 <div>
                   <p className="text-sm font-bold">Số lượng ngoại binh</p>
@@ -467,7 +526,9 @@ const PlayerRegistration: React.FC<Props> = ({
               <li className="flex items-start gap-3">
                 <span
                   className={`material-symbols-outlined ${
-                    duplicateShirts.length === 0 ? "text-[#0d631b]" : "text-red-500"
+                    duplicateShirts.length === 0
+                      ? "text-[#0d631b]"
+                      : "text-red-500"
                   }`}
                 >
                   {duplicateShirts.length === 0 ? "check_circle" : "cancel"}
@@ -475,7 +536,9 @@ const PlayerRegistration: React.FC<Props> = ({
                 <div>
                   <p className="text-sm font-bold">Số áo duy nhất</p>
                   <p className="text-[11px] text-gray-400">
-                    {duplicateShirts.length === 0 ? "Không bị trùng số áo" : `Bị trùng số áo ${duplicateShirts.join(", ")}`}
+                    {duplicateShirts.length === 0
+                      ? "Không bị trùng số áo"
+                      : `Bị trùng số áo ${duplicateShirts.join(", ")}`}
                   </p>
                 </div>
               </li>
@@ -487,7 +550,11 @@ const PlayerRegistration: React.FC<Props> = ({
                   Độ sẵn sàng
                 </span>
                 <span className="text-xs font-black text-[#0d631b]">
-                  {Math.min(Math.round((totalSelected / minPlayersReq) * 100), 100)}%
+                  {Math.min(
+                    Math.round((totalSelected / minPlayersReq) * 100),
+                    100,
+                  )}
+                  %
                 </span>
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">

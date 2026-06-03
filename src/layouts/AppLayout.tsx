@@ -233,7 +233,7 @@ export const AppLayout = ({ children, workspace }: AppLayoutProps) => {
   const isClubArea = currentWorkspace === "club";
   const areaLabel = isClubArea ? "Club Workspace" : "Admin Workspace";
 
-  const homePath = isClubArea ? "/club/dashboard" : "/admin/dashboard";
+  const homePath = isClubArea ? "/club/dashboard" : "/admin/leagues";
   const accountLabel = isClubArea ? "Quản lý CLB" : "Quản trị viên";
 
   return (

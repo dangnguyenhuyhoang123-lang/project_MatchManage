@@ -68,7 +68,9 @@ const PlayerManagement: React.FC = () => {
   const hasLocalFilters = useMemo(
     () =>
       Boolean(appliedFilters.search.trim()) ||
-      appliedFilters.club !== "Tất cả CLB",
+      appliedFilters.club !== "Tất cả CLB" ||
+      appliedFilters.position !== "Tất cả vị trí" ||
+      appliedFilters.status !== "Tất cả trạng thái",
     [appliedFilters],
   );
 
@@ -116,7 +118,15 @@ const PlayerManagement: React.FC = () => {
         String(player.teamId ?? "") === filters.club ||
         getPlayerTeamName(player) === selectedTeamName;
 
-      return matchesSearch && matchesTeam;
+      const matchesPosition =
+        filters.position === "Tất cả vị trí" ||
+        player.position === filters.position;
+
+      const matchesStatus =
+        filters.status === "Tất cả trạng thái" ||
+        player.status === filters.status;
+
+      return matchesSearch && matchesTeam && matchesPosition && matchesStatus;
     });
   };
 
@@ -124,7 +134,12 @@ const PlayerManagement: React.FC = () => {
     setIsLoading(true);
 
     try {
-      if (filters.search.trim() || filters.club !== "Tất cả CLB") {
+      if (
+        filters.search.trim() ||
+        filters.club !== "Tất cả CLB" ||
+        filters.position !== "Tất cả vị trí" ||
+        filters.status !== "Tất cả trạng thái"
+      ) {
         const baseResponse = await PlayerService.getAllPlayersNormalized(
           0,
           1,

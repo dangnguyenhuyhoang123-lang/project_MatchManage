@@ -11,6 +11,7 @@ type Props = {
   setStep: (step: number) => void;
   draft: RegistrationDraft;
   onTeamChange: (team: Partial<RegistrationDraft["team"]>) => void;
+  onSubmitted?: () => void;
   rule?: SystemRule | null;
 };
 
@@ -46,10 +47,29 @@ const isVietnamCountry = (value?: string) => {
   return ["viet nam", "vietnam", "vn"].includes(normalized);
 };
 
+const normalizeCoachRole = (role?: string) =>
+  (role ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase()
+    .trim();
+
+const isHeadCoachRole = (role?: string) => {
+  const normalized = normalizeCoachRole(role);
+  return (
+    normalized.includes("head_coach") ||
+    normalized.includes("hlv truong") ||
+    normalized.includes("huan luyen vien truong")
+  );
+};
+
 const FinalConfirmation: React.FC<Props> = ({
   setStep,
   draft,
   onTeamChange,
+  onSubmitted,
   rule,
 }) => {
   const [isConfirmed, setIsConfirmed] = useState(false);
@@ -75,6 +95,14 @@ const FinalConfirmation: React.FC<Props> = ({
 
     if (draft.coaches.length < 3) {
       missing.push("Ban huấn luyện chưa đủ tối thiểu 3 thành viên");
+    }
+
+    const headCoachCount = draft.coaches.filter((coach) =>
+      isHeadCoachRole(coach.role),
+    ).length;
+
+    if (headCoachCount !== 1) {
+      missing.push("Ban huấn luyện phải có đúng 01 HLV trưởng");
     }
 
     const minPlayers = rule?.minRegistrationPlayers ?? rule?.minPlayers ?? 16;
@@ -154,6 +182,8 @@ const FinalConfirmation: React.FC<Props> = ({
     try {
       const response = await RegistrationService.submitRegistration(payload);
       setSubmittedSummary(response.data);
+      toast.success("Gửi hồ sơ đăng ký thành công.");
+      onSubmitted?.();
     } catch (error) {
       console.error("Lỗi khi gửi đơn đăng ký:", error);
       toast.error("Không thể gửi đơn đăng ký. Vui lòng kiểm tra lại dữ liệu.");
@@ -470,6 +500,12 @@ const FinalConfirmation: React.FC<Props> = ({
                 {
                   text: "Ban huấn luyện đủ tối thiểu 3 thành viên",
                   passed: draft.coaches.length >= 3,
+                },
+                {
+                  text: "Ban huấn luyện có đúng 01 HLV trưởng",
+                  passed:
+                    draft.coaches.filter((coach) => isHeadCoachRole(coach.role))
+                      .length === 1,
                 },
                 {
                   text: "Danh sách cầu thủ đủ tối thiểu 14 người",

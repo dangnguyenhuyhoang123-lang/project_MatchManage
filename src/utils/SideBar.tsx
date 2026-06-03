@@ -14,12 +14,6 @@ type SidebarProps = {
 
 const adminMenu: MenuItem[] = [
   {
-    label: "Tổng quan",
-    path: "/admin/dashboard",
-    icon: "dashboard",
-    aliases: ["/dashBoard"],
-  },
-  {
     label: "Giải đấu",
     path: "/admin/leagues",
     icon: "emoji_events",
@@ -98,12 +92,7 @@ const clubMenu: MenuItem[] = [
     path: "/club/dashboard",
     icon: "dashboard",
   },
-  {
-    label: "Thông tin CLB",
-    path: "/club/info",
-    icon: "badge",
-    aliases: ["/manageInfoClub"],
-  },
+
   {
     label: "Sân vận động",
     path: "/club/stadium",
@@ -161,7 +150,7 @@ export const Sidebar = ({ workspace }: SidebarProps) => {
   return (
     <aside className="sticky top-0 hidden w-64 shrink-0 flex-col self-start border-r border-gray-100 bg-[#f5f3ef] p-5 md:flex">
       <Link
-        to={isClubArea ? "/club/dashboard" : "/admin/dashboard"}
+        to={isClubArea ? "/club/dashboard" : "/admin/leagues"}
         className="mb-7 block"
       >
         <p className="text-2xl font-black tracking-tight text-[#008C2F]">

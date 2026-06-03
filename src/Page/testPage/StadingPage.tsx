@@ -21,22 +21,27 @@ interface TeamStanding {
   name: string;
   stadium: string;
   played: number;
-  stats: string; // T-H-B
-  hs: string; // Hiệu số
+  stats: string;
+  hs: string;
+  goalsFor: number;
+  goalsAgainst: number;
   points: number;
-  last5: ("W" | "D" | "L")[];
+  last5: ("W" | "D" | "L" | "-")[];
   rankColor: string;
 }
 
 export default function StandingsPage() {
   const [standingsData, setStandingsData] = useState<TeamStanding[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [emptyMessage, setEmptyMessage] = useState(
+    "Vui lòng chọn mùa giải để xem bảng xếp hạng.",
+  );
 
   const [leagues, setLeagues] = useState<LeagueOption[]>([]);
   const [seasons, setSeasons] = useState<SeasonOption[]>([]);
 
-  const [selectedLeague, setSelectedLeague] = useState<number | "">(1);
-  const [selectedSeason, setSelectedSeason] = useState<number | "">(1);
+  const [selectedLeague, setSelectedLeague] = useState<number | "">("");
+  const [selectedSeason, setSelectedSeason] = useState<number | "">("");
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -52,65 +57,106 @@ export default function StandingsPage() {
   }, []);
 
   useEffect(() => {
-    if (selectedLeague) {
-      const fetchSeasons = async () => {
-        try {
-          const response = await LeagueService.getSeasonsByLeague(
-            Number(selectedLeague),
-          );
-          setSeasons(response);
-        } catch (error) {
-          console.error("Lỗi khi lấy danh sách mùa giải:", error);
-        }
-      };
-      fetchSeasons();
-    } else {
-      setSeasons([]);
-    }
+    const fetchSeasons = async () => {
+      if (!selectedLeague) {
+        setSeasons([]);
+        setSelectedSeason("");
+        setStandingsData([]);
+        setEmptyMessage(
+          "Vui lòng chọn giải đấu và mùa giải để xem bảng xếp hạng.",
+        );
+        return;
+      }
+
+      try {
+        const response = await LeagueService.getSeasonsByLeague(
+          Number(selectedLeague),
+        );
+        setSeasons(response);
+        setSelectedSeason("");
+        setStandingsData([]);
+        setEmptyMessage(
+          response.length > 0
+            ? "Vui lòng chọn mùa giải để xem bảng xếp hạng."
+            : "Giải đấu này chưa có mùa giải nào.",
+        );
+      } catch (error) {
+        console.error("Lỗi khi lấy danh sách mùa giải:", error);
+        setSeasons([]);
+        setSelectedSeason("");
+        setStandingsData([]);
+        setEmptyMessage("Không thể tải danh sách mùa giải của giải đấu này.");
+      }
+    };
+
+    fetchSeasons();
   }, [selectedLeague]);
 
   useEffect(() => {
     const fetchStandings = async () => {
+      if (!selectedSeason) {
+        setStandingsData([]);
+        setLoading(false);
+        setEmptyMessage(
+          selectedLeague
+            ? "Vui lòng chọn mùa giải để xem bảng xếp hạng."
+            : "Vui lòng chọn giải đấu và mùa giải để xem bảng xếp hạng.",
+        );
+        return;
+      }
+
       setLoading(true);
       try {
         const response = await StandingService.getAllStandings(
-          selectedSeason ? Number(selectedSeason) : undefined,
+          Number(selectedSeason),
         );
-        // Giả sử response.data là mảng dữ liệu xếp hạng
-        const data = response.data;
-        const formattedData = data.map((item: any, index: number) => ({
-          rank: item.rank || index + 1,
-          name: item.teamName || item.name || item.clubName || "Đội bóng",
-          stadium: item.stadium || "Sân vận động: Chưa rõ",
-          played: item.played || item.matchesPlayed || 0,
-          stats: `${item.win ?? item.won ?? 0} - ${item.draw ?? item.drawn ?? 0} - ${item.lose ?? item.lost ?? 0}`,
-          hs:
-            item.goalDifference !== undefined
-              ? item.goalDifference > 0
-                ? `+${item.goalDifference}`
-                : `${item.goalDifference}`
-              : "0",
-          points: item.points || 0,
-          last5: item.last5 || ["-", "-", "-", "-", "-"],
-          rankColor:
-            index === 0
-              ? "border-l-yellow-400"
-              : index === 1
-                ? "border-l-gray-400"
-                : index === 2
-                  ? "border-l-orange-400"
-                  : "border-l-green-500",
-        }));
+        const data = Array.isArray(response.data) ? response.data : [];
+        const formattedData = data.map((item: any, index: number) => {
+          const goalDifference = item.goalDifference ?? 0;
+          const goalsFor =
+            item.goalsFor ?? item.goalFor ?? item.totalGoalsFor ?? 0;
+          const goalsAgainst =
+            item.goalsAgainst ??
+            item.goalAgainst ??
+            item.totalGoalsAgainst ??
+            0;
+
+          return {
+            rank: item.rank || item.rankPosition || index + 1,
+            name: item.teamName || item.name || item.clubName || "Đội bóng",
+            stadium:
+              item.stadium || item.stadiumName || "Sân vận động: Chưa rõ",
+            played: item.played || item.matchesPlayed || 0,
+            stats: `${item.win ?? item.won ?? 0} - ${item.draw ?? item.drawn ?? 0} - ${item.lose ?? item.lost ?? 0}`,
+            hs: goalDifference > 0 ? `+${goalDifference}` : `${goalDifference}`,
+            goalsFor,
+            goalsAgainst,
+            points: item.points || 0,
+            last5: item.last5 || ["-", "-", "-", "-", "-"],
+            rankColor:
+              index === 0
+                ? "border-l-yellow-400"
+                : index === 1
+                  ? "border-l-gray-400"
+                  : index === 2
+                    ? "border-l-orange-400"
+                    : "border-l-green-500",
+          };
+        });
+
         setStandingsData(formattedData);
+        setEmptyMessage("Mùa giải này chưa có dữ liệu bảng xếp hạng.");
       } catch (error) {
         console.error("Lỗi khi lấy dữ liệu bảng xếp hạng:", error);
+        setStandingsData([]);
+        setEmptyMessage("Không thể tải dữ liệu bảng xếp hạng.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchStandings();
-  }, [selectedSeason, reloadKey]);
+  }, [selectedLeague, selectedSeason, reloadKey]);
 
   const handleRealtimeEvent = useCallback((event: RealtimeEventDTO) => {
     if (
@@ -125,24 +171,19 @@ export default function StandingsPage() {
 
   return (
     <AppLayout>
-      {/* Main Content */}
-
-      {/* Header bar */}
-
-      {/* Page Title & Filters */}
-      <header className="mb-10 flex justify-between items-start">
+      <header className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1 className="text-4xl font-black tracking-tight text-slate-900">
             <span className="text-green-700">Bảng Xếp</span> Hạng
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Cập nhật kết quả thi đấu mới nhất từ V-League 1
+          <p className="mt-1 text-sm text-slate-500">
+            Chọn đúng giải đấu và mùa giải để xem bảng xếp hạng chính xác.
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:w-auto lg:min-w-[520px]">
           <select
-            className="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold shadow-sm hover:bg-gray-50 outline-none appearance-none cursor-pointer"
+            className="h-11 rounded-full border border-gray-200 bg-white px-4 text-xs font-bold shadow-sm outline-none hover:bg-gray-50"
             value={selectedLeague}
             onChange={(e) => {
               setSelectedLeague(e.target.value ? Number(e.target.value) : "");
@@ -158,12 +199,12 @@ export default function StandingsPage() {
           </select>
 
           <select
-            className="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold shadow-sm hover:bg-gray-50 outline-none appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-11 rounded-full border border-gray-200 bg-white px-4 text-xs font-bold shadow-sm outline-none hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             value={selectedSeason}
             onChange={(e) =>
               setSelectedSeason(e.target.value ? Number(e.target.value) : "")
             }
-            disabled={!selectedLeague}
+            disabled={!selectedLeague || seasons.length === 0}
           >
             <option value="">-- Chọn Mùa giải --</option>
             {seasons.map((season) => (
@@ -178,160 +219,117 @@ export default function StandingsPage() {
         </div>
       </header>
 
-      {/* Standings Table Card */}
-      <div className="bg-[#f0ede6]/40 p-6 rounded-[2rem] border border-gray-200 shadow-sm">
-        {/* Grid Table Header */}
-        <div className="grid grid-cols-12 text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 px-4">
-          <div className="col-span-1 text-center">Hạng</div>
-          <div className="col-span-4">Câu lạc bộ</div>
-          <div className="col-span-1 text-center">Trận</div>
-          <div className="col-span-2 text-center">T - H - B</div>
-          <div className="col-span-1 text-center">HS (BT/BB)</div>
-          <div className="col-span-1 text-center">Điểm</div>
-          <div className="col-span-2 text-center">5 trận gần nhất</div>
-        </div>
+      <div className="rounded-[2rem] border border-gray-200 bg-[#f0ede6]/40 p-6 shadow-sm">
+        <div className="overflow-x-auto">
+          <div className="min-w-[980px]">
+            <div className="mb-4 grid grid-cols-12 px-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <div className="col-span-1 text-center">Hạng</div>
+              <div className="col-span-4">Câu lạc bộ</div>
+              <div className="col-span-1 text-center">Trận</div>
+              <div className="col-span-2 text-center">T - H - B</div>
+              <div className="col-span-1 text-center">HS</div>
+              <div className="col-span-1 text-center">Điểm</div>
+              <div className="col-span-2 text-center">5 trận gần nhất</div>
+            </div>
 
-        {/* Rows */}
-        <div className="space-y-3">
-          {loading ? (
-            <div className="text-center py-4 text-slate-500">
-              Đang tải dữ liệu...
-            </div>
-          ) : standingsData.length === 0 ? (
-            <div className="text-center py-4 text-slate-500">
-              Không có dữ liệu bảng xếp hạng.
-            </div>
-          ) : (
-            standingsData.map((team) => (
-              <div
-                key={team.rank}
-                className={`grid grid-cols-12 items-center bg-white p-4 rounded-2xl shadow-sm border-l-4 ${team.rankColor} hover:translate-x-1 transition-transform`}
-              >
-                <div className="col-span-1 flex justify-center">
-                  <span
-                    className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm ${team.rank <= 3 ? "bg-amber-50 text-amber-700 border border-amber-200" : "text-slate-400"}`}
+            <div className="space-y-3">
+              {loading ? (
+                <div className="rounded-2xl bg-white py-12 text-center font-bold text-slate-500">
+                  Đang tải dữ liệu bảng xếp hạng...
+                </div>
+              ) : standingsData.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-gray-200 bg-white py-12 text-center font-bold text-slate-500">
+                  {emptyMessage}
+                </div>
+              ) : (
+                standingsData.map((team) => (
+                  <div
+                    key={`${team.rank}-${team.name}`}
+                    className={`grid grid-cols-12 items-center rounded-2xl border-l-4 bg-white p-4 shadow-sm transition-transform hover:translate-x-1 ${team.rankColor}`}
                   >
-                    {team.rank}
-                  </span>
-                </div>
-
-                <div className="col-span-4 flex items-center gap-4">
-                  <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-[10px] font-bold text-slate-400 border border-gray-100">
-                    LOGO
-                  </div>
-                  <div>
-                    <p className="font-bold text-sm text-slate-800">
-                      {team.name}
-                    </p>
-                    <p className="text-[10px] opacity-50 uppercase font-semibold">
-                      {team.stadium}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="col-span-1 text-center font-bold">
-                  {team.played}
-                </div>
-                <div className="col-span-2 text-center text-sm font-medium text-slate-600">
-                  {team.stats}
-                </div>
-                <div className="col-span-1 text-center">
-                  <p className="font-bold text-green-600">{team.hs}</p>
-                  <p className="text-[9px] opacity-40">(26/14)</p>
-                </div>
-                <div className="col-span-1 text-center font-black text-lg">
-                  {team.points}
-                </div>
-
-                <div className="col-span-2 flex justify-center gap-1.5">
-                  {team.last5.map((res, i) => (
-                    <div
-                      key={i}
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white shadow-sm ${
-                        res === "W"
-                          ? "bg-green-600"
-                          : res === "D"
-                            ? "bg-indigo-500"
-                            : "bg-red-500"
-                      }`}
-                    >
-                      {res}
+                    <div className="col-span-1 flex justify-center">
+                      <span
+                        className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-black ${
+                          team.rank <= 3
+                            ? "border border-amber-200 bg-amber-50 text-amber-700"
+                            : "text-slate-400"
+                        }`}
+                      >
+                        {team.rank}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
+
+                    <div className="col-span-4 flex items-center gap-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-100 bg-slate-100 text-[10px] font-bold text-slate-400">
+                        LOGO
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-slate-800">
+                          {team.name}
+                        </p>
+                        <p className="truncate text-[10px] font-semibold uppercase opacity-50">
+                          {team.stadium}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="col-span-1 text-center font-bold">
+                      {team.played}
+                    </div>
+                    <div className="col-span-2 text-center text-sm font-medium text-slate-600">
+                      {team.stats}
+                    </div>
+                    <div className="col-span-1 text-center">
+                      <p className="font-bold text-green-600">{team.hs}</p>
+                      <p className="text-[9px] opacity-40">
+                        ({team.goalsFor}/{team.goalsAgainst})
+                      </p>
+                    </div>
+                    <div className="col-span-1 text-center text-lg font-black">
+                      {team.points}
+                    </div>
+
+                    <div className="col-span-2 flex justify-center gap-1.5">
+                      {team.last5.map((res, i) => (
+                        <div
+                          key={i}
+                          className={`flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-white shadow-sm ${
+                            res === "W"
+                              ? "bg-green-600"
+                              : res === "D"
+                                ? "bg-indigo-500"
+                                : res === "L"
+                                  ? "bg-red-500"
+                                  : "bg-slate-300"
+                          }`}
+                        >
+                          {res}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Table Footer / Rules */}
-        <div className="mt-8 pt-6 border-t border-gray-200 flex justify-between items-center px-4">
+        <div className="mt-8 flex flex-col gap-4 border-t border-gray-200 px-4 pt-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex gap-4 text-[10px] font-bold opacity-60">
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-green-600"></span> THẮNG
+              <span className="h-2 w-2 rounded-full bg-green-600" /> THẮNG
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-indigo-500"></span> HÒA
+              <span className="h-2 w-2 rounded-full bg-indigo-500" /> HÒA
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-red-500"></span> THUA
+              <span className="h-2 w-2 rounded-full bg-red-500" /> THUA
             </span>
           </div>
-          <div className="max-w-md text-[10px] leading-relaxed text-right opacity-50 font-medium">
-            <p>
-              <span className="font-bold text-slate-900">
-                Quy tắc xếp hạng:
-              </span>{" "}
-              1. Tổng điểm; 2. Hiệu số bàn thắng/bại; 3. Tổng số bàn thắng; 4.
-              Đối đầu trực tiếp; 5. Chỉ số Fair-play.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Feature Cards */}
-      <div className="mt-8 grid grid-cols-2 gap-6">
-        <div className="bg-green-900 text-white p-8 rounded-[2.5rem] relative overflow-hidden shadow-xl">
-          <div className="relative z-10">
-            <div className="w-10 h-10 bg-white/10 rounded-xl mb-4 flex items-center justify-center text-xl">
-              📈
-            </div>
-            <h3 className="text-xl font-bold mb-2">Phong độ cao nhất</h3>
-            <p className="text-sm opacity-70 mb-6">
-              Hà Nội FC đã có chuỗi 5 trận bất bại liên tiếp trên sân nhà.
-            </p>
-            <button className="bg-green-700 hover:bg-green-600 px-6 py-2 rounded-full text-xs font-bold transition">
-              Xem chi tiết
-            </button>
-          </div>
-          <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/5 rounded-full blur-3xl"></div>
-        </div>
-
-        <div className="bg-indigo-50 text-indigo-900 p-8 rounded-[2.5rem] flex justify-between items-start shadow-sm border border-indigo-100">
-          <div className="max-w-[60%]">
-            <h3 className="text-xl font-bold mb-2">Cuộc đua Vua Phá Lưới</h3>
-            <p className="text-sm opacity-70 mb-6 font-medium">
-              Rafaelson (Nam Định) đang dẫn đầu với 14 bàn thắng sau 15 vòng
-              đấu.
-            </p>
-            <div className="flex -space-x-3 mb-6">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="w-8 h-8 rounded-full bg-indigo-200 border-2 border-indigo-50 shadow-sm"
-                ></div>
-              ))}
-            </div>
-            <button className="bg-indigo-600 text-white px-6 py-2 rounded-full text-xs font-bold hover:bg-indigo-700 transition">
-              Xem chi tiết
-            </button>
-          </div>
-          <div className="w-32 h-32 bg-indigo-200/50 rounded-2xl flex items-center justify-center text-4xl shadow-inner relative">
-            🏆
-            <span className="absolute -top-2 -right-2 bg-yellow-400 text-[8px] font-black px-2 py-1 rounded-full text-white">
-              TOP 1
-            </span>
-          </div>
+          <p className="max-w-xl text-[10px] font-medium leading-relaxed opacity-50 lg:text-right">
+            <span className="font-bold text-slate-900">Quy tắc xếp hạng:</span>{" "}
+            hệ thống sắp xếp theo bộ quy định gắn với mùa giải đang chọn.
+          </p>
         </div>
       </div>
     </AppLayout>

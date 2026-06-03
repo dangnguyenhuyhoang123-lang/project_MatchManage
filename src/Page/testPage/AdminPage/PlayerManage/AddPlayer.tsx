@@ -108,12 +108,40 @@ export const AddPlayerModal: React.FC<Props> = ({
     });
   };
 
+  const handleAvatarFileChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.warning("Vui lòng chọn file hình ảnh hợp lệ.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.warning("Ảnh không nên vượt quá 2MB để tránh dữ liệu lưu quá lớn.");
+      event.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPlayer(
+        (prev) => new Player({ ...prev, avatar: String(reader.result || "") }),
+      );
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const nextErrors: Record<string, string> = {};
     if (!player.name.trim()) nextErrors.name = "Vui lòng nhập tên cầu thủ.";
-    if (!player.dateOfBirth) nextErrors.dateOfBirth = "Vui lòng chọn ngày sinh.";
+    if (!player.dateOfBirth)
+      nextErrors.dateOfBirth = "Vui lòng chọn ngày sinh.";
     if (!player.position) nextErrors.position = "Vui lòng chọn vị trí.";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
@@ -170,8 +198,21 @@ export const AddPlayerModal: React.FC<Props> = ({
                 </div>
                 <h3 className="mt-6 text-xl font-bold">Ảnh đại diện</h3>
                 <p className="mt-2 text-sm text-gray-500">
-                  Nhập URL ảnh ở phần thông tin bổ sung để hiển thị ảnh thật.
+                  Có thể nhập URL ảnh hoặc chọn file ảnh từ máy để xem trước và
+                  lưu.
                 </p>
+                <label className="mt-4 inline-flex cursor-pointer items-center justify-center rounded-full border border-green-100 bg-green-50 px-4 py-2 text-xs font-bold text-green-700 transition hover:bg-green-100">
+                  <span className="material-symbols-outlined mr-1 text-[16px]">
+                    upload
+                  </span>
+                  Chọn ảnh
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarFileChange}
+                    className="hidden"
+                  />
+                </label>
               </div>
 
               <div className="rounded-2xl bg-[#2e7d32] p-6 text-white">

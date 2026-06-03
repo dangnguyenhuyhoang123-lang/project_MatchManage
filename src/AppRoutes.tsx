@@ -121,8 +121,8 @@ const AppRoutes = () => {
             }
           >
             <Route
-              path="/admin"
-              element={<Navigate to="/admin/dashboard" replace />}
+              path="/admin/dashboard"
+              element={<Navigate to="/admin/leagues" replace />}
             />
             <Route path="/admin/dashboard" element={<DashBoardPage />} />
             <Route path="/admin/leagues" element={<TournamentManagement />} />
@@ -157,7 +157,6 @@ const AppRoutes = () => {
               element={<Navigate to="/club/dashboard" replace />}
             />
             <Route path="/club/dashboard" element={<ClubDetailPage />} />
-            <Route path="/club/info" element={<ClubDetailPage />} />
             <Route path="/club/stadium" element={<StadiumDetailPage />} />
             <Route path="/club/players" element={<PlayerRosterPage />} />
             <Route path="/club/staff" element={<ClubStaffPage />} />

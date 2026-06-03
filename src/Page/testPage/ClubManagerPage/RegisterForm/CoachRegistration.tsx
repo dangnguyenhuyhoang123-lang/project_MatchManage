@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Modal } from "../../../../components/Modal";
 import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
-import type { SeasonTeamCoach } from "../../../../model/SeasonTeamCoach";
-import SeasonTeamCoachService from "../../../../services/SeasonTeamCoachService";
+import type { Coach } from "../../../../model/CoachModel";
+import CoachService from "../../../../services/CoachService";
+import { useCurrentClubId } from "../InfoClubManage/clubInfoHelpers";
 import type { SelectedCoach } from "./RegisterFormMatch";
 
 type Props = {
@@ -23,9 +25,6 @@ type Staff = {
   assignedDate?: string;
 };
 
-const DEFAULT_TEAM_ID = 1;
-const DEFAULT_TEAM_NAME = "Becamex Bình Dương";
-
 const coachRoles = [
   { value: "HLV trưởng", label: "Huấn luyện viên trưởng", key: "headCoach" },
   { value: "Trợ lý", label: "Trợ lý huấn luyện viên", key: "assistant" },
@@ -40,48 +39,18 @@ const roleLabelMap = coachRoles.reduce<Record<string, string>>((map, role) => {
   return map;
 }, {});
 
-const getResponseItems = <T,>(data: unknown): T[] => {
-  if (Array.isArray(data)) {
-    return data as T[];
-  }
-
-  if (
-    data &&
-    typeof data === "object" &&
-    "content" in data &&
-    Array.isArray((data as { content?: unknown }).content)
-  ) {
-    return (data as { content: T[] }).content;
-  }
-
-  return [];
-};
-
-const normalizeStaff = (assignment: SeasonTeamCoach & Record<string, any>) => {
-  const coach = assignment.coach ?? {};
-  const role = assignment.role ?? "ASSISTANT_COACH";
+const normalizeStaff = (coach: Coach & Record<string, any>) => {
+  const role = coach.description ?? coach.role ?? "Trợ lý";
 
   return {
-    assignmentId: assignment.id,
-    coachId: assignment.coachId ?? coach.id,
-    name: assignment.coachName ?? coach.name ?? "Chưa có tên",
+    coachId: coach.id,
+    name: coach.name ?? "Chưa có tên",
     role,
-    idCode: assignment.idCode ?? coach.idCode,
-    nationality: assignment.nationality ?? coach.nationality,
-    avatar: assignment.avatar ?? coach.avatar,
-    status: assignment.status ?? coach.status ?? "ACTIVE",
-    assignedDate: assignment.assignedDate,
+    idCode: coach.idCode,
+    nationality: coach.nationality,
+    avatar: coach.avatar,
+    status: coach.status ?? "ACTIVE",
   } satisfies Staff;
-};
-
-const isTeamAssignment = (
-  assignment: SeasonTeamCoach & Record<string, any>,
-) => {
-  if (assignment.teamId == null) {
-    return true;
-  }
-
-  return String(assignment.teamId) === String(DEFAULT_TEAM_ID);
 };
 
 const getStaffKey = (staff: Staff) =>
@@ -187,6 +156,7 @@ const CoachRegistration: React.FC<Props> = ({
   selectedCoaches = [],
   onCoachesChange,
 }) => {
+  const { currentClubId, authLoading } = useCurrentClubId();
   const [availableStaffs, setAvailableStaffs] = useState<Staff[]>([]);
   const [selectedStaffs, setSelectedStaffs] =
     useState<SelectedCoach[]>(selectedCoaches);
@@ -199,22 +169,29 @@ const CoachRegistration: React.FC<Props> = ({
 
   useEffect(() => {
     const fetchTeamStaffs = async () => {
+      if (authLoading) return;
+
+      if (!currentClubId) {
+        setAvailableStaffs([]);
+        setErrorMessage(
+          "Không xác định được câu lạc bộ của người dùng đang đăng nhập.",
+        );
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       setErrorMessage("");
 
       try {
-        const response = await SeasonTeamCoachService.getAllSeasonTeamCoaches(
+        // Registration phải lấy Coach gốc theo CLB, không lấy CoachSeason/SeasonTeamCoach.
+        // SeasonTeamCoach chỉ được backend tạo sau khi ADMIN duyệt hồ sơ.
+        const response = await CoachService.getCoachesByTeamNormalized(
+          currentClubId,
           0,
-          100,
-          { teamId: DEFAULT_TEAM_ID },
+          500,
         );
-        const assignments = getResponseItems<
-          SeasonTeamCoach & Record<string, any>
-        >(response.data);
-
-        setAvailableStaffs(
-          assignments.filter(isTeamAssignment).map(normalizeStaff),
-        );
+        setAvailableStaffs((response.content ?? []).map(normalizeStaff));
       } catch (error) {
         console.error("Lỗi khi tải danh sách ban huấn luyện:", error);
         setErrorMessage(
@@ -227,7 +204,7 @@ const CoachRegistration: React.FC<Props> = ({
     };
 
     fetchTeamStaffs();
-  }, []);
+  }, [authLoading, currentClubId]);
 
   const selectedKeySet = useMemo(
     () => new Set(selectedStaffs.map(getStaffKey)),
@@ -250,9 +227,11 @@ const CoachRegistration: React.FC<Props> = ({
     }, {});
   }, [selectedStaffs]);
 
+  const hasExactlyOneHeadCoach = (roleCounts.headCoach ?? 0) === 1;
+
   const hasRequiredStaff =
     selectedStaffs.length >= 3 &&
-    (roleCounts.headCoach ?? 0) >= 1 &&
+    hasExactlyOneHeadCoach &&
     (roleCounts.assistant ?? 0) >= 1 &&
     (roleCounts.doctor ?? 0) >= 1;
 
@@ -294,6 +273,15 @@ const CoachRegistration: React.FC<Props> = ({
     );
 
     const nextStaffs = [...selectedStaffs, ...staffToAdd].slice(0, 8);
+    const nextHeadCoachCount = nextStaffs.filter(
+      (staff) => getRoleKey(staff.role) === "headCoach",
+    ).length;
+
+    if (nextHeadCoachCount > 1) {
+      toast.warning("Mỗi hồ sơ đăng ký chỉ được chọn 01 HLV trưởng.");
+      return;
+    }
+
     setSelectedStaffs(nextStaffs);
     onCoachesChange?.(nextStaffs);
     setSelectedStaffKeys([]);
@@ -309,6 +297,18 @@ const CoachRegistration: React.FC<Props> = ({
   };
 
   const handleRoleChange = (key: string | number, newRole: string) => {
+    if (getRoleKey(newRole) === "headCoach") {
+      const hasOtherHeadCoach = selectedStaffs.some(
+        (staff) =>
+          getStaffKey(staff) !== key && getRoleKey(staff.role) === "headCoach",
+      );
+
+      if (hasOtherHeadCoach) {
+        toast.warning("Mỗi hồ sơ đăng ký chỉ được có 01 HLV trưởng.");
+        return;
+      }
+    }
+
     const nextStaffs = selectedStaffs.map((staff) => {
       if (getStaffKey(staff) === key) {
         return { ...staff, role: newRole };
@@ -345,8 +345,13 @@ const CoachRegistration: React.FC<Props> = ({
               )}
               {(roleCounts.headCoach ?? 0) < 1 && (
                 <li>
-                  Thiếu HLV trưởng: Phải đăng ký ít nhất 01 Huấn luyện viên
-                  trưởng.
+                  Thiếu HLV trưởng: Phải đăng ký đúng 01 Huấn luyện viên trưởng.
+                </li>
+              )}
+              {(roleCounts.headCoach ?? 0) > 1 && (
+                <li>
+                  Dư HLV trưởng: Mỗi hồ sơ đăng ký chỉ được có 01 Huấn luyện
+                  viên trưởng.
                 </li>
               )}
               {(roleCounts.assistant ?? 0) < 1 && (
@@ -382,8 +387,7 @@ const CoachRegistration: React.FC<Props> = ({
               Ban huấn luyện đã sẵn sàng
             </h3>
             <p className="mt-1 text-xs text-green-700/80">
-              Đã chọn đầy đủ các vị trí bắt buộc (HLV trưởng, trợ lý, bác sĩ) và
-              không có vi phạm.
+              Đã chọn đúng 01 HLV trưởng, có trợ lý, bác sĩ và không có vi phạm.
             </p>
           </div>
         </div>
@@ -400,7 +404,7 @@ const CoachRegistration: React.FC<Props> = ({
                 </span>
               </h3>
               <p className="mt-1 text-xs text-gray-500">
-                Chọn từ biên chế hiện tại của {DEFAULT_TEAM_NAME}.
+                Chọn từ biên chế hiện tại của câu lạc bộ.
               </p>
             </div>
 
@@ -482,10 +486,10 @@ const CoachRegistration: React.FC<Props> = ({
                 </p>
               </CheckItem>
 
-              <CheckItem passed={(roleCounts.headCoach ?? 0) >= 1}>
+              <CheckItem passed={hasExactlyOneHeadCoach}>
                 <p className="text-sm font-bold">Huấn luyện viên trưởng</p>
                 <p className="text-[11px] text-gray-400">
-                  Bắt buộc có ít nhất 01 người
+                  Bắt buộc có đúng 01 người
                 </p>
               </CheckItem>
 
@@ -605,8 +609,7 @@ const CoachRegistration: React.FC<Props> = ({
           </div>
 
           <p className="mb-4 text-sm text-gray-500">
-            Danh sách ban huấn luyện thuộc biên chế {DEFAULT_TEAM_NAME} chưa
-            được chọn.
+            Danh sách ban huấn luyện thuộc biên chế câu lạc bộ chưa được chọn.
           </p>
 
           <div className="flex-1 space-y-2 overflow-y-auto pr-2">

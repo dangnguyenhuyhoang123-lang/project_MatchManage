@@ -105,6 +105,31 @@ const AddClubModal: React.FC<Props> = ({ onClose, currentTeam, onSuccess }) => {
     });
   };
 
+  const handleLogoFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.warning("Vui lòng chọn file hình ảnh hợp lệ.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.warning("Ảnh không nên vượt quá 2MB để tránh dữ liệu lưu quá lớn.");
+      event.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setTeam(
+        (prev) => new TeamModel({ ...prev, logo: String(reader.result || "") }),
+      );
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -187,8 +212,21 @@ const AddClubModal: React.FC<Props> = ({ onClose, currentTeam, onSuccess }) => {
                     </div>
                     <h3 className="font-bold">Biểu trưng CLB</h3>
                     <p className="mt-2 text-center text-sm text-gray-500">
-                      Dùng URL logo để hiển thị ảnh đại diện.
+                      Dùng URL logo hoặc chọn file ảnh từ máy để hiển thị ảnh
+                      đại diện.
                     </p>
+                    <label className="mt-4 inline-flex cursor-pointer items-center justify-center rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-100">
+                      <span className="material-symbols-outlined mr-1 text-[16px]">
+                        upload
+                      </span>
+                      Chọn logo
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoFileChange}
+                        className="hidden"
+                      />
+                    </label>
                   </div>
 
                   <div className="col-span-12 rounded-2xl border bg-white p-8 md:col-span-8">

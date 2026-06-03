@@ -437,6 +437,131 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
   const homeStats = stats.find((s) => s.teamId === homeTeamId);
   const awayStats = stats.find((s) => s.teamId === awayTeamId);
 
+  const exportMatchReport = () => {
+    const escapeHtml = (value: unknown) =>
+      String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+    const formatMinute = (event: MatchEvent) =>
+      event.extraMinute != null
+        ? `${event.minute}+${event.extraMinute}'`
+        : `${event.minute}'`;
+
+    const eventRows = events
+      .map(
+        (event, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${escapeHtml(event.eventType)}</td>
+          <td>${escapeHtml(formatMinute(event))}</td>
+          <td>${escapeHtml(event.teamName || (event.teamId === homeTeamId ? homeTeamName : awayTeamName))}</td>
+          <td>${escapeHtml(event.playerName || "--")}</td>
+          <td>${escapeHtml(event.goalType || event.note || "--")}</td>
+        </tr>`,
+      )
+      .join("");
+
+    const statsRows = [
+      [
+        "Kiểm soát bóng",
+        `${homeStats?.possession ?? 0}%`,
+        `${awayStats?.possession ?? 0}%`,
+      ],
+      ["Sút bóng", homeStats?.shots ?? 0, awayStats?.shots ?? 0],
+      [
+        "Sút trúng đích",
+        homeStats?.shotsOnTarget ?? 0,
+        awayStats?.shotsOnTarget ?? 0,
+      ],
+      ["Phạt góc", homeStats?.corners ?? 0, awayStats?.corners ?? 0],
+      ["Phạm lỗi", homeStats?.fouls ?? 0, awayStats?.fouls ?? 0],
+      ["Việt vị", homeStats?.offsides ?? 0, awayStats?.offsides ?? 0],
+      ["Thẻ vàng", homeStats?.yellowCards ?? 0, awayStats?.yellowCards ?? 0],
+      ["Thẻ đỏ", homeStats?.redCards ?? 0, awayStats?.redCards ?? 0],
+    ]
+      .map(
+        ([label, home, away]) => `
+        <tr>
+          <td>${escapeHtml(label)}</td>
+          <td>${escapeHtml(home)}</td>
+          <td>${escapeHtml(away)}</td>
+        </tr>`,
+      )
+      .join("");
+
+    const printWindow = window.open("", "_blank", "width=1000,height=800");
+    if (!printWindow) {
+      toast.error(
+        "Trình duyệt đã chặn cửa sổ xuất biên bản. Vui lòng cho phép popup.",
+      );
+      return;
+    }
+
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Biên bản trận đấu ${escapeHtml(homeTeamName)} - ${escapeHtml(awayTeamName)}</title>
+          <style>
+            body { font-family: Arial, sans-serif; color: #1f2937; padding: 32px; }
+            h1 { text-align: center; text-transform: uppercase; margin-bottom: 8px; }
+            .subtitle { text-align: center; color: #6b7280; margin-bottom: 28px; }
+            .score { display: flex; justify-content: space-between; align-items: center; border: 1px solid #e5e7eb; border-radius: 16px; padding: 20px; margin-bottom: 24px; }
+            .team { width: 35%; font-size: 18px; font-weight: 800; }
+            .team.away { text-align: right; }
+            .scoreline { font-size: 36px; font-weight: 900; }
+            .meta { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 20px; margin-bottom: 24px; }
+            .meta div { background: #f9fafb; border-radius: 10px; padding: 10px 12px; }
+            table { width: 100%; border-collapse: collapse; margin: 14px 0 28px; }
+            th, td { border: 1px solid #e5e7eb; padding: 10px; text-align: left; font-size: 13px; }
+            th { background: #f3f4f6; text-transform: uppercase; font-size: 11px; letter-spacing: .04em; }
+            h2 { margin-top: 28px; font-size: 18px; }
+            @media print { body { padding: 16px; } .no-print { display: none; } }
+          </style>
+        </head>
+        <body>
+          <button class="no-print" onclick="window.print()" style="float:right;padding:10px 16px;border-radius:999px;border:0;background:#166534;color:white;font-weight:700;cursor:pointer">In / Lưu PDF</button>
+          <h1>Biên bản trận đấu</h1>
+          <p class="subtitle">Hệ thống quản lý giải bóng đá</p>
+
+          <div class="score">
+            <div class="team">${escapeHtml(homeTeamName)}</div>
+            <div class="scoreline">${escapeHtml(currentMatch?.homeScore ?? 0)} - ${escapeHtml(currentMatch?.awayScore ?? 0)}</div>
+            <div class="team away">${escapeHtml(awayTeamName)}</div>
+          </div>
+
+          <div class="meta">
+            <div><b>Giải đấu:</b> ${escapeHtml(matchData?.league?.name || "--")}</div>
+            <div><b>Mùa giải:</b> ${escapeHtml(matchData?.season?.name || matchData?.season?.year || "--")}</div>
+            <div><b>Vòng đấu:</b> ${escapeHtml(matchData?.round?.name || "--")}</div>
+            <div><b>Ngày giờ:</b> ${escapeHtml(matchData?.matchDate ? new Date(matchData.matchDate).toLocaleString("vi-VN") : "--")}</div>
+            <div><b>Sân:</b> ${escapeHtml(matchData?.stadium?.name || matchData?.stadiumName || "--")}</div>
+            <div><b>Cầu thủ xuất sắc:</b> ${escapeHtml(currentMatch?.manOfTheMatchPlayerName || "Chưa chọn")}</div>
+          </div>
+
+          <h2>Danh sách sự kiện</h2>
+          <table>
+            <thead><tr><th>STT</th><th>Loại</th><th>Thời điểm</th><th>Đội</th><th>Cầu thủ</th><th>Ghi chú/Loại bàn</th></tr></thead>
+            <tbody>${eventRows || '<tr><td colspan="6">Chưa có sự kiện nào.</td></tr>'}</tbody>
+          </table>
+
+          <h2>Thông số chuyên môn</h2>
+          <table>
+            <thead><tr><th>Thông số</th><th>${escapeHtml(homeTeamName)}</th><th>${escapeHtml(awayTeamName)}</th></tr></thead>
+            <tbody>${statsRows}</tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+  };
+
   return (
     // <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-8 bg-[#1b1c1a]/20 backdrop-blur-sm font-sans">
     <div className="font-sans">
@@ -692,7 +817,11 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
                     className="w-full h-32 bg-white border-none rounded-xl p-4 text-sm focus:ring-1 focus:ring-green-800 mb-4 outline-none resize-none"
                     placeholder="Nhập nhận định chuyên môn..."
                   ></textarea>
-                  <button className="w-full flex items-center justify-center gap-2 py-3 rounded-full bg-white text-green-800 font-bold text-sm shadow-sm border border-green-100 hover:bg-gray-50 transition-colors">
+                  <button
+                    type="button"
+                    onClick={exportMatchReport}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-full bg-white text-green-800 font-bold text-sm shadow-sm border border-green-100 hover:bg-gray-50 transition-colors"
+                  >
                     <span className="material-symbols-outlined text-sm">
                       print
                     </span>{" "}
@@ -714,14 +843,12 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
         awayTeamId={awayTeamId}
         awayTeamName={awayTeamName}
         lineups={lineups}
-        allowedGoalTypes={
-          systemRule?.allowedGoalTypes
-            ?.split(",")
-            .map((item) => item.trim())
-            .filter((item): item is "NORMAL" | "PENALTY" | "OWN_GOAL" =>
-              ["NORMAL", "PENALTY", "OWN_GOAL"].includes(item),
-            )
-        }
+        allowedGoalTypes={systemRule?.allowedGoalTypes
+          ?.split(",")
+          .map((item) => item.trim())
+          .filter((item): item is "NORMAL" | "PENALTY" | "OWN_GOAL" =>
+            ["NORMAL", "PENALTY", "OWN_GOAL"].includes(item),
+          )}
         maxGoalMinute={systemRule?.maxGoalMinute ?? null}
       />
       <MatchSupervisorReportModal

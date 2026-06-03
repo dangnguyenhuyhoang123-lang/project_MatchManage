@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { AppLayout } from "../../../../layouts/AppLayout";
 import TeamService from "../../../../services/TeamService";
 import StadiumService from "../../../../services/StadiumService";
 import type { TeamModel } from "../../../../model/TeamModel";
+import ConfirmModal from "../../../../components/ConfirmModal";
 import {
   extractList,
   fallbackStadiumImage,
@@ -17,6 +19,50 @@ interface StadiumState {
   stadium: any | null;
 }
 
+interface StadiumFormState {
+  name: string;
+  address: string;
+  city: string;
+  country: string;
+  capacity: string;
+  grassType: string;
+  fifaStarRating: string;
+  imageUrl: string;
+  description: string;
+  status: string;
+}
+
+type StadiumFormErrors = Partial<Record<keyof StadiumFormState, string>>;
+
+function buildStadiumForm(
+  stadium: any | null,
+  team: TeamModel | null,
+): StadiumFormState {
+  const stadiumName = getStadiumName(stadium, team?.stadiumName);
+
+  return {
+    name: stadiumName === "Chưa cập nhật sân" ? "" : stadiumName,
+    address: stadium?.address ?? stadium?.location ?? "",
+    city: stadium?.city ?? team?.city ?? "",
+    country: stadium?.country ?? "Việt Nam",
+    capacity: stadium?.capacity ? String(stadium.capacity) : "",
+    grassType: stadium?.grassType ?? stadium?.surfaceType ?? "natural",
+    fifaStarRating: stadium?.fifaStarRating
+      ? String(stadium.fifaStarRating)
+      : "2",
+    imageUrl:
+      stadium?.imageUrl ??
+      stadium?.image ??
+      stadium?.avatar ??
+      stadium?.photo ??
+      "",
+    description: stadium?.description ?? "",
+    status: stadium?.status ?? "ACTIVE",
+  };
+}
+
+const emptyStadiumForm = buildStadiumForm(null, null);
+
 const StadiumDetailPage: React.FC = () => {
   const { currentClubId, authLoading } = useCurrentClubId();
   const [state, setState] = useState<StadiumState>({
@@ -25,6 +71,13 @@ const StadiumDetailPage: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [savingStadium, setSavingStadium] = useState(false);
+  const [stadiumForm, setStadiumForm] =
+    useState<StadiumFormState>(emptyStadiumForm);
+  const [stadiumFormErrors, setStadiumFormErrors] = useState<StadiumFormErrors>(
+    {},
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -67,10 +120,125 @@ const StadiumDetailPage: React.FC = () => {
     };
   }, [authLoading, currentClubId]);
 
+  const openEditModal = () => {
+    if (!state.team) {
+      toast.warning("Chưa tải được thông tin câu lạc bộ.");
+      return;
+    }
+
+    setStadiumForm(buildStadiumForm(state.stadium, state.team));
+    setStadiumFormErrors({});
+    setIsEditOpen(true);
+  };
+
+  const updateStadiumForm = (field: keyof StadiumFormState, value: string) => {
+    setStadiumForm((prev) => ({ ...prev, [field]: value }));
+    setStadiumFormErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const validateStadiumForm = () => {
+    const errors: StadiumFormErrors = {};
+    const capacity = Number(stadiumForm.capacity);
+    const fifaStarRating = Number(stadiumForm.fifaStarRating);
+
+    if (!stadiumForm.name.trim()) {
+      errors.name = "Tên sân vận động không được để trống.";
+    }
+
+    if (!Number.isFinite(capacity) || capacity <= 0) {
+      errors.capacity = "Sức chứa phải là số lớn hơn 0.";
+    }
+
+    if (
+      !Number.isFinite(fifaStarRating) ||
+      fifaStarRating < 1 ||
+      fifaStarRating > 5
+    ) {
+      errors.fifaStarRating = "Tiêu chuẩn FIFA phải từ 1 đến 5 sao.";
+    }
+
+    setStadiumFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSaveStadium = async () => {
+    if (!state.team?.id) {
+      toast.error("Không xác định được câu lạc bộ cần cập nhật sân nhà.");
+      return;
+    }
+
+    if (!validateStadiumForm()) return;
+
+    const payload = {
+      ...state.stadium,
+      name: stadiumForm.name.trim(),
+      stadiumName: stadiumForm.name.trim(),
+      address: stadiumForm.address.trim(),
+      location: stadiumForm.address.trim(),
+      city: stadiumForm.city.trim(),
+      country: stadiumForm.country.trim() || "Việt Nam",
+      capacity: Number(stadiumForm.capacity) || 0,
+      grassType: stadiumForm.grassType,
+      surfaceType: stadiumForm.grassType,
+      fifaStarRating: Number(stadiumForm.fifaStarRating) || 2,
+      imageUrl: stadiumForm.imageUrl.trim() || null,
+      image: stadiumForm.imageUrl.trim() || null,
+      description: stadiumForm.description.trim(),
+      status: stadiumForm.status || "ACTIVE",
+    };
+
+    try {
+      setSavingStadium(true);
+
+      let savedStadium: any;
+      if (state.stadium?.id) {
+        const response = await StadiumService.updateStadium(
+          state.stadium.id,
+          payload,
+        );
+        savedStadium = response.data ?? payload;
+      } else {
+        const response = await StadiumService.addStadium(payload);
+        savedStadium = response.data ?? payload;
+      }
+
+      const savedStadiumId =
+        savedStadium?.id ?? state.stadium?.id ?? state.team.stadiumId ?? null;
+      let updatedTeam = state.team;
+
+      if (savedStadiumId && state.team.stadiumId !== savedStadiumId) {
+        updatedTeam = {
+          ...state.team,
+          stadiumId: savedStadiumId,
+          stadiumName: savedStadium?.name ?? payload.name,
+        } as TeamModel;
+
+        await TeamService.updateTeam(state.team.id, updatedTeam);
+      }
+
+      setState({ team: updatedTeam, stadium: savedStadium });
+      setIsEditOpen(false);
+      toast.success(
+        state.stadium?.id
+          ? "Cập nhật sân vận động thành công."
+          : "Tạo và gán sân vận động thành công.",
+      );
+    } catch (err) {
+      console.error("Cannot save stadium", err);
+      toast.error("Không thể lưu thông tin sân vận động.");
+    } finally {
+      setSavingStadium(false);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="mx-auto max-w-7xl space-y-10 font-['Be_Vietnam_Pro']">
-        <PageHeader team={state.team} loading={loading} />
+        <PageHeader
+          team={state.team}
+          loading={loading}
+          onEdit={openEditModal}
+        />
 
         {error && (
           <div className="rounded-sm border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
@@ -85,6 +253,17 @@ const StadiumDetailPage: React.FC = () => {
         />
 
         <FacilitiesSection stadium={state.stadium} />
+
+        <EditStadiumModal
+          open={isEditOpen}
+          form={stadiumForm}
+          errors={stadiumFormErrors}
+          loading={savingStadium}
+          isCreate={!state.stadium?.id}
+          onChange={updateStadiumForm}
+          onClose={() => setIsEditOpen(false)}
+          onSubmit={handleSaveStadium}
+        />
       </div>
     </AppLayout>
   );
@@ -109,9 +288,11 @@ async function loadStadium(team: TeamModel) {
 function PageHeader({
   team,
   loading,
+  onEdit,
 }: {
   team: TeamModel | null;
   loading: boolean;
+  onEdit: () => void;
 }) {
   return (
     <section className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
@@ -135,7 +316,9 @@ function PageHeader({
 
       <button
         type="button"
-        className="flex items-center gap-2 rounded-full bg-[#008C2F] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-green-900/10 transition hover:bg-[#0d631b] active:scale-95"
+        onClick={onEdit}
+        disabled={loading || !team}
+        className="flex items-center gap-2 rounded-full bg-[#008C2F] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-green-900/10 transition hover:bg-[#0d631b] active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <span className="material-symbols-outlined text-[20px]">edit</span>
         Chỉnh sửa
@@ -342,5 +525,248 @@ function FacilityCard({
         </p>
       </div>
     </article>
+  );
+}
+
+function EditStadiumModal({
+  open,
+  form,
+  errors,
+  loading,
+  isCreate,
+  onChange,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  form: StadiumFormState;
+  errors: StadiumFormErrors;
+  loading: boolean;
+  isCreate: boolean;
+  onChange: (field: keyof StadiumFormState, value: string) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  const handleStadiumImageFileChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.warning("Vui lòng chọn file hình ảnh hợp lệ.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.warning("Ảnh không nên vượt quá 2MB để tránh dữ liệu lưu quá lớn.");
+      event.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => onChange("imageUrl", String(reader.result || ""));
+    reader.readAsDataURL(file);
+  };
+
+  if (!open) return null;
+
+  return (
+    <ConfirmModal
+      open={open}
+      title={isCreate ? "Tạo sân vận động" : "Cập nhật sân vận động"}
+      message="Cập nhật thông tin sân nhà của câu lạc bộ. Sức chứa và tiêu chuẩn FIFA sẽ được dùng khi kiểm tra hồ sơ đăng ký mùa giải."
+      confirmText={isCreate ? "Tạo sân" : "Lưu cập nhật"}
+      cancelText="Hủy"
+      loading={loading}
+      onClose={onClose}
+      onConfirm={onSubmit}
+    >
+      <div className="mt-5 grid max-h-[65vh] gap-4 overflow-y-auto pr-1 text-left sm:grid-cols-2">
+        <StadiumTextField
+          label="Tên sân"
+          value={form.name}
+          error={errors.name}
+          onChange={(value) => onChange("name", value)}
+          required
+        />
+        <StadiumTextField
+          label="Thành phố"
+          value={form.city}
+          error={errors.city}
+          onChange={(value) => onChange("city", value)}
+        />
+        <StadiumTextField
+          label="Địa chỉ"
+          value={form.address}
+          error={errors.address}
+          onChange={(value) => onChange("address", value)}
+          className="sm:col-span-2"
+        />
+        <StadiumTextField
+          label="Quốc gia"
+          value={form.country}
+          error={errors.country}
+          onChange={(value) => onChange("country", value)}
+        />
+        <StadiumTextField
+          label="Sức chứa"
+          value={form.capacity}
+          error={errors.capacity}
+          onChange={(value) => onChange("capacity", value)}
+          type="number"
+          required
+        />
+
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-bold text-gray-800">
+            Loại mặt sân
+          </span>
+          <select
+            value={form.grassType}
+            onChange={(event) => onChange("grassType", event.target.value)}
+            className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold outline-none transition focus:border-[#008C2F] focus:ring-4 focus:ring-[#008C2F]/10"
+          >
+            <option value="natural">Cỏ tự nhiên</option>
+            <option value="artificial">Cỏ nhân tạo</option>
+            <option value="hybrid">Cỏ lai</option>
+          </select>
+        </label>
+
+        <StadiumTextField
+          label="Tiêu chuẩn FIFA sao"
+          value={form.fifaStarRating}
+          error={errors.fifaStarRating}
+          onChange={(value) => onChange("fifaStarRating", value)}
+          type="number"
+          required
+        />
+
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-bold text-gray-800">
+            Trạng thái
+          </span>
+          <select
+            value={form.status}
+            onChange={(event) => onChange("status", event.target.value)}
+            className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold outline-none transition focus:border-[#008C2F] focus:ring-4 focus:ring-[#008C2F]/10"
+          >
+            <option value="ACTIVE">Đang sử dụng</option>
+            <option value="INACTIVE">Tạm ngưng</option>
+            <option value="MAINTENANCE">Bảo trì</option>
+          </select>
+        </label>
+
+        <StadiumTextField
+          label="URL ảnh sân"
+          value={form.imageUrl}
+          error={errors.imageUrl}
+          onChange={(value) => onChange("imageUrl", value)}
+          className="sm:col-span-2"
+        />
+        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-[#008C2F]/30 bg-[#008C2F]/5 px-4 py-3 text-sm font-black text-[#008C2F] transition hover:bg-[#008C2F]/10 sm:col-span-2">
+          <span className="material-symbols-outlined text-[18px]">upload</span>
+          Chọn file ảnh sân từ máy
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleStadiumImageFileChange}
+            className="hidden"
+          />
+        </label>
+
+        {form.imageUrl && (
+          <div className="rounded-2xl border border-gray-100 bg-[#f5f3ef] p-4 sm:col-span-2">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500">
+              Xem trước ảnh sân
+            </p>
+            <img
+              src={form.imageUrl}
+              alt="Stadium preview"
+              className="h-36 w-full rounded-2xl object-cover"
+            />
+          </div>
+        )}
+
+        <StadiumTextAreaField
+          label="Mô tả sân"
+          value={form.description}
+          error={errors.description}
+          onChange={(value) => onChange("description", value)}
+          className="sm:col-span-2"
+        />
+      </div>
+    </ConfirmModal>
+  );
+}
+
+function StadiumTextField({
+  label,
+  value,
+  error,
+  onChange,
+  type = "text",
+  required = false,
+  className = "",
+}: {
+  label: string;
+  value: string;
+  error?: string;
+  onChange: (value: string) => void;
+  type?: string;
+  required?: boolean;
+  className?: string;
+}) {
+  return (
+    <label className={`block ${className}`}>
+      <span className="mb-1.5 block text-sm font-bold text-gray-800">
+        {label} {required && <span className="text-red-500">*</span>}
+      </span>
+      <input
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={`w-full rounded-2xl border px-4 py-3 text-sm font-semibold outline-none transition focus:border-[#008C2F] focus:ring-4 focus:ring-[#008C2F]/10 ${
+          error ? "border-red-300 bg-red-50" : "border-gray-200 bg-white"
+        }`}
+      />
+      {error && (
+        <p className="mt-1 text-xs font-semibold text-red-600">{error}</p>
+      )}
+    </label>
+  );
+}
+
+function StadiumTextAreaField({
+  label,
+  value,
+  error,
+  onChange,
+  className = "",
+}: {
+  label: string;
+  value: string;
+  error?: string;
+  onChange: (value: string) => void;
+  className?: string;
+}) {
+  return (
+    <label className={`block ${className}`}>
+      <span className="mb-1.5 block text-sm font-bold text-gray-800">
+        {label}
+      </span>
+      <textarea
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        rows={4}
+        className={`w-full resize-none rounded-2xl border px-4 py-3 text-sm font-semibold outline-none transition focus:border-[#008C2F] focus:ring-4 focus:ring-[#008C2F]/10 ${
+          error ? "border-red-300 bg-red-50" : "border-gray-200 bg-white"
+        }`}
+      />
+      {error && (
+        <p className="mt-1 text-xs font-semibold text-red-600">{error}</p>
+      )}
+    </label>
   );
 }

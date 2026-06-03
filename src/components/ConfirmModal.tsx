@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 interface ConfirmModalProps {
   open: boolean;
   title: string;
@@ -8,6 +10,7 @@ interface ConfirmModalProps {
   danger?: boolean;
   onConfirm: () => void;
   onClose: () => void;
+  children?: ReactNode;
 }
 
 export default function ConfirmModal({
@@ -20,15 +23,18 @@ export default function ConfirmModal({
   danger = false,
   onConfirm,
   onClose,
+  children,
 }: ConfirmModalProps) {
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+      <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
         <h2 className="text-lg font-bold text-[#1B1C1A]">{title}</h2>
 
         <p className="mt-3 text-sm leading-6 text-[#707A6C]">{message}</p>
+
+        {children}
 
         <div className="mt-6 flex justify-end gap-3">
           <button

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import type { ReactNode } from "react";
 import { AppLayout } from "../../../layouts/AppLayout";
 import MatchService, {
@@ -70,6 +71,35 @@ function formatGoalDifference(row: StandingRow) {
     row.goalDifference ?? (row.goalsFor ?? 0) - (row.goalsAgainst ?? 0);
 
   return value > 0 ? `+${value}` : String(value);
+}
+
+function csvEscape(value: ReactNode) {
+  const text = String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function downloadCsv(
+  filename: string,
+  headers: string[],
+  rows: Array<Array<ReactNode>>,
+) {
+  const bom = "\ufeff";
+  const csv = [
+    headers.map(csvEscape).join(","),
+    ...rows.map((row) => row.map(csvEscape).join(",")),
+  ].join("\n");
+
+  const blob = new Blob([bom + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 function teamInitials(name: string) {
@@ -161,6 +191,115 @@ export default function ReportPage() {
     return season?.name || season?.year || "Chưa chọn mùa giải";
   }, [seasons, selectedSeasonId]);
 
+  const buildExportData = (): {
+    headers: string[];
+    rows: Array<Array<ReactNode>>;
+  } => {
+    if (activeTab === "standings") {
+      return {
+        headers: [
+          "Hạng",
+          "Đội",
+          "Trận",
+          "Thắng",
+          "Hòa",
+          "Thua",
+          "Hiệu số",
+          "Điểm",
+        ],
+        rows: standings.map((row, index) => [
+          row.rank ?? index + 1,
+          row.teamName || row.name || row.clubName || "Đội bóng",
+          row.played ?? row.matchesPlayed ?? 0,
+          row.win ?? row.won ?? row.wins ?? 0,
+          row.draw ?? row.drawn ?? row.draws ?? 0,
+          row.lose ?? row.lost ?? row.losses ?? 0,
+          formatGoalDifference(row),
+          row.points ?? 0,
+        ]),
+      };
+    }
+
+    if (activeTab === "scorers") {
+      return {
+        headers: ["Hạng", "Cầu thủ", "Đội", "Số bàn", "Kiến tạo"],
+        rows: topScorers.map((row, index) => [
+          index + 1,
+          row.playerName,
+          row.teamName || "--",
+          row.goals ?? 0,
+          row.assists ?? 0,
+        ]),
+      };
+    }
+
+    if (activeTab === "cards") {
+      return {
+        headers: ["Cầu thủ", "Đội", "Thẻ vàng", "Thẻ đỏ"],
+        rows: cards.map((row) => [
+          row.playerName,
+          row.teamName || "--",
+          row.yellowCards ?? 0,
+          row.redCards ?? 0,
+        ]),
+      };
+    }
+
+    if (activeTab === "suspensions") {
+      return {
+        headers: [
+          "Cầu thủ",
+          "Lý do",
+          "Trận gây án",
+          "Trận bị treo",
+          "Trạng thái",
+        ],
+        rows: suspensions.map((row) => [
+          row.playerName,
+          row.reason,
+          row.sourceMatchId ?? "--",
+          row.suspendedMatchId ?? "--",
+          row.served ? "Đã thi hành" : "Đang treo giò",
+        ]),
+      };
+    }
+
+    return {
+      headers: ["Hạng", "Cầu thủ", "Đội", "Số lần xuất sắc nhất trận"],
+      rows: manOfTheMatchStats.map((row, index) => [
+        index + 1,
+        row.playerName,
+        row.teamName ?? "Chưa rõ",
+        row.awardCount,
+      ]),
+    };
+  };
+
+  const handleExportReport = () => {
+    if (!selectedSeasonId) {
+      toast.warning("Vui lòng chọn mùa giải trước khi xuất báo cáo.");
+      return;
+    }
+
+    const { headers, rows } = buildExportData();
+    if (rows.length === 0) {
+      toast.warning("Không có dữ liệu để xuất ở tab báo cáo hiện tại.");
+      return;
+    }
+
+    const tabLabel =
+      tabs.find((tab) => tab.key === activeTab)?.label || "Bao-cao";
+    const safeSeason =
+      selectedSeasonLabel
+        .replace(/[^\p{L}\p{N}]+/gu, "-")
+        .replace(/^-|-$/g, "") || "mua-giai";
+    const safeTab =
+      tabLabel.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "") ||
+      "bao-cao";
+    downloadCsv(`bao-cao-${safeTab}-${safeSeason}.csv`, headers, rows);
+    toast.success("Đã xuất báo cáo CSV.");
+  };
+
   return (
     <AppLayout>
       <div className="mx-auto max-w-7xl space-y-8 pb-12">
@@ -174,22 +313,34 @@ export default function ReportPage() {
             </p>
           </div>
 
-          <select
-            value={selectedSeasonId}
-            onChange={(event) =>
-              setSelectedSeasonId(
-                event.target.value ? Number(event.target.value) : "",
-              )
-            }
-            className="w-full rounded-full border border-gray-200 bg-white px-5 py-3 text-sm font-bold text-gray-700 shadow-sm outline-none focus:ring-2 focus:ring-green-700/20 md:w-72"
-          >
-            <option value="">-- Chọn mùa giải --</option>
-            {seasons.map((season) => (
-              <option key={season.id} value={season.id}>
-                {season.name || season.year || `Mùa giải #${season.id}`}
-              </option>
-            ))}
-          </select>
+          <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
+            <select
+              value={selectedSeasonId}
+              onChange={(event) =>
+                setSelectedSeasonId(
+                  event.target.value ? Number(event.target.value) : "",
+                )
+              }
+              className="w-full rounded-full border border-gray-200 bg-white px-5 py-3 text-sm font-bold text-gray-700 shadow-sm outline-none focus:ring-2 focus:ring-green-700/20 md:w-72"
+            >
+              <option value="">-- Chọn mùa giải --</option>
+              {seasons.map((season) => (
+                <option key={season.id} value={season.id}>
+                  {season.name || season.year || `Mùa giải #${season.id}`}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={handleExportReport}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-[#008C2F] px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-green-700"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                download
+              </span>
+              Xuất báo cáo
+            </button>
+          </div>
         </header>
 
         <section className="flex gap-2 overflow-x-auto rounded-2xl border border-gray-100 bg-white p-2">
@@ -219,21 +370,23 @@ export default function ReportPage() {
         )}
 
         <section className="rounded-[2rem] border border-gray-100 bg-white p-4 shadow-sm md:p-6">
-          {loading ? (
-            <div className="py-16 text-center text-sm font-bold text-gray-500">
-              Đang tải dữ liệu báo cáo...
-            </div>
-          ) : activeTab === "standings" ? (
-            <StandingsTable rows={standings} />
-          ) : activeTab === "scorers" ? (
-            <TopScorersTable rows={topScorers} />
-          ) : activeTab === "cards" ? (
-            <CardsTable rows={cards} />
-          ) : activeTab === "suspensions" ? (
-            <SuspensionsTable rows={suspensions} />
-          ) : (
-            <ManOfTheMatchTable rows={manOfTheMatchStats} />
-          )}
+          <div className="max-h-[calc(100vh-260px)] overflow-y-auto pr-2">
+            {loading ? (
+              <div className="py-16 text-center text-sm font-bold text-gray-500">
+                Đang tải dữ liệu báo cáo...
+              </div>
+            ) : activeTab === "standings" ? (
+              <StandingsTable rows={standings} />
+            ) : activeTab === "scorers" ? (
+              <TopScorersTable rows={topScorers} />
+            ) : activeTab === "cards" ? (
+              <CardsTable rows={cards} />
+            ) : activeTab === "suspensions" ? (
+              <SuspensionsTable rows={suspensions} />
+            ) : (
+              <ManOfTheMatchTable rows={manOfTheMatchStats} />
+            )}
+          </div>
         </section>
       </div>
     </AppLayout>
@@ -358,7 +511,7 @@ function DataTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full text-left text-sm">
+      <table className="min-w-[1000px] text-left text-sm">
         <thead>
           <tr className="border-b border-gray-100 text-xs font-black uppercase tracking-widest text-gray-400">
             {headers.map((header) => (

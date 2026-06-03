@@ -7,6 +7,8 @@ import PlayerRegistration from "./PlayerRegistration";
 import RegistrationPortal from "./RegistrationPortal";
 import StadiumRegistration from "./StadiumRegistration";
 import SystemRuleService from "../../../../services/SystemRuleService";
+import TeamService from "../../../../services/TeamService";
+import { useCurrentClubId } from "../InfoClubManage/clubInfoHelpers";
 
 export type SelectedSeason = {
   id: number;
@@ -92,7 +94,7 @@ const defaultDraft: RegistrationDraft = {
   },
 };
 
-const DRAFT_STORAGE_KEY = "club_registration_draft";
+export const DRAFT_STORAGE_KEY = "club_registration_draft";
 
 const steps = [
   { step: 1, label: "Chọn giải đấu" },
@@ -212,10 +214,41 @@ function getHighestAllowedStep(completedSteps: Record<number, boolean>) {
 }
 
 const RegisterFormMatch: React.FC = () => {
+  const { currentClubId, authLoading } = useCurrentClubId();
   const [step, setStep] = useState(1);
   const [draft, setDraft] = useState<RegistrationDraft>(() => readSavedDraft());
   const [draftMessage, setDraftMessage] = useState("");
   const [rule, setRule] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (authLoading || !currentClubId) return;
+
+    TeamService.getTeamById(currentClubId)
+      .then((team) => {
+        setDraft((prev) => ({
+          ...prev,
+          team: {
+            ...prev.team,
+            id: currentClubId,
+            name: team?.name ?? prev.team.name ?? "Câu lạc bộ",
+          },
+          stadium: {
+            ...prev.stadium,
+            clubName: team?.name ?? prev.stadium.clubName,
+          },
+        }));
+      })
+      .catch((error) => {
+        console.error("Không thể đồng bộ thông tin CLB hiện tại:", error);
+        setDraft((prev) => ({
+          ...prev,
+          team: {
+            ...prev.team,
+            id: currentClubId,
+          },
+        }));
+      });
+  }, [authLoading, currentClubId]);
 
   useEffect(() => {
     if (draft.season?.systemRuleId) {
@@ -254,6 +287,26 @@ const RegisterFormMatch: React.FC = () => {
   const handleSaveDraft = () => {
     window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
     setDraftMessage("Đã lưu nháp hồ sơ đăng ký trên trình duyệt.");
+  };
+
+  const resetRegistrationDraft = () => {
+    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    setDraft((prev) => ({
+      ...defaultDraft,
+      team: {
+        ...defaultDraft.team,
+        id: currentClubId ?? prev.team.id,
+        name: prev.team.name || defaultDraft.team.name,
+      },
+      stadium: {
+        ...defaultDraft.stadium,
+        clubName: prev.team.name || defaultDraft.stadium.clubName,
+      },
+    }));
+    setStep(1);
+    setDraftMessage(
+      "Đã gửi hồ sơ thành công. Hệ thống đã xóa bản nháp và đặt lại form đăng ký về trạng thái ban đầu.",
+    );
   };
 
   return (
@@ -404,6 +457,7 @@ const RegisterFormMatch: React.FC = () => {
           setStep={goToStep}
           draft={draft}
           rule={rule}
+          onSubmitted={resetRegistrationDraft}
           onTeamChange={(team) =>
             setDraft((prev) => ({
               ...prev,
