@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Modal } from "../../../components/Modal";
+import { toast } from "sonner";
+import ConfirmModal from "../../../../components/ConfirmModal";
+import { Modal } from "../../../../components/Modal";
 import AddClubModal from "./AddClubModal";
-import { AppLayout } from "../../../layouts/AppLayout";
-import { TeamModel } from "../../../model/TeamModel";
-import TeamService from "../../../services/TeamService";
-import { PhanTrang } from "../../../utils/PhanTrang";
+import { AppLayout } from "../../../../layouts/AppLayout";
+import { TeamModel } from "../../../../model/TeamModel";
+import TeamService from "../../../../services/TeamService";
+import { PhanTrang } from "../../../../utils/PhanTrang";
 
 type FilterState = {
   search: string;
@@ -37,6 +39,8 @@ const ClubManagement: React.FC = () => {
   const [selectedTeam, setSelectedTeam] = useState<TeamModel | null>(null);
   const [teams, setTeams] = useState<TeamModel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [deletingTeam, setDeletingTeam] = useState<TeamModel | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [trangHienTai, setTrangHienTai] = useState(1);
   const [tongSoTrang, setTongSoTrang] = useState(0);
@@ -163,15 +167,23 @@ const ClubManagement: React.FC = () => {
 
   const handleDelete = async (team: TeamModel) => {
     if (!team.id) return;
+    setDeletingTeam(team);
+  };
 
-    if (window.confirm(`Bạn có chắc chắn muốn xóa đội bóng ${team.name}?`)) {
-      try {
-        await TeamService.deleteTeam(team.id);
-        fetchTeams(trangHienTai, appliedFilters);
-      } catch (error) {
-        console.error("Lỗi khi xóa đội bóng:", error);
-        alert("Không thể xóa đội bóng này.");
-      }
+  const handleConfirmDelete = async () => {
+    if (!deletingTeam?.id) return;
+
+    try {
+      setDeleteLoading(true);
+      await TeamService.deleteTeam(deletingTeam.id);
+      toast.success("Đã xóa đội bóng.");
+      setDeletingTeam(null);
+      fetchTeams(trangHienTai, appliedFilters);
+    } catch (error) {
+      console.error("Lỗi khi xóa đội bóng:", error);
+      toast.error("Không thể xóa đội bóng này.");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -385,6 +397,19 @@ const ClubManagement: React.FC = () => {
           onSuccess={() => fetchTeams(trangHienTai, appliedFilters)}
         />
       </Modal>
+      <ConfirmModal
+        open={deletingTeam !== null}
+        title="Xóa đội bóng"
+        message={`Bạn có chắc chắn muốn xóa đội bóng ${deletingTeam?.name ?? ""}?`}
+        confirmText="Xóa đội"
+        cancelText="Hủy"
+        danger
+        loading={deleteLoading}
+        onConfirm={handleConfirmDelete}
+        onClose={() => {
+          if (!deleteLoading) setDeletingTeam(null);
+        }}
+      />
     </AppLayout>
   );
 };

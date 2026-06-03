@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { AppLayout } from "../../../layouts/AppLayout";
+import MatchService, {
+  type ManOfTheMatchStatsResponse,
+} from "../../../services/MatchService";
 import PlayerStatsService, {
   type PlayerStatsResponse,
 } from "../../../services/PlayerStatsService";
@@ -11,7 +14,7 @@ import SeasonService from "../../../services/SeasonService";
 import StandingService from "../../../services/StandingService";
 import { extractApiErrorMessage } from "../../../utils/apiError";
 
-type TabKey = "standings" | "scorers" | "cards" | "suspensions";
+type TabKey = "standings" | "scorers" | "cards" | "suspensions" | "motm";
 
 type SeasonOption = {
   id: number;
@@ -27,12 +30,17 @@ type StandingRow = {
   clubName?: string;
   played?: number;
   matchesPlayed?: number;
+
+  win?: number;
+  draw?: number;
+  lose?: number;
   won?: number;
   wins?: number;
   drawn?: number;
   draws?: number;
   lost?: number;
   losses?: number;
+
   goalDifference?: number;
   goalsFor?: number;
   goalsAgainst?: number;
@@ -48,6 +56,7 @@ const tabs: Array<{ key: TabKey; label: string; icon: string }> = [
   { key: "scorers", label: "Vua phá lưới", icon: "sports_soccer" },
   { key: "cards", label: "Thẻ phạt", icon: "style" },
   { key: "suspensions", label: "Cầu thủ bị treo giò", icon: "gpp_bad" },
+  { key: "motm", label: "Cầu thủ xuất sắc", icon: "workspace_premium" },
 ];
 
 function readArray<T>(data: unknown): T[] {
@@ -58,8 +67,7 @@ function readArray<T>(data: unknown): T[] {
 
 function formatGoalDifference(row: StandingRow) {
   const value =
-    row.goalDifference ??
-    ((row.goalsFor ?? 0) - (row.goalsAgainst ?? 0));
+    row.goalDifference ?? (row.goalsFor ?? 0) - (row.goalsAgainst ?? 0);
 
   return value > 0 ? `+${value}` : String(value);
 }
@@ -80,7 +88,12 @@ export default function ReportPage() {
   const [standings, setStandings] = useState<StandingRow[]>([]);
   const [topScorers, setTopScorers] = useState<PlayerStatsResponse[]>([]);
   const [cards, setCards] = useState<PlayerStatsResponse[]>([]);
-  const [suspensions, setSuspensions] = useState<PlayerSuspensionResponse[]>([]);
+  const [suspensions, setSuspensions] = useState<PlayerSuspensionResponse[]>(
+    [],
+  );
+  const [manOfTheMatchStats, setManOfTheMatchStats] = useState<
+    ManOfTheMatchStatsResponse[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -106,6 +119,7 @@ export default function ReportPage() {
       setTopScorers([]);
       setCards([]);
       setSuspensions([]);
+      setManOfTheMatchStats([]);
       return;
     }
 
@@ -115,18 +129,22 @@ export default function ReportPage() {
 
       try {
         const seasonId = Number(selectedSeasonId);
-        const [standingRes, scorerRes, cardRes, suspensionRes] =
+        const [standingRes, scorerRes, cardRes, suspensionRes, motmRes] =
           await Promise.all([
             StandingService.getAllStandings(seasonId),
             PlayerStatsService.getTopScorers(seasonId),
             PlayerStatsService.getCards(seasonId),
             PlayerSuspensionService.getBySeason(seasonId),
+            MatchService.getManOfTheMatchStats(seasonId),
           ]);
 
         setStandings(readArray<StandingRow>(standingRes.data));
         setTopScorers(readArray<PlayerStatsResponse>(scorerRes.data));
         setCards(readArray<PlayerStatsResponse>(cardRes.data));
         setSuspensions(readArray<PlayerSuspensionResponse>(suspensionRes.data));
+        setManOfTheMatchStats(
+          readArray<ManOfTheMatchStatsResponse>(motmRes.data),
+        );
       } catch (error) {
         console.error("Cannot load report data", error);
         setErrorMessage(extractApiErrorMessage(error));
@@ -211,8 +229,10 @@ export default function ReportPage() {
             <TopScorersTable rows={topScorers} />
           ) : activeTab === "cards" ? (
             <CardsTable rows={cards} />
-          ) : (
+          ) : activeTab === "suspensions" ? (
             <SuspensionsTable rows={suspensions} />
+          ) : (
+            <ManOfTheMatchTable rows={manOfTheMatchStats} />
           )}
         </section>
       </div>
@@ -224,16 +244,25 @@ function StandingsTable({ rows }: { rows: StandingRow[] }) {
   return (
     <DataTable
       emptyText="Chưa có dữ liệu bảng xếp hạng cho mùa giải này."
-      headers={["Hạng", "Đội", "Trận", "Thắng", "Hòa", "Thua", "Hiệu số", "Điểm"]}
+      headers={[
+        "Hạng",
+        "Đội",
+        "Trận",
+        "Thắng",
+        "Hòa",
+        "Thua",
+        "Hiệu số",
+        "Điểm",
+      ]}
       rows={rows.map((row, index) => {
         const teamName = row.teamName || row.name || row.clubName || "Đội bóng";
         return [
           row.rank ?? index + 1,
           <TeamCell key="team" name={teamName} />,
           row.played ?? row.matchesPlayed ?? 0,
-          row.won ?? row.wins ?? 0,
-          row.drawn ?? row.draws ?? 0,
-          row.lost ?? row.losses ?? 0,
+          row.win ?? row.won ?? row.wins ?? 0,
+          row.draw ?? row.drawn ?? row.draws ?? 0,
+          row.lose ?? row.lost ?? row.losses ?? 0,
           formatGoalDifference(row),
           row.points ?? 0,
         ];
@@ -277,13 +306,34 @@ function SuspensionsTable({ rows }: { rows: PlayerSuspensionResponse[] }) {
   return (
     <DataTable
       emptyText="Chưa có cầu thủ bị treo giò trong mùa giải này."
-      headers={["Cầu thủ", "Lý do", "Trận gây án", "Trận bị treo", "Trạng thái"]}
+      headers={[
+        "Cầu thủ",
+        "Lý do",
+        "Trận gây án",
+        "Trận bị treo",
+        "Trạng thái",
+      ]}
       rows={rows.map((row) => [
         row.playerName,
         row.reason,
         row.sourceMatchId ?? "--",
         row.suspendedMatchId ?? "--",
         row.served ? "Đã thi hành" : "Đang treo giò",
+      ])}
+    />
+  );
+}
+
+function ManOfTheMatchTable({ rows }: { rows: ManOfTheMatchStatsResponse[] }) {
+  return (
+    <DataTable
+      emptyText="Chưa có dữ liệu cầu thủ xuất sắc nhất trận."
+      headers={["Hạng", "Cầu thủ", "Đội", "Số lần xuất sắc nhất trận"]}
+      rows={rows.map((row, index) => [
+        index + 1,
+        row.playerName,
+        row.teamName ?? "Chưa rõ",
+        row.awardCount,
       ])}
     />
   );
@@ -320,9 +370,15 @@ function DataTable({
         </thead>
         <tbody>
           {rows.map((row, rowIndex) => (
-            <tr key={rowIndex} className="border-b border-gray-50 last:border-0">
+            <tr
+              key={rowIndex}
+              className="border-b border-gray-50 last:border-0"
+            >
               {row.map((cell, cellIndex) => (
-                <td key={cellIndex} className="px-4 py-4 font-bold text-gray-700">
+                <td
+                  key={cellIndex}
+                  className="px-4 py-4 font-bold text-gray-700"
+                >
                   {cell}
                 </td>
               ))}

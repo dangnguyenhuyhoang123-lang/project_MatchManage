@@ -25,6 +25,15 @@ export type MatchTeamSeasonDTO = {
   teamSeasonId: number;
 };
 
+export type ManOfTheMatchStatsResponse = {
+  playerId: number;
+  playerName: string;
+  teamId?: number | null;
+  teamName?: string | null;
+  seasonId: number;
+  awardCount: number;
+};
+
 class MatchService {
   getAllMatches(page: number, size: number, filters?: any) {
     return axiosClient.get(`${API_BASE_URL}/getAllMatches`, {
@@ -69,6 +78,8 @@ class MatchService {
       season: responseData.season,
       homeTeam: responseData.homeTeam,
       awayTeam: responseData.awayTeam,
+      manOfTheMatchPlayerId: responseData.manOfTheMatchPlayerId,
+      manOfTheMatchPlayerName: responseData.manOfTheMatchPlayerName,
     });
   }
 
@@ -179,6 +190,8 @@ class MatchService {
           season: item.season,
           homeTeam: item.homeTeam,
           awayTeam: item.awayTeam,
+          manOfTheMatchPlayerId: item.manOfTheMatchPlayerId,
+          manOfTheMatchPlayerName: item.manOfTheMatchPlayerName,
         }),
       );
     }
@@ -205,6 +218,8 @@ class MatchService {
       season: responseData.season,
       homeTeam: responseData.homeTeam,
       awayTeam: responseData.awayTeam,
+      manOfTheMatchPlayerId: responseData.manOfTheMatchPlayerId,
+      manOfTheMatchPlayerName: responseData.manOfTheMatchPlayerName,
     });
   }
 
@@ -216,6 +231,21 @@ class MatchService {
 
   predictMatch(matchId: number) {
     return axiosClient.post<MatchModel>(`${API_BASE_URL}/${matchId}/predict`);
+  }
+
+  updateManOfTheMatch(matchId: number, playerId: number) {
+    return axiosClient.patch<MatchModel>(
+      `${API_BASE_URL}/${matchId}/man-of-the-match/${playerId}`,
+    );
+  }
+
+  getManOfTheMatchStats(seasonId: number) {
+    return axiosClient.get<ManOfTheMatchStatsResponse[]>(
+      `${API_BASE_URL}/man-of-the-match-stats`,
+      {
+        params: { seasonId },
+      },
+    );
   }
 }
 

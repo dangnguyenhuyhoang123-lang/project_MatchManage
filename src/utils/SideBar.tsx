@@ -26,6 +26,11 @@ const adminMenu: MenuItem[] = [
     aliases: ["/league"],
   },
   {
+    label: "Lời mời mùa giải",
+    path: "/admin/invitations",
+    icon: "outgoing_mail",
+  },
+  {
     label: "Vòng đấu",
     path: "/admin/rounds",
     icon: "schema",
@@ -128,6 +133,11 @@ const clubMenu: MenuItem[] = [
     path: "/club/matches",
     icon: "tactic",
     aliases: ["/manageMatchClub"],
+  },
+  {
+    label: "Lời mời giải đấu",
+    path: "/club/invitations",
+    icon: "mail",
   },
 ];
 

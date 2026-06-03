@@ -14,6 +14,7 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
   const [stadium, setStadium] = useState<string>("");
   const [matchDate, setMatchDate] = useState<string>("");
   const [matchTime, setMatchTime] = useState<string>("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (initialData) {
@@ -56,6 +57,7 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
       setMatchDate("");
       setMatchTime("");
     }
+    setErrors({});
   }, [initialData]);
 
   useEffect(() => {
@@ -143,6 +145,32 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
     stadiumOptions.push({ value: stadium, label: stadium });
   }
 
+  const clearError = (field: string) => {
+    setErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const validate = () => {
+    const nextErrors: Record<string, string> = {};
+
+    if (!selectedSeason) nextErrors.selectedSeason = "Vui lòng chọn mùa giải.";
+    if (!selectedRound) nextErrors.selectedRound = "Vui lòng chọn vòng đấu.";
+    if (!homeTeam) nextErrors.homeTeam = "Vui lòng chọn đội nhà.";
+    if (!awayTeam) nextErrors.awayTeam = "Vui lòng chọn đội khách.";
+    if (!matchDate) nextErrors.matchDate = "Vui lòng chọn ngày thi đấu.";
+    if (!matchTime) nextErrors.matchTime = "Vui lòng chọn giờ thi đấu.";
+    if (homeTeam && awayTeam && homeTeam === awayTeam) {
+      nextErrors.awayTeam = "Đội nhà và đội khách không được trùng nhau.";
+    }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-8 bg-[#1b1c1a]/20 backdrop-blur-sm font-sans">
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative">
@@ -203,21 +231,7 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
             className="space-y-6"
             onSubmit={(e) => {
               e.preventDefault();
-              if (
-                !selectedSeason ||
-                !selectedRound ||
-                !homeTeam ||
-                !awayTeam ||
-                !matchDate ||
-                !matchTime
-              ) {
-                alert("Vui lòng điền đầy đủ thông tin bắt buộc!");
-                return;
-              }
-              if (homeTeam === awayTeam) {
-                alert("Đội nhà và đội khách không được trùng nhau!");
-                return;
-              }
+              if (!validate()) return;
               onSave({
                 seasonId: Number(selectedSeason),
                 roundId: Number(selectedRound),
@@ -244,7 +258,9 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
                   setHomeTeam("");
                   setAwayTeam("");
                   setStadium("");
+                  clearError("selectedSeason");
                 }}
+                error={errors.selectedSeason}
               />
               <SelectGroup
                 label="Chọn vòng đấu"
@@ -252,9 +268,13 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
                 options={roundOptions}
                 value={selectedRound}
                 onChange={(e: any) =>
-                  setSelectedRound(e.target.value ? Number(e.target.value) : "")
+                  {
+                    setSelectedRound(e.target.value ? Number(e.target.value) : "");
+                    clearError("selectedRound");
+                  }
                 }
                 disabled={!selectedSeason}
+                error={errors.selectedRound}
               />
             </div>
 
@@ -277,10 +297,13 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
                   icon="stadium"
                   options={teamOptions}
                   value={homeTeam}
-                  onChange={(e: any) =>
-                    setHomeTeam(e.target.value ? Number(e.target.value) : "")
-                  }
+                  onChange={(e: any) => {
+                    setHomeTeam(e.target.value ? Number(e.target.value) : "");
+                    clearError("homeTeam");
+                    clearError("awayTeam");
+                  }}
                   disabled={!selectedSeason}
+                  error={errors.homeTeam}
                 />
                 <TeamSelect
                   label="Đội khách"
@@ -289,10 +312,12 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
                   icon="flight_takeoff"
                   options={teamOptions}
                   value={awayTeam}
-                  onChange={(e: any) =>
-                    setAwayTeam(e.target.value ? Number(e.target.value) : "")
-                  }
+                  onChange={(e: any) => {
+                    setAwayTeam(e.target.value ? Number(e.target.value) : "");
+                    clearError("awayTeam");
+                  }}
                   disabled={!selectedSeason}
+                  error={errors.awayTeam}
                 />
               </div>
             </div>
@@ -314,14 +339,22 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
                 icon="calendar_today"
                 type="date"
                 value={matchDate}
-                onChange={(e: any) => setMatchDate(e.target.value)}
+                onChange={(e: any) => {
+                  setMatchDate(e.target.value);
+                  clearError("matchDate");
+                }}
+                error={errors.matchDate}
               />
               <InputGroup
                 label="Giờ thi đấu"
                 icon="schedule"
                 type="time"
                 value={matchTime}
-                onChange={(e: any) => setMatchTime(e.target.value)}
+                onChange={(e: any) => {
+                  setMatchTime(e.target.value);
+                  clearError("matchTime");
+                }}
+                error={errors.matchTime}
               />
             </div>
 
@@ -354,7 +387,15 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
 
 // --- Internal UI Components ---
 
-function SelectGroup({ label, icon, options, value, onChange, disabled }: any) {
+function SelectGroup({
+  label,
+  icon,
+  options,
+  value,
+  onChange,
+  disabled,
+  error,
+}: any) {
   return (
     <div className="space-y-2">
       <label className="text-xs font-bold text-gray-500 flex items-center gap-2 px-1">
@@ -379,6 +420,7 @@ function SelectGroup({ label, icon, options, value, onChange, disabled }: any) {
           expand_more
         </span>
       </div>
+      {error && <p className="px-1 text-xs font-bold text-red-600">{error}</p>}
     </div>
   );
 }
@@ -392,6 +434,7 @@ function TeamSelect({
   value,
   onChange,
   disabled,
+  error,
 }: any) {
   return (
     <div className={`space-y-2 ${side === "right" ? "text-right" : ""}`}>
@@ -418,11 +461,12 @@ function TeamSelect({
           {icon}
         </span>
       </div>
+      {error && <p className="text-xs font-bold text-red-600">{error}</p>}
     </div>
   );
 }
 
-function InputGroup({ label, icon, type, value, onChange }: any) {
+function InputGroup({ label, icon, type, value, onChange, error }: any) {
   return (
     <div className="space-y-2">
       <label className="text-xs font-bold text-gray-500 flex items-center gap-2 px-1">
@@ -435,6 +479,7 @@ function InputGroup({ label, icon, type, value, onChange }: any) {
         onChange={onChange}
         className="w-full bg-[#efeeea] border-none rounded-xl py-3.5 px-4 focus:ring-2 focus:ring-[#0d631b] transition-all font-bold text-sm"
       />
+      {error && <p className="px-1 text-xs font-bold text-red-600">{error}</p>}
     </div>
   );
 }

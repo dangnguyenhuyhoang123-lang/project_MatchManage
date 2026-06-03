@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { RoundModel } from "../../../../model/RoundModel";
 import { SeasonModel } from "../../../../model/SeasonModel";
 import RoundService from "../../../../services/RoundService";
@@ -36,11 +37,13 @@ export default function CreateRoundModal({
   const [round, setRound] = useState<RoundModel>(createEmptyRound());
   const [seasons, setSeasons] = useState<SeasonModel[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const isEditMode = useMemo(() => Boolean(currentRound?.id), [currentRound]);
 
   useEffect(() => {
     setRound(currentRound ? new RoundModel(currentRound) : createEmptyRound());
+    setErrors({});
   }, [currentRound]);
 
   useEffect(() => {
@@ -73,6 +76,12 @@ export default function CreateRoundModal({
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value, type } = e.target;
+    setErrors((current) => {
+      if (!current[name]) return current;
+      const next = { ...current };
+      delete next[name];
+      return next;
+    });
 
     setRound((prev) => {
       const next = new RoundModel(prev);
@@ -103,20 +112,13 @@ export default function CreateRoundModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!round.name.trim()) {
-      alert("Vui lòng nhập tên vòng đấu.");
-      return;
-    }
-
-    if (!round.startDate || !round.endDate) {
-      alert("Vui lòng chọn thời gian bắt đầu và kết thúc.");
-      return;
-    }
-
-    if (!round.seasonId) {
-      alert("Vui lòng chọn mùa giải.");
-      return;
-    }
+    const nextErrors: Record<string, string> = {};
+    if (!round.name.trim()) nextErrors.name = "Vui lòng nhập tên vòng đấu.";
+    if (!round.startDate) nextErrors.startDate = "Vui lòng chọn thời gian bắt đầu.";
+    if (!round.endDate) nextErrors.endDate = "Vui lòng chọn thời gian kết thúc.";
+    if (!round.seasonId) nextErrors.seasonId = "Vui lòng chọn mùa giải.";
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
 
     setIsSubmitting(true);
 
@@ -131,7 +133,7 @@ export default function CreateRoundModal({
       onClose();
     } catch (error) {
       console.error("Lỗi khi lưu vòng đấu:", error);
-      alert("Có lỗi xảy ra khi lưu vòng đấu.");
+      toast.error("Có lỗi xảy ra khi lưu vòng đấu.");
     } finally {
       setIsSubmitting(false);
     }
@@ -172,6 +174,7 @@ export default function CreateRoundModal({
                   value={round.name}
                   onChange={handleChange}
                   placeholder="Ví dụ: Vòng 1"
+                  error={errors.name}
                 />
 
                 <SelectField
@@ -185,6 +188,7 @@ export default function CreateRoundModal({
                     label: season.year,
                   }))}
                   placeholder="Chọn mùa giải"
+                  error={errors.seasonId}
                 />
 
                 <InputField
@@ -216,6 +220,7 @@ export default function CreateRoundModal({
                   type="datetime-local"
                   value={toDateTimeLocal(round.startDate)}
                   onChange={handleChange}
+                  error={errors.startDate}
                 />
 
                 <InputField
@@ -225,6 +230,7 @@ export default function CreateRoundModal({
                   type="datetime-local"
                   value={toDateTimeLocal(round.endDate)}
                   onChange={handleChange}
+                  error={errors.endDate}
                 />
               </div>
             </div>
@@ -350,6 +356,7 @@ type InputFieldProps = {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
   type?: string;
+  error?: string;
 };
 
 const InputField = ({
@@ -360,6 +367,7 @@ const InputField = ({
   onChange,
   placeholder,
   type = "text",
+  error,
 }: InputFieldProps) => (
   <div className="flex flex-col gap-2">
     <label htmlFor={id} className="px-1 text-sm font-bold text-[#40493d]">
@@ -374,6 +382,7 @@ const InputField = ({
       className="rounded-xl border border-transparent bg-[#eae8e4]/50 px-4 py-3 text-sm outline-none transition-all placeholder:text-[#707a6c]/50 focus:border-[#0d631b]/50 focus:bg-white focus:ring-4 focus:ring-[#0d631b]/10"
       type={type}
     />
+    {error && <p className="px-1 text-xs font-bold text-red-600">{error}</p>}
   </div>
 );
 
@@ -390,6 +399,7 @@ type SelectFieldProps = {
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   options: SelectOption[];
   placeholder?: string;
+  error?: string;
 };
 
 const SelectField = ({
@@ -400,6 +410,7 @@ const SelectField = ({
   onChange,
   options,
   placeholder,
+  error,
 }: SelectFieldProps) => (
   <div className="flex flex-col gap-2">
     <label htmlFor={id} className="px-1 text-sm font-bold text-[#40493d]">
@@ -424,5 +435,6 @@ const SelectField = ({
         expand_more
       </span>
     </div>
+    {error && <p className="px-1 text-xs font-bold text-red-600">{error}</p>}
   </div>
 );

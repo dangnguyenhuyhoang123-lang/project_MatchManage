@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import CreateTournament from "./CreateTournament";
 import CreateSeasonModal from "./CreateSeasonModal";
 
+import ConfirmModal from "../../../../components/ConfirmModal";
 import { Modal } from "../../../../components/Modal";
 import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import { AppLayout } from "../../../../layouts/AppLayout";
@@ -64,6 +66,9 @@ const TournamentManagement: React.FC = () => {
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
   const [items, setItems] = useState<LeagueWithSeasons[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [deletingLeague, setDeletingLeague] = useState<League | null>(null);
+  const [deletingSeasonId, setDeletingSeasonId] = useState<number | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [trangHienTai, setTrangHienTai] = useState(1);
   const [tongSoTrang, setTongSoTrang] = useState(0);
@@ -209,31 +214,46 @@ const TournamentManagement: React.FC = () => {
 
   const handleDelete = async (league: League) => {
     if (!league.id) return;
+    setDeletingLeague(league);
+  };
 
-    if (window.confirm(`Bạn có chắc chắn muốn xóa giải đấu ${league.name}?`)) {
-      try {
-        await LeagueService.deleteLeague(league.id);
-        fetchLeagues(trangHienTai, appliedFilters);
-      } catch (error) {
-        console.error("Lỗi khi xóa giải đấu:", error);
-        alert("Không thể xóa giải đấu này.");
-      }
+  const handleConfirmDeleteLeague = async () => {
+    if (!deletingLeague?.id) return;
+
+    try {
+      setDeleteLoading(true);
+      await LeagueService.deleteLeague(deletingLeague.id);
+      toast.success("Đã xóa giải đấu.");
+      setDeletingLeague(null);
+      fetchLeagues(trangHienTai, appliedFilters);
+    } catch (error) {
+      console.error("Lỗi khi xóa giải đấu:", error);
+      toast.error("Không thể xóa giải đấu này.");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
   const handleDeleteSeason = async (seasonId: number) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa mùa giải này không?")) {
-      return;
-    }
+    setDeletingSeasonId(seasonId);
+  };
+
+  const handleConfirmDeleteSeason = async () => {
+    if (!deletingSeasonId) return;
 
     try {
-      await SeasonService.deleteSeason(seasonId);
+      setDeleteLoading(true);
+      await SeasonService.deleteSeason(deletingSeasonId);
+      toast.success("Đã xóa mùa giải.");
+      setDeletingSeasonId(null);
       fetchLeagues(trangHienTai, appliedFilters);
     } catch (error) {
       console.error("Lỗi khi xóa mùa giải:", error);
-      alert(
+      toast.error(
         "Không thể xóa mùa giải này. Vui lòng kiểm tra xem có hồ sơ đăng ký hoặc trận đấu liên quan không.",
       );
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -472,6 +492,32 @@ const TournamentManagement: React.FC = () => {
           onSuccess={() => fetchLeagues(trangHienTai, appliedFilters)}
         />
       </Modal>
+      <ConfirmModal
+        open={deletingLeague !== null}
+        title="Xóa giải đấu"
+        message={`Bạn có chắc chắn muốn xóa giải đấu ${deletingLeague?.name ?? ""}?`}
+        confirmText="Xóa giải đấu"
+        cancelText="Hủy"
+        danger
+        loading={deleteLoading}
+        onConfirm={handleConfirmDeleteLeague}
+        onClose={() => {
+          if (!deleteLoading) setDeletingLeague(null);
+        }}
+      />
+      <ConfirmModal
+        open={deletingSeasonId !== null}
+        title="Xóa mùa giải"
+        message="Bạn có chắc chắn muốn xóa mùa giải này không?"
+        confirmText="Xóa mùa giải"
+        cancelText="Hủy"
+        danger
+        loading={deleteLoading}
+        onConfirm={handleConfirmDeleteSeason}
+        onClose={() => {
+          if (!deleteLoading) setDeletingSeasonId(null);
+        }}
+      />
     </AppLayout>
   );
 };

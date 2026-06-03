@@ -83,7 +83,7 @@ export default function StandingsPage() {
           name: item.teamName || item.name || item.clubName || "Đội bóng",
           stadium: item.stadium || "Sân vận động: Chưa rõ",
           played: item.played || item.matchesPlayed || 0,
-          stats: `${item.won || 0} - ${item.drawn || 0} - ${item.lost || 0}`,
+          stats: `${item.win ?? item.won ?? 0} - ${item.draw ?? item.drawn ?? 0} - ${item.lose ?? item.lost ?? 0}`,
           hs:
             item.goalDifference !== undefined
               ? item.goalDifference > 0

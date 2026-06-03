@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ConfirmModal from "../ConfirmModal";
 import { Modal } from "../Modal";
 import MatchRefereeService, {
   type MatchRefereeResponse,
@@ -37,6 +38,9 @@ export default function MatchRefereeAssignmentModal({
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [removingAssignmentId, setRemovingAssignmentId] = useState<number | null>(
+    null,
+  );
 
   const loadAssignments = async () => {
     if (!matchId) return;
@@ -90,14 +94,17 @@ export default function MatchRefereeAssignmentModal({
   };
 
   const handleRemove = async (id: number) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa phân công trọng tài này?")) {
-      return;
-    }
+    setRemovingAssignmentId(id);
+  };
+
+  const handleConfirmRemove = async () => {
+    if (!removingAssignmentId) return;
 
     try {
       setSubmitting(true);
       setErrorMessage("");
-      await MatchRefereeService.remove(id);
+      await MatchRefereeService.remove(removingAssignmentId);
+      setRemovingAssignmentId(null);
       await loadAssignments();
       onChanged?.();
     } catch (error) {
@@ -209,6 +216,19 @@ export default function MatchRefereeAssignmentModal({
             ))}
           </div>
         )}
+        <ConfirmModal
+          open={removingAssignmentId !== null}
+          title="Xóa phân công trọng tài"
+          message="Bạn có chắc chắn muốn xóa phân công trọng tài này?"
+          confirmText="Xóa"
+          cancelText="Hủy"
+          danger
+          loading={submitting}
+          onConfirm={handleConfirmRemove}
+          onClose={() => {
+            if (!submitting) setRemovingAssignmentId(null);
+          }}
+        />
       </div>
     </Modal>
   );

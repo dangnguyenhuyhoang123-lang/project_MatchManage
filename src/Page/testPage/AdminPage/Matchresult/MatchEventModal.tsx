@@ -42,6 +42,8 @@ type EventFormState = {
   note: string;
 };
 
+type EventFormErrors = Partial<Record<keyof EventFormState, string>>;
+
 const initialForm: EventFormState = {
   eventType: "GOAL",
   goalType: "NORMAL",
@@ -68,10 +70,12 @@ export default function MatchEventModal({
   maxGoalMinute,
 }: MatchEventModalProps) {
   const [eventForm, setEventForm] = useState<EventFormState>(initialForm);
+  const [errors, setErrors] = useState<EventFormErrors>({});
 
   useEffect(() => {
     if (open) {
       setEventForm(initialForm);
+      setErrors({});
     }
   }, [open]);
 
@@ -90,6 +94,7 @@ export default function MatchEventModal({
   }, [eventForm.teamId, lineups]);
 
   const handleChangeEventType = (eventType: EventType) => {
+    setErrors({});
     setEventForm((prev) => ({
       ...prev,
       eventType,
@@ -102,6 +107,13 @@ export default function MatchEventModal({
   };
 
   const handleChangeTeam = (teamId: number) => {
+    setErrors((current) => ({
+      ...current,
+      teamId: undefined,
+      playerId: undefined,
+      playerInId: undefined,
+      assistPlayerId: undefined,
+    }));
     setEventForm((prev) => ({
       ...prev,
       teamId,
@@ -111,42 +123,47 @@ export default function MatchEventModal({
     }));
   };
 
+  const clearError = (field: keyof EventFormState) => {
+    setErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  };
+
   const validateForm = () => {
+    const nextErrors: EventFormErrors = {};
+
     if (!eventForm.teamId) {
-      alert("Vui lòng chọn đội.");
-      return false;
+      nextErrors.teamId = "Vui lòng chọn đội.";
     }
 
     if (!eventForm.playerId) {
-      alert(
+      nextErrors.playerId =
         eventForm.eventType === "SUBSTITUTION"
           ? "Vui lòng chọn cầu thủ rời sân."
-          : "Vui lòng chọn cầu thủ.",
-      );
-      return false;
+          : "Vui lòng chọn cầu thủ.";
     }
 
     if (eventForm.eventType === "SUBSTITUTION" && !eventForm.playerInId) {
-      alert("Vui lòng chọn cầu thủ vào sân.");
-      return false;
+      nextErrors.playerInId = "Vui lòng chọn cầu thủ vào sân.";
     }
 
     if (
       eventForm.eventType === "SUBSTITUTION" &&
       eventForm.playerId === eventForm.playerInId
     ) {
-      alert("Cầu thủ vào sân không được trùng với cầu thủ rời sân.");
-      return false;
+      nextErrors.playerInId =
+        "Cầu thủ vào sân không được trùng với cầu thủ rời sân.";
     }
 
     if (eventForm.minute < 0 || eventForm.minute > 130) {
-      alert("Phút thi đấu không hợp lệ.");
-      return false;
+      nextErrors.minute = "Phút thi đấu không hợp lệ.";
     }
 
     if (eventForm.extraMinute != null && eventForm.extraMinute < 0) {
-      alert("Phút bù giờ không hợp lệ.");
-      return false;
+      nextErrors.extraMinute = "Phút bù giờ không hợp lệ.";
     }
 
     if (
@@ -154,8 +171,7 @@ export default function MatchEventModal({
       maxGoalMinute != null &&
       eventForm.minute > maxGoalMinute
     ) {
-      alert(`Phút ghi bàn không được vượt quá ${maxGoalMinute}.`);
-      return false;
+      nextErrors.minute = `Phút ghi bàn không được vượt quá ${maxGoalMinute}.`;
     }
 
     if (
@@ -164,8 +180,7 @@ export default function MatchEventModal({
       allowedGoalTypes.length > 0 &&
       !allowedGoalTypes.includes(eventForm.goalType)
     ) {
-      alert("Loại bàn thắng không nằm trong quy định mùa giải.");
-      return false;
+      nextErrors.goalType = "Loại bàn thắng không nằm trong quy định mùa giải.";
     }
 
     if (
@@ -173,11 +188,12 @@ export default function MatchEventModal({
       eventForm.assistPlayerId &&
       eventForm.assistPlayerId === eventForm.playerId
     ) {
-      alert("Cầu thủ kiến tạo không được trùng với cầu thủ ghi bàn.");
-      return false;
+      nextErrors.assistPlayerId =
+        "Cầu thủ kiến tạo không được trùng với cầu thủ ghi bàn.";
     }
 
-    return true;
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
   const handleSubmit = async () => {
@@ -261,10 +277,13 @@ export default function MatchEventModal({
               <select
                 value={eventForm.goalType}
                 onChange={(e) =>
-                  setEventForm((prev) => ({
-                    ...prev,
-                    goalType: e.target.value as GoalType,
-                  }))
+                  {
+                    setEventForm((prev) => ({
+                      ...prev,
+                      goalType: e.target.value as GoalType,
+                    }));
+                    clearError("goalType");
+                  }
                 }
                 className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-700/20"
               >
@@ -272,6 +291,11 @@ export default function MatchEventModal({
                 <option value="PENALTY">Penalty</option>
                 <option value="OWN_GOAL">Phản lưới nhà</option>
               </select>
+              {errors.goalType && (
+                <p className="mt-1 text-xs font-bold text-red-600">
+                  {errors.goalType}
+                </p>
+              )}
             </div>
           )}
 
@@ -289,6 +313,11 @@ export default function MatchEventModal({
               <option value={homeTeamId}>{homeTeamName}</option>
               <option value={awayTeamId}>{awayTeamName}</option>
             </select>
+            {errors.teamId && (
+              <p className="mt-1 text-xs font-bold text-red-600">
+                {errors.teamId}
+              </p>
+            )}
           </div>
 
           {/* Main player */}
@@ -304,10 +333,14 @@ export default function MatchEventModal({
             <select
               value={eventForm.playerId}
               onChange={(e) =>
-                setEventForm((prev) => ({
-                  ...prev,
-                  playerId: Number(e.target.value),
-                }))
+                {
+                  setEventForm((prev) => ({
+                    ...prev,
+                    playerId: Number(e.target.value),
+                  }));
+                  clearError("playerId");
+                  clearError("assistPlayerId");
+                }
               }
               disabled={!eventForm.teamId}
               className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-700/20 disabled:bg-gray-100"
@@ -322,6 +355,11 @@ export default function MatchEventModal({
                 </option>
               ))}
             </select>
+            {errors.playerId && (
+              <p className="mt-1 text-xs font-bold text-red-600">
+                {errors.playerId}
+              </p>
+            )}
           </div>
 
           {/* Player in */}
@@ -334,10 +372,13 @@ export default function MatchEventModal({
               <select
                 value={eventForm.playerInId}
                 onChange={(e) =>
-                  setEventForm((prev) => ({
-                    ...prev,
-                    playerInId: Number(e.target.value),
-                  }))
+                  {
+                    setEventForm((prev) => ({
+                      ...prev,
+                      playerInId: Number(e.target.value),
+                    }));
+                    clearError("playerInId");
+                  }
                 }
                 disabled={!eventForm.teamId}
                 className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-700/20 disabled:bg-gray-100"
@@ -354,6 +395,11 @@ export default function MatchEventModal({
                   </option>
                 ))}
               </select>
+              {errors.playerInId && (
+                <p className="mt-1 text-xs font-bold text-red-600">
+                  {errors.playerInId}
+                </p>
+              )}
             </div>
           )}
 
@@ -368,10 +414,13 @@ export default function MatchEventModal({
                 <select
                   value={eventForm.assistPlayerId}
                   onChange={(e) =>
-                    setEventForm((prev) => ({
-                      ...prev,
-                      assistPlayerId: Number(e.target.value),
-                    }))
+                    {
+                      setEventForm((prev) => ({
+                        ...prev,
+                        assistPlayerId: Number(e.target.value),
+                      }));
+                      clearError("assistPlayerId");
+                    }
                   }
                   disabled={!eventForm.teamId}
                   className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-700/20 disabled:bg-gray-100"
@@ -386,6 +435,11 @@ export default function MatchEventModal({
                       </option>
                     ))}
                 </select>
+                {errors.assistPlayerId && (
+                  <p className="mt-1 text-xs font-bold text-red-600">
+                    {errors.assistPlayerId}
+                  </p>
+                )}
               </div>
             )}
 
@@ -400,13 +454,21 @@ export default function MatchEventModal({
               max={130}
               value={eventForm.minute}
               onChange={(e) =>
-                setEventForm((prev) => ({
-                  ...prev,
-                  minute: Number(e.target.value),
-                }))
+                {
+                  setEventForm((prev) => ({
+                    ...prev,
+                    minute: Number(e.target.value),
+                  }));
+                  clearError("minute");
+                }
               }
               className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-700/20"
             />
+            {errors.minute && (
+              <p className="mt-1 text-xs font-bold text-red-600">
+                {errors.minute}
+              </p>
+            )}
           </div>
 
           {/* Extra minute */}
@@ -419,15 +481,23 @@ export default function MatchEventModal({
               min={0}
               value={eventForm.extraMinute ?? ""}
               onChange={(e) =>
-                setEventForm((prev) => ({
-                  ...prev,
-                  extraMinute:
-                    e.target.value === "" ? null : Number(e.target.value),
-                }))
+                {
+                  setEventForm((prev) => ({
+                    ...prev,
+                    extraMinute:
+                      e.target.value === "" ? null : Number(e.target.value),
+                  }));
+                  clearError("extraMinute");
+                }
               }
               className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-700/20"
               placeholder="VD: 2"
             />
+            {errors.extraMinute && (
+              <p className="mt-1 text-xs font-bold text-red-600">
+                {errors.extraMinute}
+              </p>
+            )}
           </div>
 
           {/* Note */}

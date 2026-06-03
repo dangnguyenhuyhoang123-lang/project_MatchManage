@@ -26,6 +26,8 @@ export type SystemRule = {
 
   maxForeignPlayersOnField: number | null;
   maxGoalMinute: number | null;
+
+  rankingCriteriaOrder: string | null;
 };
 
 export type SystemRulePayload = {
@@ -51,6 +53,8 @@ export type SystemRulePayload = {
 
   maxForeignPlayersOnField: number | null;
   maxGoalMinute: number | null;
+
+  rankingCriteriaOrder: string | null;
 };
 
 class SystemRuleService {

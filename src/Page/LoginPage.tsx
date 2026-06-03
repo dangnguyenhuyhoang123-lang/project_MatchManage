@@ -29,8 +29,6 @@ const LoginPage = () => {
         const userResponse = await UserService.getCurrentUser();
         setUser(userResponse);
       }
-
-      // alert("Đăng ký thành công");
       navigate("/");
     } catch (err) {
       const errorData = (err as any)?.response?.data;

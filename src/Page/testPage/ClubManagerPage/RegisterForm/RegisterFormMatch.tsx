@@ -221,7 +221,7 @@ const RegisterFormMatch: React.FC = () => {
     if (draft.season?.systemRuleId) {
       SystemRuleService.getById(draft.season.systemRuleId)
         .then((res) => {
-          setRule(res);
+          setRule(res.data);
         })
         .catch((err) => {
           console.error("Lỗi khi tải bộ luật giải đấu:", err);
@@ -403,6 +403,7 @@ const RegisterFormMatch: React.FC = () => {
         <FinalConfirmation
           setStep={goToStep}
           draft={draft}
+          rule={rule}
           onTeamChange={(team) =>
             setDraft((prev) => ({
               ...prev,

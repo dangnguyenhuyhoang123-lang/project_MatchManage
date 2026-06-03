@@ -10,14 +10,16 @@ import NewsPage from "./Page/NewsPage";
 import NewsDetailPage from "./Page/NewsDetailPage";
 import AboutPage from "./Page/AboutPage";
 import PublicLeaguesPage from "./Page/PublicLeaguesPage";
+import PublicPlayerSearchPage from "./Page/PublicPlayerSearchPage";
 import MatchDetail from "./Page/MatchDetail";
 import TeamDetail from "./Page/TeamDetail";
 import UserProfilePage from "./Page/UserProfilePage";
 
 import DashBoardPage from "./Page/testPage/DashBoardPage";
 import TournamentManagement from "./Page/testPage/AdminPage/LeagueManage/TournamentManagement";
+import SeasonInvitationManager from "./Page/testPage/AdminPage/LeagueManage/SeasonInvitationManager";
 import RoundManagement from "./Page/testPage/AdminPage/RoundManage/RoundManagement";
-import ClubManagement from "./Page/testPage/TeamManage/ClubManagement";
+import ClubManagement from "./Page/testPage/AdminPage/TeamManage/ClubManagement";
 import PlayerManagement from "./Page/testPage/AdminPage/PlayerManage/PlayerManagement";
 import MatchSchedule from "./Page/testPage/AdminPage/MatchSchedule/MatchShedule";
 import MatchResults from "./Page/testPage/AdminPage/Matchresult/MatchResults";
@@ -35,6 +37,7 @@ import StadiumDetailPage from "./Page/testPage/ClubManagerPage/InfoClubManage/St
 import PublicLayout from "./layouts/PublicLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import ClubManagerLayout from "./layouts/ClubManagerLayout";
+import ClubInvitationPage from "./Page/testPage/ClubManagerPage/ClubInvitationPage";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 import SystemRulesPage from "./Page/testPage/AdminPage/SystemRulesPage";
@@ -91,6 +94,7 @@ const AppRoutes = () => {
             <Route path="/news/:id" element={<NewsDetailPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/leagues" element={<PublicLeaguesPage />} />
+            <Route path="/players" element={<PublicPlayerSearchPage />} />
             <Route
               path="/public-leagues"
               element={<Navigate to="/leagues" replace />}
@@ -122,6 +126,10 @@ const AppRoutes = () => {
             />
             <Route path="/admin/dashboard" element={<DashBoardPage />} />
             <Route path="/admin/leagues" element={<TournamentManagement />} />
+            <Route
+              path="/admin/invitations"
+              element={<SeasonInvitationManager />}
+            />
             <Route path="/admin/rounds" element={<RoundManagement />} />
             <Route path="/admin/clubs" element={<ClubManagement />} />
             <Route path="/admin/players" element={<PlayerManagement />} />
@@ -155,6 +163,7 @@ const AppRoutes = () => {
             <Route path="/club/staff" element={<ClubStaffPage />} />
             <Route path="/club/registrations" element={<RegisterFormMatch />} />
             <Route path="/club/matches" element={<MatchManagePageClub />} />
+            <Route path="/club/invitations" element={<ClubInvitationPage />} />
           </Route>
 
           <Route
@@ -172,10 +181,6 @@ const AppRoutes = () => {
           <Route
             path="/clubs"
             element={<Navigate to="/admin/clubs" replace />}
-          />
-          <Route
-            path="/players"
-            element={<Navigate to="/admin/players" replace />}
           />
           <Route
             path="/matches"

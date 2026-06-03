@@ -14,6 +14,8 @@ export class MatchModel {
   awayTeam: TeamModel;
   predictedHomeScore?: number | null;
   predictedAwayScore?: number | null;
+  manOfTheMatchPlayerId?: number | null;
+  manOfTheMatchPlayerName?: string | null;
 
   constructor({
     id,
@@ -27,6 +29,8 @@ export class MatchModel {
     awayTeam,
     predictedHomeScore,
     predictedAwayScore,
+    manOfTheMatchPlayerId,
+    manOfTheMatchPlayerName,
   }: {
     id?: number;
     status?: MatchStatus;
@@ -39,6 +43,8 @@ export class MatchModel {
     awayTeam: TeamModel;
     predictedHomeScore?: number | null;
     predictedAwayScore?: number | null;
+    manOfTheMatchPlayerId?: number | null;
+    manOfTheMatchPlayerName?: string | null;
   }) {
     if (homeTeam?.id === awayTeam?.id) {
       throw new Error("Home team and away team cannot be the same");
@@ -61,6 +67,8 @@ export class MatchModel {
     this.awayTeam = awayTeam;
     this.predictedHomeScore = predictedHomeScore;
     this.predictedAwayScore = predictedAwayScore;
+    this.manOfTheMatchPlayerId = manOfTheMatchPlayerId;
+    this.manOfTheMatchPlayerName = manOfTheMatchPlayerName;
   }
 
   getWinner(): TeamModel | null {

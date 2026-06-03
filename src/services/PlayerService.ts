@@ -9,6 +9,17 @@ type PlayerFilters = {
   teamId?: number | string;
 };
 
+export type PlayerSearchResponse = {
+  playerId: number;
+  playerName: string;
+  teamId?: number | null;
+  teamName?: string | null;
+  seasonId?: number | null;
+  playerType: "DOMESTIC" | "FOREIGN" | string;
+  nationality?: string | null;
+  totalGoals: number;
+};
+
 const normalizePlayer = (raw: any) =>
   new Player({
     id: raw?.id,
@@ -114,6 +125,22 @@ class PlayerService {
 
   deletePlayer(id: number) {
     return axiosClient.delete(`${API_BASE_URL}/deletePlayer/${id}`);
+  }
+
+  searchPlayers(params?: {
+    seasonId?: number;
+    teamId?: number;
+    keyword?: string;
+    playerType?: string;
+  }) {
+    return axiosClient.get<PlayerSearchResponse[]>(`${API_BASE_URL}/search`, {
+      params: {
+        seasonId: params?.seasonId || undefined,
+        teamId: params?.teamId || undefined,
+        keyword: params?.keyword?.trim() || undefined,
+        playerType: params?.playerType || undefined,
+      },
+    });
   }
 }
 

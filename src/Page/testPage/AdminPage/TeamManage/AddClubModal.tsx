@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { TeamModel } from "../../../model/TeamModel";
-import TeamService from "../../../services/TeamService";
-import StadiumService from "../../../services/StadiumService";
+import { toast } from "sonner";
+import { TeamModel } from "../../../../model/TeamModel";
+import TeamService from "../../../../services/TeamService";
+import StadiumService from "../../../../services/StadiumService";
 
 type StadiumOption = {
   id: number;
@@ -28,19 +29,17 @@ const createEmptyTeam = () =>
     stadiumName: null,
   });
 
-const AddClubModal: React.FC<Props> = ({
-  onClose,
-  currentTeam,
-  onSuccess,
-}) => {
+const AddClubModal: React.FC<Props> = ({ onClose, currentTeam, onSuccess }) => {
   const [team, setTeam] = useState<TeamModel>(createEmptyTeam());
   const [stadiums, setStadiums] = useState<StadiumOption[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const isEditMode = useMemo(() => Boolean(currentTeam?.id), [currentTeam]);
 
   useEffect(() => {
     setTeam(currentTeam ? new TeamModel(currentTeam) : createEmptyTeam());
+    setErrors({});
   }, [currentTeam]);
 
   useEffect(() => {
@@ -49,7 +48,7 @@ const AddClubModal: React.FC<Props> = ({
         const response = await StadiumService.getAllStadiums();
         const rawStadiums = Array.isArray(response.data)
           ? response.data
-          : response.data?.content ?? [];
+          : (response.data?.content ?? []);
 
         setStadiums(
           rawStadiums
@@ -77,6 +76,12 @@ const AddClubModal: React.FC<Props> = ({
     >,
   ) => {
     const { name, value } = e.target;
+    setErrors((current) => {
+      if (!current[name]) return current;
+      const next = { ...current };
+      delete next[name];
+      return next;
+    });
 
     setTeam((prev) => {
       const next = new TeamModel(prev);
@@ -103,15 +108,11 @@ const AddClubModal: React.FC<Props> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!team.name.trim()) {
-      alert("Vui lòng nhập tên đội bóng.");
-      return;
-    }
-
-    if (!team.city.trim()) {
-      alert("Vui lòng nhập thành phố.");
-      return;
-    }
+    const nextErrors: Record<string, string> = {};
+    if (!team.name.trim()) nextErrors.name = "Vui lòng nhập tên đội bóng.";
+    if (!team.city.trim()) nextErrors.city = "Vui lòng nhập thành phố.";
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
 
     setIsSubmitting(true);
 
@@ -126,7 +127,7 @@ const AddClubModal: React.FC<Props> = ({
       onClose();
     } catch (error) {
       console.error("Lỗi khi lưu đội bóng:", error);
-      alert("Có lỗi xảy ra khi lưu đội bóng.");
+      toast.error("Có lỗi xảy ra khi lưu đội bóng.");
     } finally {
       setIsSubmitting(false);
     }
@@ -149,7 +150,9 @@ const AddClubModal: React.FC<Props> = ({
                     onClick={onClose}
                     className="flex h-10 w-10 items-center justify-center rounded-full border hover:bg-zinc-100"
                   >
-                    <span className="material-symbols-outlined">arrow_back</span>
+                    <span className="material-symbols-outlined">
+                      arrow_back
+                    </span>
                   </button>
 
                   <span className="text-xs font-bold uppercase text-blue-500">
@@ -196,6 +199,7 @@ const AddClubModal: React.FC<Props> = ({
                         onChange={handleInputChange}
                         placeholder="Tên CLB"
                         label="Tên đội bóng"
+                        error={errors.name}
                       />
                       <InputField
                         name="logo"
@@ -217,6 +221,7 @@ const AddClubModal: React.FC<Props> = ({
                         onChange={handleInputChange}
                         placeholder="TP. Hồ Chí Minh"
                         label="Thành phố"
+                        error={errors.city}
                       />
                       <SelectField
                         name="region"
@@ -302,10 +307,13 @@ type InputFieldProps = {
   name: string;
   value: string | number;
   onChange: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
   ) => void;
   placeholder?: string;
   type?: string;
+  error?: string;
 };
 
 const InputField = ({
@@ -315,9 +323,12 @@ const InputField = ({
   onChange,
   placeholder,
   type = "text",
+  error,
 }: InputFieldProps) => (
   <div>
-    <label className="mb-2 block text-sm font-bold text-gray-700">{label}</label>
+    <label className="mb-2 block text-sm font-bold text-gray-700">
+      {label}
+    </label>
     <input
       type={type}
       name={name}
@@ -326,6 +337,9 @@ const InputField = ({
       placeholder={placeholder}
       className="w-full rounded bg-gray-100 p-3"
     />
+    {error && (
+      <p className="mt-1 text-sm font-semibold text-red-600">{error}</p>
+    )}
   </div>
 );
 
@@ -334,7 +348,9 @@ type SelectFieldProps = {
   name: string;
   value: string;
   onChange: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
   ) => void;
   options: Array<string | { label: string; value: string }>;
   placeholder?: string;
@@ -349,7 +365,9 @@ const SelectField = ({
   placeholder = "Chọn",
 }: SelectFieldProps) => (
   <div>
-    <label className="mb-2 block text-sm font-bold text-gray-700">{label}</label>
+    <label className="mb-2 block text-sm font-bold text-gray-700">
+      {label}
+    </label>
     <select
       name={name}
       value={value}

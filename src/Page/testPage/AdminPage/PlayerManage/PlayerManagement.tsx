@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { AddPlayerModal } from "./AddPlayer";
+import ConfirmModal from "../../../../components/ConfirmModal";
 import { Modal } from "../../../../components/Modal";
 import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import { AppLayout } from "../../../../layouts/AppLayout";
@@ -51,6 +53,8 @@ const PlayerManagement: React.FC = () => {
   const [teamOptions, setTeamOptions] = useState<TeamOption[]>([]);
   const [displayedPlayers, setDisplayedPlayers] = useState<Player[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [deletingPlayer, setDeletingPlayer] = useState<Player | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [trangHienTai, setTrangHienTai] = useState(1);
   const [tongSoTrang, setTongSoTrang] = useState(0);
@@ -185,15 +189,23 @@ const PlayerManagement: React.FC = () => {
 
   const handleDelete = async (player: Player) => {
     if (!player.id) return;
+    setDeletingPlayer(player);
+  };
 
-    if (window.confirm(`Bạn có chắc chắn muốn xóa cầu thủ ${player.name}?`)) {
-      try {
-        await PlayerService.deletePlayer(player.id);
-        fetchPlayers(trangHienTai, appliedFilters);
-      } catch (error) {
-        console.error("Lỗi khi xóa cầu thủ:", error);
-        alert("Không thể xóa cầu thủ này.");
-      }
+  const handleConfirmDelete = async () => {
+    if (!deletingPlayer?.id) return;
+
+    try {
+      setDeleteLoading(true);
+      await PlayerService.deletePlayer(deletingPlayer.id);
+      toast.success("Đã xóa cầu thủ.");
+      setDeletingPlayer(null);
+      fetchPlayers(trangHienTai, appliedFilters);
+    } catch (error) {
+      console.error("Lỗi khi xóa cầu thủ:", error);
+      toast.error("Không thể xóa cầu thủ này.");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -388,6 +400,19 @@ const PlayerManagement: React.FC = () => {
           onSuccess={() => fetchPlayers(trangHienTai, appliedFilters)}
         />
       </Modal>
+      <ConfirmModal
+        open={deletingPlayer !== null}
+        title="Xóa cầu thủ"
+        message={`Bạn có chắc chắn muốn xóa cầu thủ ${deletingPlayer?.name ?? ""}?`}
+        confirmText="Xóa cầu thủ"
+        cancelText="Hủy"
+        danger
+        loading={deleteLoading}
+        onConfirm={handleConfirmDelete}
+        onClose={() => {
+          if (!deleteLoading) setDeletingPlayer(null);
+        }}
+      />
     </AppLayout>
   );
 };

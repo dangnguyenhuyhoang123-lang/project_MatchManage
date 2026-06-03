@@ -15,4 +15,5 @@ export type SystemRule = {
   maxSubstitution: number | null;
   minRegistrationPlayers: number | null;
   maxForeignPlayers: number | null;
+  rankingCriteriaOrder: string | null;
 };

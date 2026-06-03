@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import type {
   GrassType,
   RegistrationDetailDTO,
@@ -6,6 +7,7 @@ import type {
   RegistrationSummaryDTO,
 } from "../../../model/Registration";
 import type { SystemRule } from "../../../services/SystemRuleService";
+import ConfirmModal from "../../../components/ConfirmModal";
 import LoadingSpinner from "../../../components/Spinner/LoadingSpinner";
 import RegistrationService from "../../../services/RegistrationService";
 import SeasonService from "../../../services/SeasonService";
@@ -332,6 +334,13 @@ const AdminRegistrationManager: React.FC = () => {
     useState<RegistrationDetailDTO | null>(null);
   const [detailErrorMessage, setDetailErrorMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [pendingApproveId, setPendingApproveId] = useState<number | null>(null);
+  const [pendingRejectId, setPendingRejectId] = useState<number | null>(null);
+  const [rejectNote, setRejectNote] = useState("");
+  const [pendingPayment, setPendingPayment] = useState<{
+    id: number;
+    proofUrl: string;
+  } | null>(null);
 
   const loadRegistrations = useCallback(async () => {
     setIsLoading(true);
@@ -439,14 +448,16 @@ const AdminRegistrationManager: React.FC = () => {
   };
 
   const handleApprove = async (id: number) => {
-    if (!window.confirm("Bạn chắc chắn muốn chấp nhận hồ sơ này?")) {
-      return;
-    }
+    setPendingApproveId(id);
+  };
 
-    setProcessingId(id);
+  const handleConfirmApprove = async () => {
+    if (!pendingApproveId) return;
+
+    setProcessingId(pendingApproveId);
 
     try {
-      const detailRes = await RegistrationService.getRegistrationById(id);
+      const detailRes = await RegistrationService.getRegistrationById(pendingApproveId);
       const detail = detailRes.data;
       if (detail?.seasonId) {
         const seasonRes = await SeasonService.getSeasonById(detail.seasonId);
@@ -455,50 +466,56 @@ const AdminRegistrationManager: React.FC = () => {
           const ruleRes = await SystemRuleService.getById(systemRuleId);
           const errors = getRegistrationValidationErrors(detail, ruleRes.data);
           if (errors.length > 0) {
-            alert(`Không thể duyệt hồ sơ do vi phạm các điều luật:\n- ${errors.join("\n- ")}`);
+            toast.error(`Không thể duyệt hồ sơ do vi phạm các điều luật:\n- ${errors.join("\n- ")}`);
             return;
           }
         }
       }
 
       if (detail.feeStatus !== "PAID") {
-        alert("Hồ sơ chưa xác nhận lệ phí, không thể duyệt.");
+        toast.warning("Hồ sơ chưa xác nhận lệ phí, không thể duyệt.");
         return;
       }
 
-      await RegistrationService.approveRegistration(id);
-      if (selectedRegistrationDetail?.id === id) {
-        const detailResponse = await RegistrationService.getRegistrationById(id);
+      await RegistrationService.approveRegistration(pendingApproveId);
+      if (selectedRegistrationDetail?.id === pendingApproveId) {
+        const detailResponse = await RegistrationService.getRegistrationById(pendingApproveId);
         setSelectedRegistrationDetail(detailResponse.data);
       }
       await loadRegistrations();
+      toast.success("Đã duyệt hồ sơ đăng ký.");
+      setPendingApproveId(null);
     } catch (error) {
       console.error("Lá»—i khi duyá»‡t há»“ sÆ¡:", error);
-      alert("Không thể duyệt hồ sơ đăng ký.");
+      toast.error("Không thể duyệt hồ sơ đăng ký.");
     } finally {
       setProcessingId(null);
     }
   };
 
   const handleReject = async (id: number) => {
-    const note = window.prompt("Nhập lý do từ chối hồ sơ:", "");
+    setPendingRejectId(id);
+    setRejectNote("");
+  };
 
-    if (note === null) {
-      return;
-    }
+  const handleConfirmReject = async () => {
+    if (!pendingRejectId) return;
 
-    setProcessingId(id);
+    setProcessingId(pendingRejectId);
 
     try {
-      await RegistrationService.rejectRegistration(id, note);
-      if (selectedRegistrationDetail?.id === id) {
-        const detailResponse = await RegistrationService.getRegistrationById(id);
+      await RegistrationService.rejectRegistration(pendingRejectId, rejectNote);
+      if (selectedRegistrationDetail?.id === pendingRejectId) {
+        const detailResponse = await RegistrationService.getRegistrationById(pendingRejectId);
         setSelectedRegistrationDetail(detailResponse.data);
       }
       await loadRegistrations();
+      toast.success("Đã từ chối hồ sơ đăng ký.");
+      setPendingRejectId(null);
+      setRejectNote("");
     } catch (error) {
       console.error("Lá»—i khi Từ chối há»“ sÆ¡:", error);
-      alert("Không thể từ chối hồ sơ đăng ký.");
+      toast.error("Không thể từ chối hồ sơ đăng ký.");
     } finally {
       setProcessingId(null);
     }
@@ -543,25 +560,29 @@ const AdminRegistrationManager: React.FC = () => {
     id: number,
     paymentProofUrl?: string | null,
   ) => {
-    const proofUrl = window.prompt(
-      "Nhập URL chứng từ thanh toán nếu cần cập nhật:",
-      paymentProofUrl ?? "",
-    );
+    setPendingPayment({ id, proofUrl: paymentProofUrl ?? "" });
+  };
 
-    if (proofUrl === null) {
-      return;
-    }
+  const handleSubmitPayment = async () => {
+    if (!pendingPayment) return;
 
-    setProcessingId(id);
+    setProcessingId(pendingPayment.id);
 
     try {
-      await RegistrationService.markRegistrationPaid(id, proofUrl);
+      await RegistrationService.markRegistrationPaid(
+        pendingPayment.id,
+        pendingPayment.proofUrl,
+      );
       await loadRegistrations();
-      const detailResponse = await RegistrationService.getRegistrationById(id);
+      const detailResponse = await RegistrationService.getRegistrationById(
+        pendingPayment.id,
+      );
       setSelectedRegistrationDetail(detailResponse.data);
+      toast.success("Đã xác nhận lệ phí hồ sơ.");
+      setPendingPayment(null);
     } catch (error) {
       console.error("Cannot confirm registration payment", error);
-      alert("Không thể xác nhận lệ phí hồ sơ. Vui lòng thử lại.");
+      toast.error("Không thể xác nhận lệ phí hồ sơ. Vui lòng thử lại.");
     } finally {
       setProcessingId(null);
     }
@@ -825,6 +846,55 @@ const AdminRegistrationManager: React.FC = () => {
           isProcessing={processingId !== null}
         />
       )}
+      <ConfirmModal
+        open={pendingApproveId !== null}
+        title="Duyệt hồ sơ đăng ký"
+        message="Bạn chắc chắn muốn chấp nhận hồ sơ này?"
+        confirmText="Duyệt hồ sơ"
+        cancelText="Hủy"
+        loading={processingId !== null}
+        onConfirm={handleConfirmApprove}
+        onClose={() => {
+          if (processingId === null) setPendingApproveId(null);
+        }}
+      />
+      {pendingRejectId !== null && (
+        <ActionInputModal
+          title="Từ chối hồ sơ đăng ký"
+          message="Nhập lý do từ chối hồ sơ nếu cần."
+          value={rejectNote}
+          inputType="textarea"
+          confirmText="Từ chối"
+          danger
+          loading={processingId !== null}
+          onChange={setRejectNote}
+          onClose={() => {
+            if (processingId === null) {
+              setPendingRejectId(null);
+              setRejectNote("");
+            }
+          }}
+          onConfirm={handleConfirmReject}
+        />
+      )}
+      {pendingPayment !== null && (
+        <ActionInputModal
+          title="Xác nhận lệ phí"
+          message="Nhập URL chứng từ thanh toán nếu cần cập nhật."
+          value={pendingPayment.proofUrl}
+          confirmText="Xác nhận"
+          loading={processingId !== null}
+          onChange={(proofUrl) =>
+            setPendingPayment((current) =>
+              current ? { ...current, proofUrl } : current,
+            )
+          }
+          onClose={() => {
+            if (processingId === null) setPendingPayment(null);
+          }}
+          onConfirm={handleSubmitPayment}
+        />
+      )}
     </AppLayout>
   );
 };
@@ -836,6 +906,73 @@ type StatCardProps = {
   valueClassName?: string;
   iconClassName: string;
 };
+
+type ActionInputModalProps = {
+  title: string;
+  message: string;
+  value: string;
+  inputType?: "input" | "textarea";
+  confirmText: string;
+  danger?: boolean;
+  loading?: boolean;
+  onChange: (value: string) => void;
+  onConfirm: () => void;
+  onClose: () => void;
+};
+
+const ActionInputModal = ({
+  title,
+  message,
+  value,
+  inputType = "input",
+  confirmText,
+  danger = false,
+  loading = false,
+  onChange,
+  onConfirm,
+  onClose,
+}: ActionInputModalProps) => (
+  <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 px-4">
+    <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+      <h2 className="text-lg font-bold text-[#1B1C1A]">{title}</h2>
+      <p className="mt-3 text-sm leading-6 text-[#707A6C]">{message}</p>
+      {inputType === "textarea" ? (
+        <textarea
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          rows={4}
+          className="mt-4 w-full rounded-xl border border-[#E4E2DE] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-green-700/20"
+        />
+      ) : (
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="mt-4 w-full rounded-xl border border-[#E4E2DE] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-green-700/20"
+        />
+      )}
+      <div className="mt-6 flex justify-end gap-3">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={loading}
+          className="rounded-xl border border-[#E4E2DE] px-4 py-2 text-sm font-semibold text-[#1B1C1A] hover:bg-[#F5F3EF] disabled:opacity-60"
+        >
+          Hủy
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={loading}
+          className={`rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 ${
+            danger ? "bg-red-600 hover:bg-red-700" : "bg-[#1B1C1A] hover:bg-black"
+          }`}
+        >
+          {loading ? "Đang xử lý..." : confirmText}
+        </button>
+      </div>
+    </div>
+  </div>
+);
 
 const StatCard = ({
   label,

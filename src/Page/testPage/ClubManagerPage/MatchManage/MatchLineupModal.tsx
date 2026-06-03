@@ -1,4 +1,5 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
+import ConfirmModal from "../../../../components/ConfirmModal";
 import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import { useCallback } from "react";
 import { MatchStatus } from "../../../../model/enum";
@@ -154,6 +155,7 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
   const [notice, setNotice] = useState("");
   const [hasExistingLineup, setHasExistingLineup] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const isReadOnly = mode === "view";
   const slots = FORMATIONS[formation];
@@ -471,7 +473,6 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
   };
 
   const deleteLineupAction = async () => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa đội hình này?")) return;
     try {
       setSaving(true);
       setNotice("");
@@ -483,6 +484,7 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
       setBenchPlayers([]);
 
       onSaved?.();
+      setDeleteConfirmOpen(false);
       setNotice("Đã xóa đội hình thành công.");
     } catch (err) {
       console.error("Cannot delete lineup", err);
@@ -555,7 +557,7 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
         {!isReadOnly && hasExistingLineup && (
           <button
             type="button"
-            onClick={deleteLineupAction}
+            onClick={() => setDeleteConfirmOpen(true)}
             disabled={saving || loading}
             className="rounded-full bg-red-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-red-900/15 transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60 sm:mr-auto"
           >
@@ -582,6 +584,19 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
           </button>
         )}
       </div>
+      <ConfirmModal
+        open={deleteConfirmOpen}
+        title="Xóa đội hình"
+        message="Bạn có chắc chắn muốn xóa đội hình này?"
+        confirmText="Xóa đội hình"
+        cancelText="Hủy"
+        danger
+        loading={saving}
+        onConfirm={deleteLineupAction}
+        onClose={() => {
+          if (!saving) setDeleteConfirmOpen(false);
+        }}
+      />
     </div>
   );
 };

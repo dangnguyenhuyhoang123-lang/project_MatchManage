@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import ConfirmModal from "../../../components/ConfirmModal";
 import SystemRuleService, {
   type SystemRule,
   type SystemRulePayload,
@@ -22,10 +24,12 @@ type FormState = {
   maxGoalMinute: string;
   status: "ACTIVE" | "INACTIVE";
   allowedGoalTypes: string[];
+  rankingCriteriaOrder: string;
 };
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
-
+const DEFAULT_RANKING_CRITERIA =
+  "POINTS,GOAL_DIFFERENCE,GOALS_FOR,HEAD_TO_HEAD,DRAW_LOT";
 const goalTypeOptions = [
   { value: "NORMAL", label: "Bàn thắng thường" },
   { value: "PENALTY", label: "Penalty" },
@@ -50,6 +54,57 @@ const emptyForm: FormState = {
   maxGoalMinute: "90",
   status: "ACTIVE",
   allowedGoalTypes: ["NORMAL", "PENALTY", "OWN_GOAL"],
+  rankingCriteriaOrder: DEFAULT_RANKING_CRITERIA,
+};
+
+const RANKING_CRITERIA_OPTIONS = [
+  {
+    value: "POINTS",
+    label: "Điểm",
+  },
+  {
+    value: "GOAL_DIFFERENCE",
+    label: "Hiệu số bàn thắng bại",
+  },
+  {
+    value: "GOALS_FOR",
+    label: "Số bàn thắng",
+  },
+  {
+    value: "HEAD_TO_HEAD",
+    label: "Đối đầu trực tiếp",
+  },
+  {
+    value: "DRAW_LOT",
+    label: "Rút thăm",
+  },
+];
+
+const parseRankingCriteria = (value?: string | null): string[] => {
+  if (!value) return [];
+
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const formatRankingCriteriaLabel = (value?: string | null): string => {
+  const selected = parseRankingCriteria(value);
+
+  if (selected.length === 0) {
+    return "Chưa cấu hình";
+  }
+
+  return selected
+    .map((criterion) => {
+      const option = RANKING_CRITERIA_OPTIONS.find(
+        (item) => item.value === criterion,
+      );
+
+      return option?.label ?? criterion;
+    })
+    .join(" → ");
 };
 
 function toInputValue(value: number | null) {
@@ -90,6 +145,7 @@ function buildFormFromRule(rule: SystemRule): FormState {
     maxGoalMinute: toInputValue(rule.maxGoalMinute),
     status: rule.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
     allowedGoalTypes: parseGoalTypes(rule.allowedGoalTypes),
+    rankingCriteriaOrder: rule.rankingCriteriaOrder || DEFAULT_RANKING_CRITERIA,
   };
 }
 
@@ -112,7 +168,37 @@ function buildPayload(form: FormState): SystemRulePayload {
     maxGoalMinute: toNullableNumber(form.maxGoalMinute),
     status: form.status,
     allowedGoalTypes: form.allowedGoalTypes.join(",") || null,
+    rankingCriteriaOrder:
+      form.rankingCriteriaOrder
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .join(",") || DEFAULT_RANKING_CRITERIA,
   };
+}
+
+function validateRankingCriteriaOrder(value: string): string | null {
+  const selected = parseRankingCriteria(value);
+
+  if (selected.length === 0) {
+    return "Thứ tự ưu tiên xếp hạng không được để trống.";
+  }
+
+  const validValues = RANKING_CRITERIA_OPTIONS.map((item) => item.value);
+
+  const invalidCriterion = selected.find(
+    (criterion) => !validValues.includes(criterion),
+  );
+
+  if (invalidCriterion) {
+    return `Tiêu chí xếp hạng không hợp lệ: ${invalidCriterion}.`;
+  }
+
+  if (!selected.includes("POINTS")) {
+    return "Thứ tự ưu tiên xếp hạng nên có tiêu chí POINTS.";
+  }
+
+  return null;
 }
 
 function validateForm(form: FormState) {
@@ -198,6 +284,13 @@ function validateForm(form: FormState) {
     errors.maxGoalMinute = "Phút tối đa ghi bàn phải lớn hơn 0.";
   }
 
+  const rankingCriteriaError = validateRankingCriteriaOrder(
+    form.rankingCriteriaOrder,
+  );
+
+  if (rankingCriteriaError) {
+    errors.rankingCriteriaOrder = rankingCriteriaError;
+  }
   return errors;
 }
 
@@ -221,6 +314,8 @@ const SystemRulesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<SystemRule | null>(null);
+  const [deletingRule, setDeletingRule] = useState<SystemRule | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -347,15 +442,18 @@ const SystemRulesPage: React.FC = () => {
   };
 
   const handleDelete = async (rule: SystemRule) => {
-    const confirmed = window.confirm(
-      `Bạn có chắc chắn muốn xóa bộ luật "${rule.ruleName}"?`,
-    );
+    setDeletingRule(rule);
+  };
 
-    if (!confirmed) return;
+  const handleConfirmDelete = async () => {
+    if (!deletingRule) return;
 
     try {
-      await SystemRuleService.delete(rule.id);
-      setRules((prev) => prev.filter((item) => item.id !== rule.id));
+      setDeleteLoading(true);
+      await SystemRuleService.delete(deletingRule.id);
+      setRules((prev) => prev.filter((item) => item.id !== deletingRule.id));
+      toast.success("Đã xóa bộ luật.");
+      setDeletingRule(null);
     } catch (error: any) {
       console.error("Lỗi khi xóa bộ luật:", error);
       const apiMsg = String(
@@ -369,14 +467,16 @@ const SystemRulesPage: React.FC = () => {
         error?.response?.status === 409 ||
         error?.response?.status === 500
       ) {
-        alert(
-          `Không thể xóa bộ luật "${rule.ruleName}" vì nó đang được sử dụng bởi một hoặc nhiều mùa giải. Gợi ý: Bạn có thể chuyển trạng thái của bộ luật này sang INACTIVE để ngưng áp dụng thay vì xóa.`,
+        toast.error(
+          `Không thể xóa bộ luật "${deletingRule.ruleName}" vì nó đang được sử dụng bởi một hoặc nhiều mùa giải. Gợi ý: Bạn có thể chuyển trạng thái của bộ luật này sang INACTIVE để ngưng áp dụng thay vì xóa.`,
         );
       } else {
-        alert(
+        toast.error(
           "Không thể xóa bộ luật này. Vui lòng kiểm tra xem nó có đang được liên kết với mùa giải nào không.",
         );
       }
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -473,6 +573,19 @@ const SystemRulesPage: React.FC = () => {
           onToggleGoalType={toggleGoalType}
         />
       )}
+      <ConfirmModal
+        open={deletingRule !== null}
+        title="Xóa bộ luật"
+        message={`Bạn có chắc chắn muốn xóa bộ luật "${deletingRule?.ruleName ?? ""}"?`}
+        confirmText="Xóa bộ luật"
+        cancelText="Hủy"
+        danger
+        loading={deleteLoading}
+        onConfirm={handleConfirmDelete}
+        onClose={() => {
+          if (!deleteLoading) setDeletingRule(null);
+        }}
+      />
     </main>
   );
 };
@@ -602,6 +715,11 @@ function RuleCard({
           icon="assignment"
           label="Cầu thủ đăng ký tối thiểu"
           value={formatValue(rule.minRegistrationPlayers)}
+        />
+        <InfoItem
+          icon="leaderboard"
+          label="Ưu tiên xếp hạng"
+          value={formatRankingCriteriaLabel(rule.rankingCriteriaOrder)}
         />
       </div>
 
@@ -860,6 +978,47 @@ function RuleModal({
               error={errors.maxGoalMinute}
               onChange={(value) => onFieldChange("maxGoalMinute", value)}
             />
+
+            <div className="md:col-span-2">
+              <TextField
+                label="Thứ tự ưu tiên xếp hạng"
+                value={form.rankingCriteriaOrder}
+                error={errors.rankingCriteriaOrder}
+                onChange={(value) =>
+                  onFieldChange("rankingCriteriaOrder", value)
+                }
+              />
+
+              <div className="mt-3 rounded-2xl bg-[#F5F3EF] p-4">
+                <p className="mb-2 text-xs font-black uppercase tracking-widest text-gray-400">
+                  Gợi ý tiêu chí
+                </p>
+
+                <div className="flex flex-wrap gap-2">
+                  {RANKING_CRITERIA_OPTIONS.map((option) => (
+                    <span
+                      key={option.value}
+                      className="rounded-full bg-white px-3 py-1 text-xs font-bold text-gray-700"
+                    >
+                      {option.value} - {option.label}
+                    </span>
+                  ))}
+                </div>
+
+                <p className="mt-3 text-xs font-semibold leading-5 text-gray-500">
+                  Nhập các tiêu chí cách nhau bằng dấu phẩy. Ví dụ:{" "}
+                  <span className="font-black text-gray-700">
+                    {DEFAULT_RANKING_CRITERIA}
+                  </span>
+                </p>
+
+                <p className="mt-2 text-xs font-semibold leading-5 text-gray-500">
+                  Hiện tại backend của bạn xử lý chính các tiêu chí POINTS,
+                  GOAL_DIFFERENCE, GOALS_FOR. HEAD_TO_HEAD và DRAW_LOT có thể
+                  được lưu để mở rộng khi xếp hạng cuối mùa.
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="mt-8 flex flex-col-reverse gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:justify-end">

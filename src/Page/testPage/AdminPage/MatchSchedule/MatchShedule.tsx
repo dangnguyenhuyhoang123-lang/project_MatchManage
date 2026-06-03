@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 import AddMatchModal from "./AddMatchModal";
+import ConfirmModal from "../../../../components/ConfirmModal";
+import GenerateScheduleModal from "../../../../components/match/GenerateScheduleModal";
 import MatchRefereeAssignmentModal from "../../../../components/match/MatchRefereeAssignmentModal";
 import { Modal } from "../../../../components/Modal";
 import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
@@ -21,7 +24,10 @@ export default function MatchSchedule() {
   const [matches, setMatches] = useState<MatchModel[]>([]);
   const [editingMatch, setEditingMatch] = useState<MatchModel | null>(null);
   const [refereeMatchId, setRefereeMatchId] = useState<number | null>(null);
+  const [isGenerateScheduleOpen, setIsGenerateScheduleOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [deletingMatchId, setDeletingMatchId] = useState<number | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [predictingIds, setPredictingIds] = useState<Set<number>>(new Set());
 
   const handleSaveMatch = async (payload: any) => {
@@ -36,19 +42,28 @@ export default function MatchSchedule() {
       fetchMatches(trangHienTai);
     } catch (error) {
       console.error("Lỗi khi lưu trận đấu:", error);
-      alert("Có lỗi xảy ra khi lưu trận đấu!");
+      toast.error("Có lỗi xảy ra khi lưu trận đấu!");
     }
   };
 
   const handleDeleteMatch = async (id: number) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa trận đấu này?")) {
-      try {
-        await MatchService.deleteMatch(id);
-        fetchMatches(trangHienTai);
-      } catch (error) {
-        console.error("Lỗi khi xóa trận đấu:", error);
-        alert("Có lỗi xảy ra khi xóa trận đấu!");
-      }
+    setDeletingMatchId(id);
+  };
+
+  const handleConfirmDeleteMatch = async () => {
+    if (!deletingMatchId) return;
+
+    try {
+      setDeleteLoading(true);
+      await MatchService.deleteMatch(deletingMatchId);
+      toast.success("Đã xóa trận đấu.");
+      setDeletingMatchId(null);
+      fetchMatches(trangHienTai);
+    } catch (error) {
+      console.error("Lỗi khi xóa trận đấu:", error);
+      toast.error("Có lỗi xảy ra khi xóa trận đấu!");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -71,7 +86,7 @@ export default function MatchSchedule() {
       fetchMatches(trangHienTai);
     } catch (error) {
       console.error("Lỗi khi dự đoán trận đấu:", error);
-      alert("Không thể dự đoán trận đấu. Vui lòng thử lại!");
+      toast.error("Không thể dự đoán trận đấu. Vui lòng thử lại!");
     } finally {
       setPredictingIds((current) => {
         const next = new Set(current);
@@ -311,15 +326,26 @@ export default function MatchSchedule() {
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                setEditingMatch(null);
-                setOpen(true);
-              }}
-              className="bg-green-700 text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-green-800 transition-colors whitespace-nowrap"
-            >
-              + Thêm trận đấu
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setIsGenerateScheduleOpen(true)}
+                disabled={!selectedSeason}
+                className="bg-white text-green-700 px-6 py-3 rounded-xl font-bold shadow-sm border border-green-100 hover:bg-green-50 transition-colors whitespace-nowrap disabled:opacity-50"
+              >
+                Sinh lịch tự động
+              </button>
+
+              <button
+                onClick={() => {
+                  setEditingMatch(null);
+                  setOpen(true);
+                }}
+                className="bg-green-700 text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-green-800 transition-colors whitespace-nowrap"
+              >
+                + Thêm trận đấu
+              </button>
+            </div>
           </div>
 
           {/* TABLE */}
@@ -409,6 +435,25 @@ export default function MatchSchedule() {
           matchId={refereeMatchId}
           onClose={() => setRefereeMatchId(null)}
           onChanged={() => fetchMatches(trangHienTai)}
+        />
+        <GenerateScheduleModal
+          open={isGenerateScheduleOpen}
+          seasonId={selectedSeason ? Number(selectedSeason) : null}
+          onClose={() => setIsGenerateScheduleOpen(false)}
+          onGenerated={() => fetchMatches(1)}
+        />
+        <ConfirmModal
+          open={deletingMatchId !== null}
+          title="Xóa trận đấu"
+          message="Bạn có chắc chắn muốn xóa trận đấu này? Hành động này không dễ hoàn tác."
+          confirmText="Xóa trận"
+          cancelText="Hủy"
+          danger
+          loading={deleteLoading}
+          onConfirm={handleConfirmDeleteMatch}
+          onClose={() => {
+            if (!deleteLoading) setDeletingMatchId(null);
+          }}
         />
       </div>
     </AppLayout>

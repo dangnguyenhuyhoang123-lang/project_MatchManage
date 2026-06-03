@@ -17,6 +17,7 @@ const navLinks = [
   { label: "Giải đấu", path: "/leagues" },
   { label: "Tin tức", path: "/news" },
   { label: "Về chúng tôi", path: "/about" },
+  { label: "Cầu thủ", path: "/players" },
 ];
 
 const roleLabels: Record<string, string> = {

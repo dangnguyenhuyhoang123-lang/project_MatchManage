@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import ConfirmModal from "../../../../components/ConfirmModal";
 import { Modal } from "../../../../components/Modal";
 import LoadingSpinner from "../../../../components/Spinner/LoadingSpinner";
 import CreateRoundModal from "./CreateRoundModal";
@@ -49,6 +51,8 @@ const RoundManagement: React.FC = () => {
   const [seasons, setSeasons] = useState<SeasonModel[]>([]);
   const [selectedSeasonId, setSelectedSeasonId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [deletingRound, setDeletingRound] = useState<RoundModel | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [trangHienTai, setTrangHienTai] = useState(1);
   const [tongSoTrang, setTongSoTrang] = useState(0);
@@ -113,18 +117,26 @@ const RoundManagement: React.FC = () => {
 
   const handleDelete = async (round: RoundModel) => {
     if (!round.id) return;
+    setDeletingRound(round);
+  };
 
-    if (window.confirm(`Bạn có chắc chắn muốn xóa ${round.name}?`)) {
-      try {
-        await RoundService.deleteRound(round.id);
-        fetchRounds(
-          trangHienTai,
-          selectedSeasonId ? Number(selectedSeasonId) : undefined,
-        );
-      } catch (error) {
-        console.error("Lỗi khi xóa vòng đấu:", error);
-        alert("Không thể xóa vòng đấu này.");
-      }
+  const handleConfirmDelete = async () => {
+    if (!deletingRound?.id) return;
+
+    try {
+      setDeleteLoading(true);
+      await RoundService.deleteRound(deletingRound.id);
+      toast.success("Đã xóa vòng đấu.");
+      setDeletingRound(null);
+      fetchRounds(
+        trangHienTai,
+        selectedSeasonId ? Number(selectedSeasonId) : undefined,
+      );
+    } catch (error) {
+      console.error("Lỗi khi xóa vòng đấu:", error);
+      toast.error("Không thể xóa vòng đấu này.");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -334,6 +346,19 @@ const RoundManagement: React.FC = () => {
           }
         />
       </Modal>
+      <ConfirmModal
+        open={deletingRound !== null}
+        title="Xóa vòng đấu"
+        message={`Bạn có chắc chắn muốn xóa ${deletingRound?.name ?? "vòng đấu này"}?`}
+        confirmText="Xóa vòng đấu"
+        cancelText="Hủy"
+        danger
+        loading={deleteLoading}
+        onConfirm={handleConfirmDelete}
+        onClose={() => {
+          if (!deleteLoading) setDeletingRound(null);
+        }}
+      />
     </AppLayout>
   );
 };

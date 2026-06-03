@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 
 const SignUpPage = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -10,15 +11,19 @@ const SignUpPage = () => {
   const [errors, setErrors] = useState({
     username: "",
     email: "",
+    confirmPassword: "",
   });
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    setErrors({ username: "", email: "" });
+    setErrors({ username: "", email: "", confirmPassword: "" });
 
     if (password !== confirmPassword) {
-      alert("Mật khẩu không khớp");
+      setErrors((current) => ({
+        ...current,
+        confirmPassword: "Mật khẩu không khớp",
+      }));
       return;
     }
 
@@ -51,7 +56,7 @@ const SignUpPage = () => {
         return;
       }
 
-      alert("Đăng ký thành công");
+      toast.success("Đăng ký thành công");
     } catch (err) {
       console.error(err);
     }
@@ -155,8 +160,19 @@ const SignUpPage = () => {
               placeholder="Confirm password"
               className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                setErrors((current) => ({
+                  ...current,
+                  confirmPassword: "",
+                }));
+              }}
             />
+            {errors.confirmPassword && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.confirmPassword}
+              </p>
+            )}
           </div>
 
           {/* Terms */}

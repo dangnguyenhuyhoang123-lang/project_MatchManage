@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Player } from "../../../../model/Player";
 import PlayerService from "../../../../services/PlayerService";
 import TeamService from "../../../../services/TeamService";
@@ -39,11 +40,13 @@ export const AddPlayerModal: React.FC<Props> = ({
   const [player, setPlayer] = useState<Player>(createEmptyPlayer());
   const [teamOptions, setTeamOptions] = useState<TeamOption[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const isEditMode = useMemo(() => Boolean(currentPlayer?.id), [currentPlayer]);
 
   useEffect(() => {
     setPlayer(currentPlayer ? new Player(currentPlayer) : createEmptyPlayer());
+    setErrors({});
   }, [currentPlayer]);
 
   useEffect(() => {
@@ -77,6 +80,12 @@ export const AddPlayerModal: React.FC<Props> = ({
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
+    setErrors((current) => {
+      if (!current[name]) return current;
+      const next = { ...current };
+      delete next[name];
+      return next;
+    });
 
     setPlayer((prev) => {
       const next = new Player(prev);
@@ -102,20 +111,12 @@ export const AddPlayerModal: React.FC<Props> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!player.name.trim()) {
-      alert("Vui lòng nhập tên cầu thủ.");
-      return;
-    }
-
-    if (!player.dateOfBirth) {
-      alert("Vui lòng chọn ngày sinh.");
-      return;
-    }
-
-    if (!player.position) {
-      alert("Vui lòng chọn vị trí.");
-      return;
-    }
+    const nextErrors: Record<string, string> = {};
+    if (!player.name.trim()) nextErrors.name = "Vui lòng nhập tên cầu thủ.";
+    if (!player.dateOfBirth) nextErrors.dateOfBirth = "Vui lòng chọn ngày sinh.";
+    if (!player.position) nextErrors.position = "Vui lòng chọn vị trí.";
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
 
     setIsSubmitting(true);
 
@@ -130,7 +131,7 @@ export const AddPlayerModal: React.FC<Props> = ({
       onClose();
     } catch (error) {
       console.error("Lỗi khi lưu cầu thủ:", error);
-      alert("Có lỗi xảy ra khi lưu cầu thủ.");
+      toast.error("Có lỗi xảy ra khi lưu cầu thủ.");
     } finally {
       setIsSubmitting(false);
     }
@@ -198,6 +199,7 @@ export const AddPlayerModal: React.FC<Props> = ({
                     name="name"
                     value={player.name}
                     onChange={handleChange}
+                    error={errors.name}
                   />
                   <InputField
                     label="CCCD / Mã định danh"
@@ -211,6 +213,7 @@ export const AddPlayerModal: React.FC<Props> = ({
                     type="date"
                     value={player.dateOfBirth}
                     onChange={handleChange}
+                    error={errors.dateOfBirth}
                   />
                   <InputField
                     label="Quốc tịch"
@@ -229,6 +232,7 @@ export const AddPlayerModal: React.FC<Props> = ({
                       { value: "FW", label: "Tiền đạo (FW)" },
                     ]}
                     onChange={handleChange}
+                    error={errors.position}
                   />
                   <InputField
                     label="Vị trí chi tiết"
@@ -358,6 +362,7 @@ type InputFieldProps = {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   type?: string;
   placeholder?: string;
+  error?: string;
 };
 
 const InputField = ({
@@ -367,6 +372,7 @@ const InputField = ({
   onChange,
   type = "text",
   placeholder,
+  error,
 }: InputFieldProps) => (
   <div className="flex flex-col gap-2">
     <label className="px-1 text-xs font-bold uppercase tracking-wider text-[#40493d]">
@@ -380,6 +386,7 @@ const InputField = ({
       placeholder={placeholder}
       className="w-full rounded-xl bg-[#eae8e4] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#0d631b]/20"
     />
+    {error && <p className="px-1 text-xs font-bold text-red-600">{error}</p>}
   </div>
 );
 
@@ -395,6 +402,7 @@ type SelectFieldProps = {
   options: SelectOption[];
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   placeholder?: string;
+  error?: string;
 };
 
 const SelectField = ({
@@ -404,6 +412,7 @@ const SelectField = ({
   options,
   onChange,
   placeholder = "Chọn",
+  error,
 }: SelectFieldProps) => (
   <div className="flex flex-col gap-2">
     <label className="px-1 text-xs font-bold uppercase tracking-wider text-[#40493d]">
@@ -422,6 +431,7 @@ const SelectField = ({
         </option>
       ))}
     </select>
+    {error && <p className="px-1 text-xs font-bold text-red-600">{error}</p>}
   </div>
 );
 

@@ -1,6 +1,8 @@
 import React, { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 import type { RegistrationSummaryDTO } from "../../../../model/Registration";
 import RegistrationService from "../../../../services/RegistrationService";
+import type { SystemRule } from "../../../../services/SystemRuleService";
 import type { RegistrationDraft, SelectedPlayer } from "./RegisterFormMatch";
 import { useRealtimeEvent } from "../../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../../services/websocket/NotificationSocketService";
@@ -8,9 +10,8 @@ import type { RealtimeEventDTO } from "../../../../services/websocket/Notificati
 type Props = {
   setStep: (step: number) => void;
   draft: RegistrationDraft;
-  onTeamChange: (
-    team: Partial<RegistrationDraft["team"]>,
-  ) => void;
+  onTeamChange: (team: Partial<RegistrationDraft["team"]>) => void;
+  rule?: SystemRule | null;
 };
 
 const roleLabels: Record<string, string> = {
@@ -49,6 +50,7 @@ const FinalConfirmation: React.FC<Props> = ({
   setStep,
   draft,
   onTeamChange,
+  rule,
 }) => {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,8 +77,10 @@ const FinalConfirmation: React.FC<Props> = ({
       missing.push("Ban huấn luyện chưa đủ tối thiểu 3 thành viên");
     }
 
-    if (allPlayers.length < 14) {
-      missing.push("Danh sách cầu thủ chưa đủ tối thiểu 14 người");
+    const minPlayers = rule?.minRegistrationPlayers ?? rule?.minPlayers ?? 16;
+
+    if (allPlayers.length < minPlayers) {
+      missing.push(`Danh sách cầu thủ chưa đủ tối thiểu ${minPlayers} người`);
     }
 
     if (!draft.stadium.name.trim() || !draft.stadium.address.trim()) {
@@ -152,7 +156,7 @@ const FinalConfirmation: React.FC<Props> = ({
       setSubmittedSummary(response.data);
     } catch (error) {
       console.error("Lỗi khi gửi đơn đăng ký:", error);
-      alert("Không thể gửi đơn đăng ký. Vui lòng kiểm tra lại dữ liệu.");
+      toast.error("Không thể gửi đơn đăng ký. Vui lòng kiểm tra lại dữ liệu.");
     } finally {
       setIsSubmitting(false);
     }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import ConfirmModal from "../../components/ConfirmModal";
 import type { MatchModel } from "../../model/Match/MatchModel";
 import { MatchStatus } from "../../model/enum";
 import { ListMatchManage } from "../../utils/labelManage/ManageMatch/ListMatchhManage";
@@ -72,6 +73,7 @@ const MatchManagementPage = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [filters, setFilters] = useState<AdminMatchFilterParams>({});
+  const [deletingMatchId, setDeletingMatchId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -297,26 +299,24 @@ const MatchManagementPage = () => {
     if (!matchId) {
       return;
     }
+    setDeletingMatchId(matchId);
+  };
 
-    const shouldDelete = window.confirm(
-      "Ban co chac muon xoa tran dau nay khong?",
-    );
-
-    if (!shouldDelete) {
-      return;
-    }
+  const handleConfirmDelete = async () => {
+    if (!deletingMatchId) return;
 
     try {
       setError("");
       setMessage("");
-      await deleteAdminMatch(matchId);
+      await deleteAdminMatch(deletingMatchId);
 
-      if (editingId === matchId) {
+      if (editingId === deletingMatchId) {
         resetForm();
       }
 
       await reloadMatches();
       setMessage("Xoa tran dau thanh cong.");
+      setDeletingMatchId(null);
     } catch (deleteError) {
       setError(
         deleteError instanceof Error
@@ -369,6 +369,16 @@ const MatchManagementPage = () => {
           />
         </div>
       </div>
+      <ConfirmModal
+        open={deletingMatchId !== null}
+        title="Xóa trận đấu"
+        message="Bạn có chắc muốn xóa trận đấu này không?"
+        confirmText="Xóa trận"
+        cancelText="Hủy"
+        danger
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeletingMatchId(null)}
+      />
     </div>
   );
 };

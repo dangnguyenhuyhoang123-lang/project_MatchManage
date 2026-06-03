@@ -1,14 +1,22 @@
 import { useCallback, useState, useEffect, type FC } from "react";
+import { toast } from "sonner";
 import MatchService from "../../../../services/MatchService";
+import PlayerSeasonService from "../../../../services/PlayerSeasonService";
 import SystemRuleService, {
   type SystemRule,
 } from "../../../../services/SystemRuleService";
 import type { MatchEvent } from "../../../../model/Match/MatchEvents";
 import type { MatchStats } from "../../../../model/Match/MatchStats";
+import ConfirmModal from "../../../../components/ConfirmModal";
 import MatchEventModal from "./MatchEventModal";
+import MatchSupervisorReportModal from "../../../../components/match/MatchSupervisorReportModal";
 
-import type { MatchLineupsResponse } from "../../../../model/Match/MatchLineup";
+import type {
+  MatchLineup,
+  MatchLineupsResponse,
+} from "../../../../model/Match/MatchLineup";
 import type { MatchEventUpsertRequest } from "../../../../model/Match/MatchEvents";
+import type { PlayerSeason } from "../../../../model/PlayerSeason";
 import { useRealtimeEvent } from "../../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../../services/websocket/NotificationSocketService";
 
@@ -16,6 +24,53 @@ interface MatchResultUpdateProps {
   matchData: any;
   onClose?: () => void;
   onUpdateSuccess?: () => void;
+}
+
+type MatchPlayerOption = {
+  playerId: number;
+  playerName: string;
+  teamName?: string | null;
+  shirtNumber?: number | null;
+};
+
+type PageData<T> = {
+  content?: T[];
+  data?: T[] | PageData<T>;
+};
+
+function readArray<T>(data: unknown): T[] {
+  if (Array.isArray(data)) return data as T[];
+  const page = data as PageData<T> | undefined;
+  if (Array.isArray(page?.content)) return page.content;
+  if (Array.isArray(page?.data)) return page.data;
+  if (page?.data && !Array.isArray(page.data)) {
+    return Array.isArray(page.data.content) ? page.data.content : [];
+  }
+  return [];
+}
+
+function lineupToOption(player: MatchLineup, teamName?: string | null) {
+  return {
+    playerId: player.playerId,
+    playerName: player.playerName,
+    teamName,
+    shirtNumber: player.shirtNumber,
+  };
+}
+
+function getLineupPlayerOptions(
+  lineupsData: MatchLineupsResponse | null,
+): MatchPlayerOption[] {
+  if (!lineupsData) return [];
+
+  return [
+    ...(lineupsData.home?.lineups ?? []).map((player) =>
+      lineupToOption(player, lineupsData.home?.teamName),
+    ),
+    ...(lineupsData.away?.lineups ?? []).map((player) =>
+      lineupToOption(player, lineupsData.away?.teamName),
+    ),
+  ];
 }
 
 const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
@@ -37,8 +92,15 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
   const [loading, setLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [isSupervisorReportOpen, setIsSupervisorReportOpen] = useState(false);
+  const [deletingEventId, setDeletingEventId] = useState<number | null>(null);
+  const [finishConfirmOpen, setFinishConfirmOpen] = useState(false);
   const [lineups, setLineups] = useState<MatchLineupsResponse | null>(null);
   const [systemRule, setSystemRule] = useState<SystemRule | null>(null);
+  const [motmCandidates, setMotmCandidates] = useState<MatchPlayerOption[]>([]);
+  const [selectedMotmPlayerId, setSelectedMotmPlayerId] = useState<number | "">(
+    matchData?.manOfTheMatchPlayerId ?? "",
+  );
   // const [eventForm, setEventForm] = useState({
   //   eventType: "GOAL" as "GOAL" | "YELLOW_CARD" | "RED_CARD" | "SUBSTITUTION",
   //   goalType: "NORMAL" as "NORMAL" | "PENALTY" | "OWN_GOAL",
@@ -92,6 +154,41 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
     fetchData();
   }, [matchData?.id]);
 
+  const loadFallbackMotmCandidates = async (
+    match: typeof currentMatch,
+  ): Promise<MatchPlayerOption[]> => {
+    const teamIds = [match?.homeTeam?.id, match?.awayTeam?.id].filter(
+      (teamId): teamId is number => Number.isFinite(Number(teamId)),
+    );
+    const candidates: MatchPlayerOption[] = [];
+
+    for (const teamId of teamIds) {
+      try {
+        const teamSeasonRes = await MatchService.getTeamSeasonByMatchAndTeam(
+          matchData.id,
+          teamId,
+        );
+        const teamSeasonId = teamSeasonRes.data?.teamSeasonId;
+        if (!teamSeasonId) continue;
+
+        const playerSeasonRes =
+          await PlayerSeasonService.getPlayerSeasonsByTeamSeason(teamSeasonId);
+        readArray<PlayerSeason>(playerSeasonRes.data).forEach((player) => {
+          candidates.push({
+            playerId: Number(player.playerId),
+            playerName: player.playerName || `Cầu thủ #${player.playerId}`,
+            teamName: player.teamName,
+            shirtNumber: player.shirtNumber,
+          });
+        });
+      } catch (error) {
+        console.error("Cannot load fallback MOTM players", error);
+      }
+    }
+
+    return candidates;
+  };
+
   const reloadMatchData = async () => {
     if (!matchData?.id) return;
 
@@ -103,10 +200,18 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
         MatchService.getMatchLineups(matchData.id),
       ]);
 
+    const lineupCandidates = getLineupPlayerOptions(lineupsData);
+    const candidates =
+      lineupCandidates.length > 0
+        ? lineupCandidates
+        : await loadFallbackMotmCandidates(updatedMatch);
+
     setCurrentMatch(updatedMatch);
+    setSelectedMotmPlayerId(updatedMatch.manOfTheMatchPlayerId ?? "");
     setEvents(eventsData || []);
     setStats(statsData || []);
     setLineups(lineupsData);
+    setMotmCandidates(candidates);
   };
 
   const loadSystemRule = async () => {
@@ -163,7 +268,7 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
   //     }
   //   } catch (error) {
   //     console.error("Lỗi khi cập nhật kết quả trận đấu:", error);
-  //     alert("Cập nhật thất bại. Vui lòng thử lại.");
+  //     toast.error("Cập nhật thất bại. Vui lòng thử lại.");
   //   } finally {
   //     setLoading(false);
   //   }
@@ -173,17 +278,17 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
   //   if (!currentMatch?.id) return;
 
   //   if (!eventForm.teamId) {
-  //     alert("Vui lòng chọn đội.");
+  //     toast.warning("Vui lòng chọn đội.");
   //     return;
   //   }
 
   //   if (!eventForm.playerId) {
-  //     alert("Vui lòng chọn cầu thủ.");
+  //     toast.warning("Vui lòng chọn cầu thủ.");
   //     return;
   //   }
 
   //   if (eventForm.minute < 0 || eventForm.minute > 130) {
-  //     alert("Phút thi đấu không hợp lệ.");
+  //     toast.warning("Phút thi đấu không hợp lệ.");
   //     return;
   //   }
 
@@ -222,7 +327,7 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
   //     });
   //   } catch (error) {
   //     console.error("Lỗi khi thêm sự kiện:", error);
-  //     alert("Thêm sự kiện thất bại.");
+  //     toast.error("Thêm sự kiện thất bại.");
   //   } finally {
   //     setLoading(false);
   //   }
@@ -231,17 +336,22 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
   const handleDeleteEvent = async (eventId: number) => {
     if (!currentMatch?.id) return;
 
-    const confirmed = window.confirm("Bạn có chắc muốn xóa sự kiện này?");
-    if (!confirmed) return;
+    setDeletingEventId(eventId);
+  };
+
+  const handleConfirmDeleteEvent = async () => {
+    if (!currentMatch?.id || !deletingEventId) return;
 
     setLoading(true);
 
     try {
-      await MatchService.deleteMatchEvent(currentMatch.id, eventId);
+      await MatchService.deleteMatchEvent(currentMatch.id, deletingEventId);
       await reloadMatchData();
+      toast.success("Đã xóa sự kiện.");
+      setDeletingEventId(null);
     } catch (error) {
       console.error("Lỗi khi xóa sự kiện:", error);
-      alert("Xóa sự kiện thất bại.");
+      toast.error("Xóa sự kiện thất bại.");
     } finally {
       setLoading(false);
     }
@@ -260,9 +370,11 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
       if (onUpdateSuccess) {
         onUpdateSuccess();
       }
+      setFinishConfirmOpen(false);
+      toast.success("Đã hoàn tất trận đấu.");
     } catch (error) {
       console.error("Lỗi khi hoàn tất trận đấu:", error);
-      alert("Hoàn tất trận đấu thất bại.");
+      toast.error("Hoàn tất trận đấu thất bại.");
     } finally {
       setLoading(false);
     }
@@ -280,7 +392,34 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
       setIsEventModalOpen(false);
     } catch (error) {
       console.error("Lỗi khi thêm sự kiện:", error);
-      alert("Thêm sự kiện thất bại.");
+      toast.error("Thêm sự kiện thất bại.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveManOfTheMatch = async () => {
+    if (!currentMatch?.id) return;
+
+    if (!selectedMotmPlayerId) {
+      toast.warning("Vui lòng chọn cầu thủ xuất sắc nhất trận.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await MatchService.updateManOfTheMatch(
+        currentMatch.id,
+        Number(selectedMotmPlayerId),
+      );
+      await reloadMatchData();
+      toast.success("Đã lưu cầu thủ xuất sắc nhất trận.");
+    } catch (error) {
+      console.error("Cannot update man of the match", error);
+      toast.error(
+        "Không thể lưu cầu thủ xuất sắc nhất trận. Vui lòng kiểm tra cầu thủ có thuộc hai đội thi đấu không.",
+      );
     } finally {
       setLoading(false);
     }
@@ -318,6 +457,14 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
               <div className="flex gap-3">
                 <button
                   type="button"
+                  onClick={() => setIsSupervisorReportOpen(true)}
+                  className="px-6 py-2 rounded-full border border-green-200 bg-green-50 text-green-700 font-bold hover:bg-green-100"
+                  disabled={loading}
+                >
+                  Báo cáo giám sát
+                </button>
+                <button
+                  type="button"
                   onClick={onClose}
                   className="px-6 py-2 rounded-full border border-gray-300 text-gray-600 font-bold hover:bg-gray-50"
                   disabled={loading}
@@ -326,7 +473,7 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={handleFinishMatch}
+                  onClick={() => setFinishConfirmOpen(true)}
                   className="px-6 py-2 rounded-full bg-green-800 text-white font-bold shadow-lg shadow-green-900/20 hover:bg-green-700 disabled:opacity-70"
                   disabled={loading}
                 >
@@ -467,6 +614,43 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
               {/* Right: Stats & Notes */}
               <div className="col-span-12 md:col-span-3 space-y-6">
                 <section className="bg-white rounded-2xl p-6 border border-black/5 shadow-sm">
+                  <h3 className="text-sm font-black text-green-900 uppercase tracking-widest mb-4">
+                    Cầu thủ xuất sắc nhất trận
+                  </h3>
+                  <div className="rounded-xl bg-green-50 p-3 text-xs font-bold text-green-800">
+                    Hiện tại:{" "}
+                    {currentMatch?.manOfTheMatchPlayerName ||
+                      "Chưa chọn cầu thủ"}
+                  </div>
+                  <select
+                    value={selectedMotmPlayerId}
+                    onChange={(event) =>
+                      setSelectedMotmPlayerId(
+                        event.target.value ? Number(event.target.value) : "",
+                      )
+                    }
+                    className="mt-4 w-full rounded-xl border border-gray-100 bg-[#f5f3ef] px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-green-700/20"
+                  >
+                    <option value="">-- Chọn cầu thủ --</option>
+                    {motmCandidates.map((player) => (
+                      <option key={player.playerId} value={player.playerId}>
+                        {player.shirtNumber ? `#${player.shirtNumber} - ` : ""}
+                        {player.playerName}
+                        {player.teamName ? ` (${player.teamName})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleSaveManOfTheMatch}
+                    disabled={loading || !selectedMotmPlayerId}
+                    className="mt-3 w-full rounded-full bg-green-800 px-4 py-3 text-sm font-black text-white shadow-sm transition hover:bg-green-700 disabled:opacity-50"
+                  >
+                    Lưu cầu thủ xuất sắc
+                  </button>
+                </section>
+
+                <section className="bg-white rounded-2xl p-6 border border-black/5 shadow-sm">
                   <h3 className="text-sm font-black text-green-900 uppercase tracking-widest mb-6">
                     Thông số
                   </h3>
@@ -539,6 +723,38 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
             )
         }
         maxGoalMinute={systemRule?.maxGoalMinute ?? null}
+      />
+      <MatchSupervisorReportModal
+        open={isSupervisorReportOpen}
+        matchId={currentMatch?.id ?? matchData?.id ?? null}
+        onClose={() => setIsSupervisorReportOpen(false)}
+        onSaved={reloadMatchData}
+      />
+      <ConfirmModal
+        open={deletingEventId !== null}
+        title="Xóa sự kiện"
+        message="Bạn có chắc muốn xóa sự kiện này? Tỉ số và thống kê trận đấu có thể được cập nhật lại."
+        confirmText="Xóa sự kiện"
+        cancelText="Hủy"
+        danger
+        loading={loading}
+        onConfirm={handleConfirmDeleteEvent}
+        onClose={() => {
+          if (!loading) setDeletingEventId(null);
+        }}
+      />
+      <ConfirmModal
+        open={finishConfirmOpen}
+        title="Kết thúc trận đấu"
+        message="Bạn có chắc chắn muốn hoàn tất trận đấu này? Hành động này sẽ đổi trạng thái trận sang đã kết thúc."
+        confirmText="Kết thúc trận"
+        cancelText="Hủy"
+        danger
+        loading={loading}
+        onConfirm={handleFinishMatch}
+        onClose={() => {
+          if (!loading) setFinishConfirmOpen(false);
+        }}
       />
     </div>
   );

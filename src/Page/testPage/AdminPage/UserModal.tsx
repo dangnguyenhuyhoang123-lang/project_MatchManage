@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { Modal } from "../../../components/Modal";
 import type { AuthUser } from "../../../types/AuthUser";
 import { TeamModel } from "../../../model/TeamModel";
@@ -30,6 +31,7 @@ export function UserModal({
   });
 
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const isEdit = !!user;
 
   useEffect(() => {
@@ -57,12 +59,19 @@ export function UserModal({
         teamId: null,
       });
     }
+    setErrors({});
   }, [user, isOpen]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value, type } = e.target;
+    setErrors((current) => {
+      if (!current[name]) return current;
+      const next = { ...current };
+      delete next[name];
+      return next;
+    });
 
     if (type === "checkbox") {
       const checked = (e.target as HTMLInputElement).checked;
@@ -98,7 +107,7 @@ export function UserModal({
       }
 
       if (payload.roles.includes("ROLE_CLUB_MANAGER") && !payload.teamId) {
-        alert("Vui lòng chọn CLB liên kết cho Club Manager.");
+        setErrors({ teamId: "Vui lòng chọn CLB liên kết cho Club Manager." });
         return;
       }
 
@@ -106,7 +115,7 @@ export function UserModal({
       onClose();
     } catch (error) {
       console.error("Lỗi lưu user", error);
-      alert("Đã xảy ra lỗi khi lưu thông tin người dùng.");
+      toast.error("Đã xảy ra lỗi khi lưu thông tin người dùng.");
     } finally {
       setLoading(false);
     }
@@ -230,6 +239,11 @@ export function UserModal({
                 </option>
               ))}
             </select>
+            {errors.teamId && (
+              <p className="mt-1 text-xs font-bold text-red-600">
+                {errors.teamId}
+              </p>
+            )}
           </div>
 
           <div className="col-span-2 mt-2">

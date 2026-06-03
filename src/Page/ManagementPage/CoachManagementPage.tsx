@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import ConfirmModal from "../../components/ConfirmModal";
 import LoadingSpinner from "../../components/Spinner/LoadingSpinner";
 
 const CoachManagementPage = () => {
@@ -8,11 +9,16 @@ const CoachManagementPage = () => {
     { id: 2, name: "Coach B", team: "Team Y" },
   ]);
   const [isLoading] = useState(false);
+  const [deletingCoachId, setDeletingCoachId] = useState<number | null>(null);
 
   const handleDelete = (id: number) => {
-    if (window.confirm("Are you sure you want to delete this coach?")) {
-      setCoaches((prev) => prev.filter((coach) => coach.id !== id));
-    }
+    setDeletingCoachId(id);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletingCoachId) return;
+    setCoaches((prev) => prev.filter((coach) => coach.id !== deletingCoachId));
+    setDeletingCoachId(null);
   };
 
   if (isLoading) {
@@ -66,6 +72,16 @@ const CoachManagementPage = () => {
           </table>
         </div>
       </div>
+      <ConfirmModal
+        open={deletingCoachId !== null}
+        title="Delete coach"
+        message="Are you sure you want to delete this coach?"
+        confirmText="Delete"
+        cancelText="Cancel"
+        danger
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeletingCoachId(null)}
+      />
     </div>
   );
 };

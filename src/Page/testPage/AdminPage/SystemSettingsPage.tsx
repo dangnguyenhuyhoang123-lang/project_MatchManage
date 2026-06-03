@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import ConfirmModal from "../../../components/ConfirmModal";
 import { AppLayout } from "../../../layouts/AppLayout";
 import {
   Search,
@@ -23,6 +25,18 @@ export default function SystemSettingsPage() {
   const [teams, setTeams] = useState<TeamModel[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AuthUser | null>(null);
+  const [pendingRoleChange, setPendingRoleChange] = useState<{
+    user: AuthUser;
+    role: string;
+  } | null>(null);
+  const [pendingStatusToggle, setPendingStatusToggle] = useState<{
+    userId: number;
+    currentStatus: boolean;
+  } | null>(null);
+  const [pendingDeleteUserId, setPendingDeleteUserId] = useState<number | null>(
+    null,
+  );
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const fetchTeams = async () => {
     try {
@@ -61,7 +75,7 @@ export default function SystemSettingsPage() {
       else roles = ["ROLE_USER"];
 
       if (role === "Club Manager" && !user.teamId) {
-        alert(
+        toast.warning(
           "Để cấp quyền Club Manager, người dùng này cần có một CLB đại diện. Vui lòng cập nhật CLB trong form chi tiết!",
         );
         setSelectedUser(user);
@@ -71,9 +85,23 @@ export default function SystemSettingsPage() {
 
       const teamId = role === "Club Manager" ? user.teamId || null : null;
       await UserService.updateUserRoles(user.id, { roles, teamId });
+      toast.success("Đã cập nhật vai trò người dùng.");
       fetchUsers();
     } catch (error) {
       console.error("Lỗi khi cập nhật quyền:", error);
+      toast.error("Không thể cập nhật quyền người dùng.");
+    }
+  };
+
+  const handleConfirmRoleChange = async () => {
+    if (!pendingRoleChange) return;
+
+    try {
+      setConfirmLoading(true);
+      await handleRoleChange(pendingRoleChange.user, pendingRoleChange.role);
+      setPendingRoleChange(null);
+    } finally {
+      setConfirmLoading(false);
     }
   };
 
@@ -81,24 +109,34 @@ export default function SystemSettingsPage() {
     try {
       const teamId = teamIdStr ? Number(teamIdStr) : null;
       await UserService.updateUserRoles(user.id, { roles: user.roles, teamId });
+      toast.success("Đã cập nhật CLB liên kết.");
       fetchUsers();
     } catch (error) {
       console.error("Lỗi khi cập nhật CLB:", error);
+      toast.error("Không thể cập nhật CLB liên kết.");
     }
   };
 
   const handleStatusToggle = async (userId: number, currentStatus: boolean) => {
-    if (
-      window.confirm(
-        `Bạn có chắc chắn muốn ${currentStatus ? "vô hiệu hóa" : "kích hoạt"} người dùng này?`,
-      )
-    ) {
-      try {
-        await UserService.updateUserStatus(userId, { status: !currentStatus });
-        fetchUsers();
-      } catch (error) {
-        console.error("Lỗi khi cập nhật trạng thái:", error);
-      }
+    setPendingStatusToggle({ userId, currentStatus });
+  };
+
+  const handleConfirmStatusToggle = async () => {
+    if (!pendingStatusToggle) return;
+
+    try {
+      setConfirmLoading(true);
+      await UserService.updateUserStatus(pendingStatusToggle.userId, {
+        status: !pendingStatusToggle.currentStatus,
+      });
+      toast.success("Đã cập nhật trạng thái người dùng.");
+      setPendingStatusToggle(null);
+      fetchUsers();
+    } catch (error) {
+      console.error("Lỗi khi cập nhật trạng thái:", error);
+      toast.error("Không thể cập nhật trạng thái người dùng.");
+    } finally {
+      setConfirmLoading(false);
     }
   };
 
@@ -107,7 +145,7 @@ export default function SystemSettingsPage() {
       console.log(payload);
       if (isEdit) {
         if (!payload.id) {
-          alert("Không tìm thấy ID người dùng.");
+          toast.error("Không tìm thấy ID người dùng.");
           return;
         }
 
@@ -121,7 +159,7 @@ export default function SystemSettingsPage() {
         const isClubManager = roles.includes("ROLE_CLUB_MANAGER");
 
         if (isClubManager && !payload.teamId) {
-          alert("Vui lòng chọn CLB cho Club Manager.");
+          toast.warning("Vui lòng chọn CLB cho Club Manager.");
           return;
         }
         console.log(payload);
@@ -139,7 +177,7 @@ export default function SystemSettingsPage() {
       console.error("Status:", error?.response?.status);
       console.error("Response data:", error?.response?.data);
 
-      alert(
+      toast.error(
         error?.response?.data?.message ||
           error?.response?.data ||
           "Lưu người dùng thất bại.",
@@ -150,13 +188,23 @@ export default function SystemSettingsPage() {
   };
 
   const handleDeleteUser = async (userId: number) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa người dùng này?")) {
-      try {
-        await UserService.deleteUser(userId);
-        fetchUsers();
-      } catch (error) {
-        console.error("Lỗi khi xóa người dùng:", error);
-      }
+    setPendingDeleteUserId(userId);
+  };
+
+  const handleConfirmDeleteUser = async () => {
+    if (!pendingDeleteUserId) return;
+
+    try {
+      setConfirmLoading(true);
+      await UserService.deleteUser(pendingDeleteUserId);
+      toast.success("Đã xóa người dùng.");
+      setPendingDeleteUserId(null);
+      fetchUsers();
+    } catch (error) {
+      console.error("Lỗi khi xóa người dùng:", error);
+      toast.error("Không thể xóa người dùng.");
+    } finally {
+      setConfirmLoading(false);
     }
   };
 
@@ -356,7 +404,10 @@ export default function SystemSettingsPage() {
                         <select
                           value={userRoleDisplay}
                           onChange={(e) =>
-                            handleRoleChange(user, e.target.value)
+                            setPendingRoleChange({
+                              user,
+                              role: e.target.value,
+                            })
                           }
                           className={`appearance-none text-xs font-semibold rounded-full pl-3 pr-8 py-1 outline-none cursor-pointer ${
                             userRoleDisplay === "Admin"
@@ -464,6 +515,48 @@ export default function SystemSettingsPage() {
         onSave={handleSaveUser}
         user={selectedUser}
         teams={teams}
+      />
+      <ConfirmModal
+        open={pendingRoleChange !== null}
+        title="Đổi vai trò người dùng"
+        message={`Bạn có chắc chắn muốn đổi vai trò người dùng này thành ${pendingRoleChange?.role ?? ""}?`}
+        confirmText="Đổi vai trò"
+        cancelText="Hủy"
+        loading={confirmLoading}
+        onConfirm={handleConfirmRoleChange}
+        onClose={() => {
+          if (!confirmLoading) setPendingRoleChange(null);
+        }}
+      />
+      <ConfirmModal
+        open={pendingStatusToggle !== null}
+        title="Đổi trạng thái tài khoản"
+        message={`Bạn có chắc chắn muốn ${
+          pendingStatusToggle?.currentStatus ? "vô hiệu hóa" : "kích hoạt"
+        } người dùng này?`}
+        confirmText={
+          pendingStatusToggle?.currentStatus ? "Vô hiệu hóa" : "Kích hoạt"
+        }
+        cancelText="Hủy"
+        danger={Boolean(pendingStatusToggle?.currentStatus)}
+        loading={confirmLoading}
+        onConfirm={handleConfirmStatusToggle}
+        onClose={() => {
+          if (!confirmLoading) setPendingStatusToggle(null);
+        }}
+      />
+      <ConfirmModal
+        open={pendingDeleteUserId !== null}
+        title="Xóa người dùng"
+        message="Bạn có chắc chắn muốn xóa người dùng này?"
+        confirmText="Xóa người dùng"
+        cancelText="Hủy"
+        danger
+        loading={confirmLoading}
+        onConfirm={handleConfirmDeleteUser}
+        onClose={() => {
+          if (!confirmLoading) setPendingDeleteUserId(null);
+        }}
       />
     </AppLayout>
   );
