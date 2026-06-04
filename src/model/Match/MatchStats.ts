@@ -16,3 +16,17 @@ export interface MatchStats {
   totalPasses: number;
   passAccuracy: number;
 }
+
+export interface MatchStatsUpsertRequest = {
+  teamId: number;
+  possession: number;
+  shots: number;
+  shotsOnTarget: number;
+  corners: number;
+  fouls: number;
+  offsides: number;
+  yellowCards: number;
+  redCards: number;
+  totalPasses: number;
+  passAccuracy: number;
+};

@@ -14,10 +14,10 @@ import { useAuth } from "../../utils/useAuth";
 const navLinks = [
   { label: "Trang chủ", path: "/" },
   { label: "Tính năng", path: "/features" },
-  { label: "Giải đấu", path: "/leagues" },
+  { label: "Lich thi đấu", path: "/leagues" },
+  { label: "Khám phá", path: "/explore" },
   { label: "Tin tức", path: "/news" },
   { label: "Về chúng tôi", path: "/about" },
-  { label: "Cầu thủ", path: "/players" },
 ];
 
 const roleLabels: Record<string, string> = {

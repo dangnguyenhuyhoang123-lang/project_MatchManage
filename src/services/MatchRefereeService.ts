@@ -6,6 +6,7 @@ export type MatchRefereeAssignRequest = {
   matchId: number;
   refereeId: number;
   role: string;
+  note?: string | null;
 };
 
 export type MatchRefereeResponse = {
@@ -15,6 +16,7 @@ export type MatchRefereeResponse = {
   refereeName: string;
   refereeNationality?: string | null;
   role: string;
+  note?: string | null;
 };
 
 class MatchRefereeService {

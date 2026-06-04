@@ -2,45 +2,52 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
-import HomePage from "./Page/HomePage";
-import LoginPage from "./Page/LoginPage";
-import SignUpPage from "./Page/SignUpPage";
-import FeaturePage from "./Page/FeaturePage";
-import NewsPage from "./Page/NewsPage";
-import NewsDetailPage from "./Page/NewsDetailPage";
-import AboutPage from "./Page/AboutPage";
-import PublicLeaguesPage from "./Page/PublicLeaguesPage";
-import PublicPlayerSearchPage from "./Page/PublicPlayerSearchPage";
-import MatchDetail from "./Page/MatchDetail";
-import TeamDetail from "./Page/TeamDetail";
-import UserProfilePage from "./Page/UserProfilePage";
+import HomePage from "./Page/public/HomePage";
+import LoginPage from "./Page/public/LoginPage";
+import SignUpPage from "./Page/public/SignUpPage";
+import FeaturePage from "./Page/public/FeaturePage";
+
+import NewsPage from "./Page/public/news/NewsPage";
+import NewsDetailPage from "./Page/public/news/NewsDetailPage";
+import AboutPage from "./Page/public/AboutPage";
+import PublicLeaguesPage from "./Page/public/PublicLeaguesPage";
+
+import PublicExplorePage from "./Page/public/explorePage/PublicExplorePage";
+import LeagueDetailPage from "./Page/public/explorePage/LeagueDetailPage";
+import SeasonDetailPage from "./Page/public/explorePage/SeasonDetailPage";
+import TeamPublicDetailPage from "./Page/public/explorePage/TeamPublicDetailPage";
+import PlayerPublicDetailPage from "./Page/public/explorePage/PlayerPublicDetailPage";
+import MatchDetail from "./Page/public/MatchDetail";
+import UserProfilePage from "./Page/public/UserProfilePage";
 
 import DashBoardPage from "./Page/testPage/DashBoardPage";
-import TournamentManagement from "./Page/testPage/AdminPage/LeagueManage/TournamentManagement";
-import SeasonInvitationManager from "./Page/testPage/AdminPage/LeagueManage/SeasonInvitationManager";
-import RoundManagement from "./Page/testPage/AdminPage/RoundManage/RoundManagement";
-import ClubManagement from "./Page/testPage/AdminPage/TeamManage/ClubManagement";
-import PlayerManagement from "./Page/testPage/AdminPage/PlayerManage/PlayerManagement";
-import MatchSchedule from "./Page/testPage/AdminPage/MatchSchedule/MatchShedule";
-import MatchResults from "./Page/testPage/AdminPage/Matchresult/MatchResults";
-import StandingsPage from "./Page/testPage/StadingPage";
-import ReportPage from "./Page/testPage/AdminPage/ReportPage";
-import AdminRegistrationManager from "./Page/testPage/AdminPage/AdminRegistrationManager";
-import SystemSettingsPage from "./Page/testPage/AdminPage/SystemSettingsPage";
 
-import RegisterFormMatch from "./Page/testPage/ClubManagerPage/RegisterForm/RegisterFormMatch";
-import MatchManagePageClub from "./Page/testPage/ClubManagerPage/MatchManage/MatchManagePageClub";
-import ClubDetailPage from "./Page/testPage/ClubManagerPage/InfoClubManage/ClubDetailPage";
-import PlayerRosterPage from "./Page/testPage/ClubManagerPage/InfoClubManage/PlayerRosterPage";
-import ClubStaffPage from "./Page/testPage/ClubManagerPage/InfoClubManage/ClubStaffPage";
-import StadiumDetailPage from "./Page/testPage/ClubManagerPage/InfoClubManage/StadiumDetailPage";
+import TournamentManagement from "./Page/admin/LeagueManage/TournamentManagement";
+import SeasonInvitationManager from "./Page/admin/LeagueManage/SeasonInvitationManager";
+import RoundManagement from "./Page/admin/RoundManage/RoundManagement";
+import ClubManagement from "./Page/admin/TeamManage/ClubManagement";
+import PlayerManagement from "./Page/admin/PlayerManage/PlayerManagement";
+import MatchSchedule from "./Page/admin/MatchSchedule/MatchShedule";
+import MatchResults from "./Page/admin/Matchresult/MatchResults";
+import StandingsPage from "./Page/admin/StadingPage";
+import ReportPage from "./Page/admin/ReportPage";
+import AdminRegistrationManager from "./Page/admin/AdminRegistrationManager";
+import SystemSettingsPage from "./Page/admin/SystemSettingsPage";
+
+import RegisterFormMatch from "./Page/club/RegisterForm/RegisterFormMatch";
+import MatchManagePageClub from "./Page/club/MatchManage/MatchManagePageClub";
+import ClubDetailPage from "./Page/club/InfoClubManage/ClubDetailPage";
+import PlayerRosterPage from "./Page/club/InfoClubManage/PlayerRosterPage";
+import ClubStaffPage from "./Page/club/InfoClubManage/ClubStaffPage";
+import StadiumDetailPage from "./Page/club/InfoClubManage/StadiumDetailPage";
 import PublicLayout from "./layouts/PublicLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import ClubManagerLayout from "./layouts/ClubManagerLayout";
-import ClubInvitationPage from "./Page/testPage/ClubManagerPage/ClubInvitationPage";
+import RefereeManagementPage from "./Page/admin/RefereeManage/RefereeManagementPage";
+import ClubInvitationPage from "./Page/club/ClubInvitationPage";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
-import SystemRulesPage from "./Page/testPage/AdminPage/SystemRulesPage";
+import SystemRulesPage from "./Page/admin/SystemRulesPage";
 function getRouteWorkspace(pathname: string) {
   if (pathname.startsWith("/admin")) {
     return "admin";
@@ -94,13 +101,23 @@ const AppRoutes = () => {
             <Route path="/news/:id" element={<NewsDetailPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/leagues" element={<PublicLeaguesPage />} />
-            <Route path="/players" element={<PublicPlayerSearchPage />} />
+            <Route path="/explore" element={<PublicExplorePage />} />
+            <Route path="/leagues/:leagueId" element={<LeagueDetailPage />} />
+            <Route
+              path="/leagues/:leagueId/seasons/:seasonId"
+              element={<SeasonDetailPage />}
+            />
+
+            <Route
+              path="/players/:playerId"
+              element={<PlayerPublicDetailPage />}
+            />
             <Route
               path="/public-leagues"
               element={<Navigate to="/leagues" replace />}
             />
             <Route path="/matches/:id" element={<MatchDetail />} />
-            <Route path="/teams/:teamName" element={<TeamDetail />} />
+            <Route path="/teams/:teamId" element={<TeamPublicDetailPage />} />
             <Route
               path="/profile"
               element={
@@ -133,6 +150,7 @@ const AppRoutes = () => {
             <Route path="/admin/rounds" element={<RoundManagement />} />
             <Route path="/admin/clubs" element={<ClubManagement />} />
             <Route path="/admin/players" element={<PlayerManagement />} />
+            <Route path="/admin/referees" element={<RefereeManagementPage />} />
             <Route path="/admin/matches" element={<MatchSchedule />} />
             <Route path="/admin/results" element={<MatchResults />} />
             <Route path="/admin/standings" element={<StandingsPage />} />

@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import type { AppWorkspace } from "../layouts/AppLayout";
+import { ArrowBigLeftDashIcon, ArrowBigLeftIcon } from "lucide-react";
 
 type MenuItem = {
   label: string;
@@ -41,6 +42,11 @@ const adminMenu: MenuItem[] = [
     path: "/admin/players",
     icon: "groups",
     aliases: ["/players"],
+  },
+  {
+    label: "Trọng tài",
+    path: "/admin/referees",
+    icon: "sports",
   },
   {
     label: "Lịch thi đấu",
@@ -105,6 +111,7 @@ const clubMenu: MenuItem[] = [
     icon: "groups",
     aliases: ["/managePlayerClub"],
   },
+
   {
     label: "Ban huấn luyện",
     path: "/club/staff",
@@ -199,10 +206,8 @@ export const Sidebar = ({ workspace }: SidebarProps) => {
           to="/"
           className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-[#008C2F] transition-colors hover:text-[#0d631b]"
         >
-          Xem trang public
-          <span className="material-symbols-outlined text-sm">
-            arrow_forward
-          </span>
+          <ArrowBigLeftIcon />
+          Quay lại
         </Link>
       </div>
     </aside>

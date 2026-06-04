@@ -30,6 +30,21 @@ class CoachService {
       },
     });
   }
+
+  async getAllCoachesNormalized(page = 0, size = 10, filters?: any) {
+    const response = await this.getAllCoaches(page, size, filters);
+    const data = response.data;
+
+    return {
+      ...data,
+      content: Array.isArray(data?.content)
+        ? data.content.map(normalizeCoach)
+        : Array.isArray(data)
+          ? data.map(normalizeCoach)
+          : [],
+    };
+  }
+
   getCoachesByTeamId(teamId: number, page = 0, size = 8) {
     return axiosClient.get(`${API_BASE_URL}/getCoachesByTeam/${teamId}`, {
       params: { page, size },

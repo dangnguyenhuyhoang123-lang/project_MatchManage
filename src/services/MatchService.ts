@@ -1,7 +1,10 @@
 // src/service/MatchService.ts
 import axiosClient from "./axiosClient";
 import type { MatchEvent } from "../model/Match/MatchEvents";
-import type { MatchStats } from "../model/Match/MatchStats";
+import type {
+  MatchStats,
+  MatchStatsUpsertRequest,
+} from "../model/Match/MatchStats";
 import type {
   MatchLineupsResponse,
   MatchTactics,
@@ -130,6 +133,18 @@ class MatchService {
     );
 
     return response.data;
+  }
+
+  async upsertStatsMatch(
+    matchID: number,
+    payload: MatchStatsUpsertRequest[],
+  ): Promise<MatchStats[]> {
+    const response = await axiosClient.put<MatchStats[]>(
+      `${API_BASE_URL}/${matchID}/stats`,
+      payload,
+    );
+
+    return Array.isArray(response.data) ? response.data : [];
   }
   async getMatchLineups(matchId: number): Promise<MatchLineupsResponse> {
     const response = await axiosClient.get<MatchLineupsResponse>(
