@@ -137,7 +137,9 @@ export default function MatchEventModal({
           Number(a.extraMinute ?? 0) - Number(b.extraMinute ?? 0);
         if (extraDiff !== 0) return extraDiff;
 
-        return Number(a.eventOrder ?? a.id ?? 0) - Number(b.eventOrder ?? b.id ?? 0);
+        return (
+          Number(a.eventOrder ?? a.id ?? 0) - Number(b.eventOrder ?? b.id ?? 0)
+        );
       });
 
     substitutionEvents.forEach((event) => {
@@ -279,7 +281,7 @@ export default function MatchEventModal({
     }
 
     if (eventForm.teamId && !hasLineupForSelectedTeam) {
-      nextErrors.teamId = "Doi nay chua co doi hinh thi dau.";
+      nextErrors.teamId = "Chưa cập nhật đội hình thi đấu";
     }
 
     if (
@@ -471,12 +473,12 @@ export default function MatchEventModal({
             </select>
             {hasSelectedTeam && !hasLineupForSelectedTeam && (
               <p className="mt-1 text-xs font-bold text-amber-600">
-                Doi nay chua co doi hinh thi dau.
+                Chưa cập nhật đội hình thi đấu.
               </p>
             )}
             {hasLineupForSelectedTeam && mainPlayerOptions.length === 0 && (
               <p className="mt-1 text-xs font-bold text-amber-600">
-                Khong co cau thu dang thi dau phu hop.
+                không có cầu thủ thi đấu phù hợp.
               </p>
             )}
             {errors.playerId && (

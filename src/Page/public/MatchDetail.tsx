@@ -19,6 +19,7 @@ import { getTeamDetailPath } from "../../utils/teamRoute";
 import { AnimatedPanel } from "../../components/AnimationPanel/AnimatedPanel";
 import { usePublicRealtimeEvent } from "../../hooks/usePublicRealtimeEvent";
 import type { RealtimeEventDTO } from "../../model/RealtimeEvent";
+import LoadingSpinner from "../../components/Spinner/LoadingSpinner";
 
 type MatchDetailPlayer = MatchLineup & {
   teamId?: number;
@@ -140,6 +141,48 @@ const isSameTeam = (player: MatchDetailPlayer, team?: TeamModel | null) => {
   return player.teamName === team.name;
 };
 
+const getLineGroup = (
+  position?: string | null,
+): "GK" | "DEF" | "MID" | "ATT" | "OTHER" => {
+  const value = (position ?? "").toUpperCase();
+
+  if (["GK"].includes(value)) return "GK";
+
+  if (["DF", "DEF", "RB", "LB", "CB", "RCB", "LCB"].includes(value)) {
+    return "DEF";
+  }
+
+  if (
+    [
+      "MF",
+      "MID",
+      "CDM",
+      "CM",
+      "RCM",
+      "LCM",
+      "DM",
+      "CAM",
+      "LAM",
+      "RAM",
+      "LM",
+      "RM",
+      "LWB",
+      "RWB",
+    ].includes(value)
+  ) {
+    return "MID";
+  }
+
+  if (["FW", "ATT", "RW", "LW", "ST", "CF", "LS", "RS"].includes(value)) {
+    return "ATT";
+  }
+
+  return "OTHER";
+};
+
+const sortByLineupOrder = (a: MatchDetailPlayer, b: MatchDetailPlayer) =>
+  (a.lineupOrder ?? 0) - (b.lineupOrder ?? 0);
+
 const mapLineup = (
   players: MatchDetailPlayer[],
   formation: number[],
@@ -147,8 +190,23 @@ const mapLineup = (
 ) => {
   const result: PlayerRender[] = [];
 
-  const gk = players.find((p) => p.position === "GK");
-  const others = players.filter((p) => p.position !== "GK");
+  const gk = players.find((p) => getLineGroup(p.position) === "GK");
+
+  const defenders = players
+    .filter((p) => getLineGroup(p.position) === "DEF")
+    .sort(sortByLineupOrder);
+
+  const midfielders = players
+    .filter((p) => getLineGroup(p.position) === "MID")
+    .sort(sortByLineupOrder);
+
+  const attackers = players
+    .filter((p) => getLineGroup(p.position) === "ATT")
+    .sort(sortByLineupOrder);
+
+  const groupedLines = [defenders, midfielders, attackers].filter(
+    (line) => line.length > 0,
+  );
 
   const topLimit = isHome ? 50 : 10;
   const bottomLimit = isHome ? 100 : 65;
@@ -167,14 +225,12 @@ const mapLineup = (
     });
   }
 
-  let index = 0;
-  const totalLines = formation.length;
+  const totalLines = groupedLines.length;
 
-  formation.forEach((count, lineIndex) => {
-    for (let i = 0; i < count; i++) {
-      const p = others[index++];
-      if (!p) continue;
+  groupedLines.forEach((linePlayers, lineIndex) => {
+    const count = linePlayers.length;
 
+    linePlayers.forEach((p, i) => {
       const CENTER_SHIFT_X = 5.5;
 
       const rawX = ((i + 1) * 100) / (count + 1);
@@ -191,7 +247,7 @@ const mapLineup = (
         isHome,
         animationDelay: `${(lineIndex + i + 1) * 35}ms`,
       });
-    }
+    });
   });
 
   return result;
@@ -500,9 +556,7 @@ const MatchDetail = () => {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
         <div className="w-12 h-12 border-4 border-[#0D631B] border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-[#707A6C] font-bold animate-pulse">
-          Đang tải dữ liệu trận đấu...
-        </p>
+        <LoadingSpinner />
       </div>
     );
   }

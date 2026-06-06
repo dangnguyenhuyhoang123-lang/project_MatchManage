@@ -81,6 +81,58 @@ function readArray<T>(data: unknown): T[] {
   return [];
 }
 
+const formatEventMinute = (
+  event: Pick<MatchEvent, "minute" | "extraMinute">,
+) => {
+  if (event.extraMinute && event.extraMinute > 0) {
+    return `${event.minute}+${event.extraMinute}'`;
+  }
+
+  return `${event.minute}'`;
+};
+
+const getEventTypeLabel = (eventType: string) => {
+  switch (eventType) {
+    case "GOAL":
+      return "Bàn thắng";
+    case "YELLOW_CARD":
+      return "Thẻ vàng";
+    case "RED_CARD":
+      return "Thẻ đỏ";
+    case "SUBSTITUTION":
+      return "Thay người";
+    default:
+      return eventType;
+  }
+};
+
+const getEventIcon = (eventType: string) => {
+  switch (eventType) {
+    case "GOAL":
+      return "sports_soccer";
+    case "YELLOW_CARD":
+    case "RED_CARD":
+      return "style";
+    case "SUBSTITUTION":
+      return "sync_alt";
+    default:
+      return "fiber_manual_record";
+  }
+};
+
+const sortEventsByTime = (items: MatchEvent[]) =>
+  [...items].sort((a, b) => {
+    const minuteDiff = Number(a.minute ?? 0) - Number(b.minute ?? 0);
+    if (minuteDiff !== 0) return minuteDiff;
+
+    const extraDiff = Number(a.extraMinute ?? 0) - Number(b.extraMinute ?? 0);
+    if (extraDiff !== 0) return extraDiff;
+
+    return (
+      Number(a.eventOrder ?? a.id ?? 0) - Number(b.eventOrder ?? b.id ?? 0)
+    );
+  });
+
 function lineupToOption(player: MatchLineup, teamName?: string | null) {
   return {
     playerId: player.playerId,
@@ -360,88 +412,6 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
 
   useRealtimeEvent(handleRealtimeEvent);
 
-  // const handleUpdate = async () => {
-  //   if (!matchData?.id) return;
-  //   setLoading(true);
-  //   try {
-  //     const updatedMatch = {
-  //       ...matchData,
-  //       status: "FINISHED",
-  //       homeScore: homeScore,
-  //       awayScore: awayScore,
-  //     };
-
-  //     await MatchService.updateMatch(matchData.id, updatedMatch);
-  //     if (onUpdateSuccess) {
-  //       onUpdateSuccess();
-  //     }
-  //   } catch (error) {
-  //     console.error("Lỗi khi cập nhật kết quả trận đấu:", error);
-  //     toast.error("Cập nhật thất bại. Vui lòng thử lại.");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  // const handleAddEvent = async () => {
-  //   if (!currentMatch?.id) return;
-
-  //   if (!eventForm.teamId) {
-  //     toast.warning("Vui lòng chọn đội.");
-  //     return;
-  //   }
-
-  //   if (!eventForm.playerId) {
-  //     toast.warning("Vui lòng chọn cầu thủ.");
-  //     return;
-  //   }
-
-  //   if (eventForm.minute < 0 || eventForm.minute > 130) {
-  //     toast.warning("Phút thi đấu không hợp lệ.");
-  //     return;
-  //   }
-
-  //   setLoading(true);
-
-  //   try {
-  //     await MatchService.createMatchEvent(currentMatch.id, {
-  //       minute: eventForm.minute,
-  //       extraMinute: eventForm.extraMinute,
-  //       eventOrder: null,
-  //       eventType: eventForm.eventType,
-  //       goalType: eventForm.eventType === "GOAL" ? eventForm.goalType : null,
-  //       teamId: eventForm.teamId,
-  //       playerId: eventForm.playerId,
-  //       playerInId:
-  //         eventForm.eventType === "SUBSTITUTION" ? eventForm.playerInId : null,
-  //       assistPlayerId:
-  //         eventForm.eventType === "GOAL"
-  //           ? eventForm.assistPlayerId || null
-  //           : null,
-  //       note: eventForm.note || null,
-  //     });
-
-  //     await reloadMatchData();
-
-  //     setEventForm({
-  //       eventType: "GOAL",
-  //       goalType: "NORMAL",
-  //       teamId: 0,
-  //       playerId: 0,
-  //       playerInId: 0,
-  //       assistPlayerId: 0,
-  //       minute: 1,
-  //       extraMinute: null,
-  //       note: "",
-  //     });
-  //   } catch (error) {
-  //     console.error("Lỗi khi thêm sự kiện:", error);
-  //     toast.error("Thêm sự kiện thất bại.");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   const handleDeleteEvent = async (eventId: number) => {
     if (!currentMatch?.id) return;
 
@@ -585,7 +555,20 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
   const awayLogo = matchData?.awayTeam?.logo || "";
 
   // Lọc danh sách bàn thắng
-  const goals = events.filter((e) => e.eventType === "GOAL");
+  const goals = sortEventsByTime(events.filter((e) => e.eventType === "GOAL"));
+  const substitutions = sortEventsByTime(
+    events.filter((e) => e.eventType === "SUBSTITUTION"),
+  );
+  const cardEvents = sortEventsByTime(
+    events.filter(
+      (e) => e.eventType === "YELLOW_CARD" || e.eventType === "RED_CARD",
+    ),
+  );
+  const timelineEvents = sortEventsByTime(
+    events.filter((e) =>
+      ["GOAL", "YELLOW_CARD", "RED_CARD", "SUBSTITUTION"].includes(e.eventType),
+    ),
+  );
 
   return (
     // <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-8 bg-[#1b1c1a]/20 backdrop-blur-sm font-sans">
@@ -709,6 +692,58 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
                   </div>
                 </section>
 
+                <section className="bg-[#f5f3ef] rounded-2xl p-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-bold text-green-900 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-green-700">
+                        sync_alt
+                      </span>{" "}
+                      Danh sách thay người
+                    </h3>
+                  </div>
+                  <div className="space-y-3">
+                    {substitutions.map((event) => (
+                      <SubstitutionRow
+                        key={event.id}
+                        event={event}
+                        team={event.teamId === homeTeamId ? "home" : "away"}
+                        onDelete={handleDeleteEvent}
+                      />
+                    ))}
+                    {substitutions.length === 0 && (
+                      <p className="text-sm text-gray-500 text-center py-4">
+                        Chưa có sự kiện thay người.
+                      </p>
+                    )}
+                  </div>
+                </section>
+
+                <section className="bg-[#f5f3ef] rounded-2xl p-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-bold text-green-900 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-yellow-500">
+                        style
+                      </span>{" "}
+                      Danh sách thẻ phạt
+                    </h3>
+                  </div>
+                  <div className="space-y-3">
+                    {cardEvents.map((event) => (
+                      <CardEventRow
+                        key={event.id}
+                        event={event}
+                        team={event.teamId === homeTeamId ? "home" : "away"}
+                        onDelete={handleDeleteEvent}
+                      />
+                    ))}
+                    {cardEvents.length === 0 && (
+                      <p className="text-sm text-gray-500 text-center py-4">
+                        Chưa có thẻ phạt.
+                      </p>
+                    )}
+                  </div>
+                </section>
+
                 <section className="bg-[#f5f3ef] rounded-2xl p-6 hidden md:block">
                   <h3 className="text-lg font-bold text-green-900 mb-8 flex items-center gap-2">
                     <span className="material-symbols-outlined text-green-700">
@@ -718,7 +753,7 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
                   </h3>
                   <div className="relative pt-12 pb-16 px-4">
                     <div className="h-1.5 w-full bg-gray-300 rounded-full"></div>
-                    {events.map((evt) => {
+                    {timelineEvents.map((evt) => {
                       let typeLabel = "";
                       let typeVal = "";
                       let color = "bg-gray-400";
@@ -734,13 +769,18 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
                         typeLabel = "Thẻ đỏ";
                         typeVal = "card";
                         color = "bg-red-500";
+                      } else if (evt.eventType === "SUBSTITUTION") {
+                        typeLabel = "Thay người";
+                        typeVal = "substitution";
+                        color = "bg-green-500";
                       } else {
-                        return null; // substitution or others
+                        return null;
                       }
 
                       return (
                         <TimelineMarker
                           key={evt.id}
+                          event={evt}
                           minute={evt.minute}
                           label={typeLabel}
                           type={typeVal}
@@ -999,9 +1039,7 @@ const GoalRow = ({
           Thời điểm
         </p>
         <p className="text-xs md:text-sm font-bold">
-          {goal.extraMinute != null
-            ? `${goal.minute}+${goal.extraMinute}'`
-            : `${goal.minute}'`}
+          {formatEventMinute(goal)}
         </p>
       </div>
       <div>
@@ -1027,7 +1065,150 @@ const GoalRow = ({
   </div>
 );
 
+const SubstitutionRow = ({
+  event,
+  team,
+  onDelete,
+}: {
+  event: MatchEvent;
+  team: "home" | "away";
+  onDelete: (id: number) => void;
+}) => (
+  <div
+    className={`bg-white p-3 md:p-4 rounded-xl flex items-center gap-3 md:gap-4 shadow-sm ${team === "away" ? "border-l-4 border-indigo-500" : "border-l-4 border-green-500"}`}
+  >
+    <div
+      className={`w-8 h-8 md:w-10 md:h-10 shrink-0 ${team === "home" ? "bg-green-100 text-green-700" : "bg-indigo-100 text-indigo-700"} flex items-center justify-center rounded-full`}
+    >
+      <span className="material-symbols-outlined text-[18px] md:text-[24px]">
+        sync_alt
+      </span>
+    </div>
+    <div className="flex-1 grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-4">
+      <div>
+        <p className="text-[9px] md:text-[10px] font-bold text-gray-400 uppercase mb-0.5">
+          Thời điểm
+        </p>
+        <p className="text-xs md:text-sm font-bold">
+          {formatEventMinute(event)}
+        </p>
+      </div>
+      <div>
+        <p className="text-[9px] md:text-[10px] font-bold text-gray-400 uppercase mb-0.5">
+          Đội
+        </p>
+        <p className="text-xs md:text-sm font-bold truncate">
+          {event.teamName || "--"}
+        </p>
+      </div>
+      <div>
+        <p className="text-[9px] md:text-[10px] font-bold text-gray-400 uppercase mb-0.5">
+          Rời sân
+        </p>
+        <p className="text-xs md:text-sm font-bold truncate">
+          {event.playerName || "--"}
+        </p>
+      </div>
+      <div>
+        <p className="text-[9px] md:text-[10px] font-bold text-gray-400 uppercase mb-0.5">
+          Vào sân
+        </p>
+        <p className="text-xs md:text-sm font-bold truncate">
+          {event.playerInName || "--"}
+        </p>
+      </div>
+      {event.note && (
+        <p className="col-span-2 md:col-span-4 text-xs font-semibold text-gray-500">
+          {event.note}
+        </p>
+      )}
+    </div>
+    <button
+      type="button"
+      onClick={() => onDelete(event.id)}
+      className="text-gray-300 hover:text-red-500 shrink-0 p-1"
+    >
+      <span className="material-symbols-outlined text-[20px]">delete</span>
+    </button>
+  </div>
+);
+
+const CardEventRow = ({
+  event,
+  team,
+  onDelete,
+}: {
+  event: MatchEvent;
+  team: "home" | "away";
+  onDelete: (id: number) => void;
+}) => {
+  const isRed = event.eventType === "RED_CARD";
+
+  return (
+    <div
+      className={`bg-white p-3 md:p-4 rounded-xl flex items-center gap-3 md:gap-4 shadow-sm ${team === "away" ? "border-l-4 border-indigo-500" : "border-l-4 border-green-500"}`}
+    >
+      <div
+        className={`w-8 h-8 md:w-10 md:h-10 shrink-0 ${isRed ? "bg-red-100 text-red-600" : "bg-yellow-100 text-yellow-600"} flex items-center justify-center rounded-full`}
+      >
+        <span className="material-symbols-outlined text-[18px] md:text-[24px]">
+          style
+        </span>
+      </div>
+      <div className="flex-1 grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-4">
+        <div>
+          <p className="text-[9px] md:text-[10px] font-bold text-gray-400 uppercase mb-0.5">
+            Thời điểm
+          </p>
+          <p className="text-xs md:text-sm font-bold">
+            {formatEventMinute(event)}
+          </p>
+        </div>
+        <div>
+          <p className="text-[9px] md:text-[10px] font-bold text-gray-400 uppercase mb-0.5">
+            Đội
+          </p>
+          <p className="text-xs md:text-sm font-bold truncate">
+            {event.teamName || "--"}
+          </p>
+        </div>
+        <div>
+          <p className="text-[9px] md:text-[10px] font-bold text-gray-400 uppercase mb-0.5">
+            Cầu thủ
+          </p>
+          <p className="text-xs md:text-sm font-bold truncate">
+            {event.playerName || "--"}
+          </p>
+        </div>
+        <div>
+          <p className="text-[9px] md:text-[10px] font-bold text-gray-400 uppercase mb-0.5">
+            Loại thẻ
+          </p>
+          <p
+            className={`text-xs md:text-sm font-black truncate ${isRed ? "text-red-600" : "text-yellow-600"}`}
+          >
+            {getEventTypeLabel(event.eventType)}
+          </p>
+        </div>
+        {event.note && (
+          <p className="col-span-2 md:col-span-4 text-xs font-semibold text-gray-500">
+            {event.note}
+          </p>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => onDelete(event.id)}
+        className="text-gray-300 hover:text-red-500 shrink-0 p-1"
+      >
+        <span className="material-symbols-outlined text-[20px]">delete</span>
+      </button>
+    </div>
+  );
+};
+
 const TimelineMarker = ({
+  event,
   minute,
   label,
   type,
@@ -1035,32 +1216,55 @@ const TimelineMarker = ({
   team,
   position,
 }: any) => {
-  const safeMinute = Math.min(Math.max(Number(minute) || 0, 0), 120);
+  const safeMinute = Math.min(
+    Math.max(Number(event?.minute ?? minute) || 0, 0),
+    120,
+  );
   const leftPos = position || `${(safeMinute / 120) * 100}%`;
+  const isSubstitution = event?.eventType === "SUBSTITUTION";
+  const isGoal = event?.eventType === "GOAL" || type === "goal";
+  const markerColor =
+    event?.eventType === "RED_CARD"
+      ? "bg-red-500"
+      : event?.eventType === "YELLOW_CARD"
+        ? "bg-yellow-400"
+        : color;
+  const detailText = isSubstitution
+    ? `${event.playerInName || "--"} vào sân, ${event.playerName || "--"} rời sân`
+    : event?.playerName || "";
+
   return (
     <div
-      className="absolute top-12 -translate-x-1/2 flex flex-col items-center"
+      className="absolute top-12 -translate-x-1/2 flex max-w-32 flex-col items-center"
       style={{ left: leftPos }}
     >
       <div
-        className={`w-0.5 ${type === "goal" ? "h-10" : "h-6"} ${team === "away" ? "bg-indigo-500" : "bg-green-600"} mb-1`}
+        className={`w-0.5 ${isGoal ? "h-10" : "h-6"} ${team === "away" ? "bg-indigo-500" : "bg-green-600"} mb-1`}
       ></div>
-      {type === "goal" ? (
+      {isGoal || isSubstitution ? (
         <div
           className={`w-8 h-8 rounded-full ${team === "away" ? "bg-indigo-500" : "bg-green-600"} flex items-center justify-center text-white shadow-lg`}
         >
-          <span className="material-symbols-outlined text-xs fill-1">
-            sports_soccer
+          <span className="material-symbols-outlined text-xs">
+            {getEventIcon(event?.eventType || "GOAL")}
           </span>
         </div>
       ) : (
         <div
-          className={`w-5 h-7 rounded-sm ${color} border border-gray-300 shadow-sm`}
+          className={`w-5 h-7 rounded-sm ${markerColor} border border-gray-300 shadow-sm`}
         ></div>
       )}
-      <span className="text-[10px] font-bold mt-1 whitespace-nowrap">
-        {label} {minute}'
+      <span className="text-center text-[10px] font-bold mt-1">
+        {event
+          ? `${formatEventMinute(event)} ${getEventTypeLabel(event.eventType)}`
+          : `${label} ${minute}'`}
       </span>
+      {event && (
+        <span className="mt-1 line-clamp-2 text-center text-[9px] font-semibold text-gray-500">
+          {event.teamName ? `${event.teamName}: ` : ""}
+          {detailText}
+        </span>
+      )}
     </div>
   );
 };
