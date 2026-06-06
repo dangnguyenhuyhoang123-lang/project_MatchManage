@@ -60,7 +60,7 @@ const tabs: { key: TabKey; label: string; icon: ReactNode }[] = [
 ];
 
 const fallbackAvatar =
-  "https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&q=80&w=320";
+  "https://cellphones.com.vn/sforum/wp-content/uploads/2024/02/avatar-ff-ngau-91.jpg";
 const fallbackTeamLogo =
   "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&q=80&w=240";
 

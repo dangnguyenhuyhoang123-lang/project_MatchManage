@@ -9,6 +9,7 @@ import LeagueService from "../../../services/LeagueService";
 import { PhanTrang } from "../../../utils/PhanTrang";
 import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../services/websocket/NotificationSocketService";
+import LoadingSpinner from "../../../components/Spinner/LoadingSpinner";
 
 type LeagueOption = {
   id: number;
@@ -331,9 +332,7 @@ const MatchResults: React.FC = () => {
                 </div>
 
                 {loading ? (
-                  <div className="rounded-2xl border border-dashed border-gray-200 py-12 text-center font-bold text-gray-500">
-                    Đang tải dữ liệu trận đấu...
-                  </div>
+                  <LoadingSpinner />
                 ) : matches.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-gray-200 py-12 text-center font-bold text-gray-500">
                     {emptyMessage}

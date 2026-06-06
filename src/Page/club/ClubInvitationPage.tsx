@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import ConfirmModal from "../../components/ConfirmModal";
 import SeasonInvitationService, {
   type InvitationStatus,
   type SeasonInvitationResponse,
 } from "../../services/SeasonInvitationService";
+import { useRealtimeEvent } from "../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../model/RealtimeEvent";
 
 type FilterKey = "ALL" | "INVITED";
 
@@ -104,7 +106,7 @@ export default function ClubInvitationPage() {
     note: "",
   });
 
-  const loadInvitations = async () => {
+  const loadInvitations = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -120,11 +122,22 @@ export default function ClubInvitationPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadInvitations();
-  }, []);
+  }, [loadInvitations]);
+
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (event.action === "REFETCH_INVITATIONS") {
+        void loadInvitations();
+      }
+    },
+    [loadInvitations],
+  );
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   const pendingInvitations = useMemo(
     () => invitations.filter((item) => item.status === "INVITED"),

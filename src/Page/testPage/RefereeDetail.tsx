@@ -40,7 +40,7 @@ const RefereeDetail: React.FC = () => {
       <header className="fixed top-0 w-full z-50 bg-[#fbf9f5] shadow-md flex justify-between items-center px-8 py-4 h-20">
         <div className="flex items-center gap-4">
           <span className="text-2xl font-black text-[#0d631b] tracking-tighter font-['Be_Vietnam_Pro']">
-            PitchMaster
+            HDPro
           </span>
         </div>
         <div className="flex items-center gap-6">

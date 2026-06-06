@@ -6,7 +6,7 @@ import type { SystemRule } from "../../../services/SystemRuleService";
 import type { RegistrationDraft, SelectedPlayer } from "./RegisterFormMatch";
 import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../services/websocket/NotificationSocketService";
-
+import { getErrorMessage } from "../../../utils/errorUtils";
 type Props = {
   setStep: (step: number) => void;
   draft: RegistrationDraft;
@@ -276,7 +276,12 @@ const FinalConfirmation: React.FC<Props> = ({
       onSubmitted?.();
     } catch (error) {
       console.error("Lỗi khi gửi đơn đăng ký:", error);
-      toast.error("Không thể gửi đơn đăng ký. Vui lòng kiểm tra lại dữ liệu.");
+      toast.error(
+        getErrorMessage(
+          error,
+          "Không thể gửi đơn đăng ký. Vui lòng kiểm tra lại dữ liệu.",
+        ),
+      );
     } finally {
       setIsSubmitting(false);
     }

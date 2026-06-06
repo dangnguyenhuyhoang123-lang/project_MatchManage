@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import ConfirmModal from "../../../components/ConfirmModal";
 import { Modal } from "../../../components/Modal";
@@ -7,6 +7,8 @@ import { AppLayout } from "../../../layouts/AppLayout";
 import { TeamModel } from "../../../model/TeamModel";
 import TeamService from "../../../services/TeamService";
 import { PhanTrang } from "../../../utils/PhanTrang";
+import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
 
 type FilterState = {
   search: string;
@@ -83,65 +85,79 @@ const ClubManagement: React.FC = () => {
     });
   };
 
-  const fetchTeams = async (page = 1, filters = appliedFilters) => {
-    setIsLoading(true);
+  const fetchTeams = useCallback(
+    async (page = 1, filters = appliedFilters) => {
+      setIsLoading(true);
 
-    try {
-      if (
-        filters.region !== "Tất cả khu vực" ||
-        filters.status !== "Tất cả trạng thái"
-      ) {
-        const baseResponse = await TeamService.getAllTeamsNormalized(
-          0,
-          1,
+      try {
+        if (
+          filters.region !== "Tất cả khu vực" ||
+          filters.status !== "Tất cả trạng thái"
+        ) {
+          const baseResponse = await TeamService.getAllTeamsNormalized(
+            0,
+            1,
+            filters,
+          );
+          const totalElements = baseResponse.totalElements ?? 0;
+          const fetchSize = Math.max(totalElements, 1);
+          const fullResponse = await TeamService.getAllTeamsNormalized(
+            0,
+            fetchSize,
+            filters,
+          );
+
+          const clientFiltered = filterTeamsOnClient(
+            fullResponse.content ?? [],
+            filters,
+          );
+          const totalPages = Math.ceil(clientFiltered.length / PAGE_SIZE);
+          const safePage =
+            totalPages === 0 ? 1 : Math.min(page, Math.max(totalPages, 1));
+          const startIndex = (safePage - 1) * PAGE_SIZE;
+
+          setTeams(clientFiltered.slice(startIndex, startIndex + PAGE_SIZE));
+          setTongSoPhanTu(clientFiltered.length);
+          setTongSoTrang(totalPages);
+          setTrangHienTai(safePage);
+          return;
+        }
+
+        const data = await TeamService.getAllTeamsNormalized(
+          page - 1,
+          PAGE_SIZE,
           filters,
         );
-        const totalElements = baseResponse.totalElements ?? 0;
-        const fetchSize = Math.max(totalElements, 1);
-        const fullResponse = await TeamService.getAllTeamsNormalized(
-          0,
-          fetchSize,
-          filters,
-        );
-
-        const clientFiltered = filterTeamsOnClient(
-          fullResponse.content ?? [],
-          filters,
-        );
-        const totalPages = Math.ceil(clientFiltered.length / PAGE_SIZE);
-        const safePage =
-          totalPages === 0 ? 1 : Math.min(page, Math.max(totalPages, 1));
-        const startIndex = (safePage - 1) * PAGE_SIZE;
-
-        setTeams(clientFiltered.slice(startIndex, startIndex + PAGE_SIZE));
-        setTongSoPhanTu(clientFiltered.length);
-        setTongSoTrang(totalPages);
-        setTrangHienTai(safePage);
-        return;
+        setTeams(data.content ?? []);
+        setTongSoTrang(data.totalPages ?? 0);
+        setTongSoPhanTu(data.totalElements ?? 0);
+        setTrangHienTai((data.number ?? page - 1) + 1);
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu đội bóng:", error);
+        setTeams([]);
+        setTongSoTrang(0);
+        setTongSoPhanTu(0);
+      } finally {
+        setIsLoading(false);
       }
-
-      const data = await TeamService.getAllTeamsNormalized(
-        page - 1,
-        PAGE_SIZE,
-        filters,
-      );
-      setTeams(data.content ?? []);
-      setTongSoTrang(data.totalPages ?? 0);
-      setTongSoPhanTu(data.totalElements ?? 0);
-      setTrangHienTai((data.number ?? page - 1) + 1);
-    } catch (error) {
-      console.error("Lỗi khi tải dữ liệu đội bóng:", error);
-      setTeams([]);
-      setTongSoTrang(0);
-      setTongSoPhanTu(0);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    [appliedFilters],
+  );
 
   useEffect(() => {
     fetchTeams(trangHienTai, appliedFilters);
-  }, [trangHienTai, appliedFilters]);
+  }, [fetchTeams, trangHienTai, appliedFilters]);
+
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (event.action === "REFETCH_TEAMS") {
+        void fetchTeams(trangHienTai, appliedFilters);
+      }
+    },
+    [appliedFilters, fetchTeams, trangHienTai],
+  );
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   const handleFilterChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Modal } from "../../../components/Modal";
 import LoadingSpinner from "../../../components/Spinner/LoadingSpinner";
@@ -7,6 +7,8 @@ import CoachService from "../../../services/CoachService";
 import { useCurrentClubId } from "../InfoClubManage/clubInfoHelpers";
 import type { SelectedCoach } from "./RegisterFormMatch";
 import type { SystemRule } from "../../../services/SystemRuleService";
+import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
 
 type Props = {
   setStep?: (step: number) => void;
@@ -184,6 +186,7 @@ const CoachRegistration: React.FC<Props> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const fetchTeamStaffs = async () => {
@@ -222,7 +225,18 @@ const CoachRegistration: React.FC<Props> = ({
     };
 
     fetchTeamStaffs();
-  }, [authLoading, currentClubId]);
+  }, [authLoading, currentClubId, reloadKey]);
+
+  const handleRealtimeEvent = useCallback((event: RealtimeEventDTO) => {
+    if (
+      event.action === "REFETCH_COACHES" ||
+      event.action === "REFETCH_TEAMS"
+    ) {
+      setReloadKey((current) => current + 1);
+    }
+  }, []);
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   const selectedKeySet = useMemo(
     () => new Set(selectedStaffs.map(getStaffKey)),
@@ -473,16 +487,18 @@ const CoachRegistration: React.FC<Props> = ({
                 </p>
               </div>
             ) : (
-              selectedStaffs.map((staff) => (
-                <StaffCard
-                  key={getStaffKey(staff)}
-                  staff={staff}
-                  onRemove={() => removeStaff(getStaffKey(staff))}
-                  onRoleChange={(newRole) =>
-                    handleRoleChange(getStaffKey(staff), newRole)
-                  }
-                />
-              ))
+              <div className="max-h-[724px] space-y-3 overflow-y-auto pr-2">
+                {selectedStaffs.map((staff) => (
+                  <StaffCard
+                    key={getStaffKey(staff)}
+                    staff={staff}
+                    onRemove={() => removeStaff(getStaffKey(staff))}
+                    onRoleChange={(newRole) =>
+                      handleRoleChange(getStaffKey(staff), newRole)
+                    }
+                  />
+                ))}
+              </div>
             )}
 
             {selectedStaffs.length > 0 && selectedStaffs.length < maxCoaches && (

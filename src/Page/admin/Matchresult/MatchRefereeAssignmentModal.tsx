@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import ConfirmModal from "../../../components/ConfirmModal";
 import { Modal } from "../../../components/Modal";
@@ -7,6 +7,8 @@ import MatchRefereeService, {
 } from "../../../services/MatchRefereeService";
 
 import RefereeService, { type Referee } from "../../../services/RefereeService";
+import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
 
 function extractApiErrorMessage(error: unknown) {
   const maybe = error as {
@@ -69,7 +71,7 @@ export default function MatchRefereeAssignmentModal({
     [referees],
   );
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!matchId) return;
     try {
       setLoading(true);
@@ -86,12 +88,32 @@ export default function MatchRefereeAssignmentModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [matchId]);
 
   useEffect(() => {
     if (open) loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, matchId]);
+  }, [loadData, open]);
+
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      const referenceId =
+        event.referenceId == null ? Number.NaN : Number(event.referenceId);
+      const isCurrentMatch =
+        !Number.isFinite(referenceId) || referenceId === matchId;
+
+      if (
+        open &&
+        isCurrentMatch &&
+        (event.action === "REFETCH_MATCH_REFEREES" ||
+          event.action === "REFETCH_MATCH_DETAIL")
+      ) {
+        void loadData();
+      }
+    },
+    [loadData, matchId, open],
+  );
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   const handleAssignReferee = async () => {
     if (!matchId) return;

@@ -1,9 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import LoadingSpinner from "../../../components/Spinner/LoadingSpinner";
 import { Modal } from "../../../components/Modal";
 import PlayerService from "../../../services/PlayerService";
 import type { SelectedPlayer } from "./RegisterFormMatch";
 import { useCurrentClubId } from "../InfoClubManage/clubInfoHelpers";
+import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
 
 type Props = {
   setStep: (step: number) => void;
@@ -80,6 +82,40 @@ function getPlayerPosition(player: any) {
   return player.detailPosition || player.position || "Cầu thủ";
 }
 
+function matchesPlayerFilters(
+  player: SelectedPlayer,
+  searchValue: string,
+  positionFilter: string,
+  typeFilter: string,
+) {
+  const keyword = normalizeText(searchValue);
+
+  if (
+    keyword &&
+    ![
+      player.name,
+      getPlayerIdCode(player),
+      player.nationality,
+      getPlayerPosition(player),
+      playerTypeLabel(player),
+      player.shirtNumber,
+      player.number,
+    ].some((value) => normalizeText(String(value ?? "")).includes(keyword))
+  ) {
+    return false;
+  }
+
+  if (positionFilter && getPlayerPosition(player) !== positionFilter) {
+    return false;
+  }
+
+  if (typeFilter && playerTypeLabel(player) !== typeFilter) {
+    return false;
+  }
+
+  return true;
+}
+
 function getPlayerWarnings(
   player: SelectedPlayer,
   minAge: number,
@@ -119,9 +155,13 @@ const PlayerRegistration: React.FC<Props> = ({
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [positionFilter, setPositionFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
+  const [selectedSearchTerm, setSelectedSearchTerm] = useState("");
+  const [selectedPositionFilter, setSelectedPositionFilter] = useState("");
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState("");
+  const [availableSearchTerm, setAvailableSearchTerm] = useState("");
+  const [availablePositionFilter, setAvailablePositionFilter] = useState("");
+  const [availableTypeFilter, setAvailableTypeFilter] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     setSelectedPlayers(
@@ -164,7 +204,19 @@ const PlayerRegistration: React.FC<Props> = ({
     };
 
     fetchTeamPlayers();
-  }, [authLoading, currentClubId]);
+  }, [authLoading, currentClubId, reloadKey]);
+
+  const handleRealtimeEvent = useCallback((event: RealtimeEventDTO) => {
+    if (
+      event.action === "REFETCH_PLAYERS" ||
+      event.action === "REFETCH_TEAM_SEASON" ||
+      event.action === "REFETCH_SEASON_TEAMS"
+    ) {
+      setReloadKey((current) => current + 1);
+    }
+  }, []);
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   const minPlayersReq = rule?.minPlayers ?? 14;
   const maxPlayersReq = rule?.maxPlayers ?? 30;
@@ -180,42 +232,56 @@ const PlayerRegistration: React.FC<Props> = ({
     [selectedPlayers],
   );
 
-  const positions = useMemo(() => {
+  const selectedPositions = useMemo(() => {
+    const values = selectedPlayers
+      .map((player) => getPlayerPosition(player))
+      .filter(Boolean);
+    return Array.from(new Set(values));
+  }, [selectedPlayers]);
+
+  const availablePositions = useMemo(() => {
     const values = availablePlayers
       .map((player) => getPlayerPosition(player))
       .filter(Boolean);
     return Array.from(new Set(values));
   }, [availablePlayers]);
 
-  const filteredAvailablePlayers = useMemo(() => {
-    const keyword = normalizeText(searchTerm);
+  const filteredSelectedPlayers = useMemo(
+    () =>
+      selectedPlayers.filter((player) =>
+        matchesPlayerFilters(
+          player,
+          selectedSearchTerm,
+          selectedPositionFilter,
+          selectedTypeFilter,
+        ),
+      ),
+    [
+      selectedPlayers,
+      selectedPositionFilter,
+      selectedSearchTerm,
+      selectedTypeFilter,
+    ],
+  );
 
+  const filteredAvailablePlayers = useMemo(() => {
     return availablePlayers.filter((player) => {
       if (selectedIds.has(player.id)) return false;
 
-      if (
-        keyword &&
-        ![
-          player.name,
-          getPlayerIdCode(player),
-          player.nationality,
-          getPlayerPosition(player),
-        ].some((value) => normalizeText(String(value ?? "")).includes(keyword))
-      ) {
-        return false;
-      }
-
-      if (positionFilter && getPlayerPosition(player) !== positionFilter) {
-        return false;
-      }
-
-      if (typeFilter && playerTypeLabel(player) !== typeFilter) {
-        return false;
-      }
-
-      return true;
+      return matchesPlayerFilters(
+        player,
+        availableSearchTerm,
+        availablePositionFilter,
+        availableTypeFilter,
+      );
     });
-  }, [availablePlayers, positionFilter, searchTerm, selectedIds, typeFilter]);
+  }, [
+    availablePlayers,
+    availablePositionFilter,
+    availableSearchTerm,
+    availableTypeFilter,
+    selectedIds,
+  ]);
 
   const missingBirthDatePlayers = useMemo(
     () =>
@@ -430,26 +496,26 @@ const PlayerRegistration: React.FC<Props> = ({
 
             <div className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-3">
               <input
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
+                value={selectedSearchTerm}
+                onChange={(event) => setSelectedSearchTerm(event.target.value)}
                 placeholder="Tìm cầu thủ, idCode..."
                 className="h-11 rounded-xl border border-gray-100 bg-[#f5f3ef] px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-green-700/20"
               />
               <select
-                value={positionFilter}
-                onChange={(event) => setPositionFilter(event.target.value)}
+                value={selectedPositionFilter}
+                onChange={(event) => setSelectedPositionFilter(event.target.value)}
                 className="h-11 rounded-xl border border-gray-100 bg-[#f5f3ef] px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-green-700/20"
               >
                 <option value="">Tất cả vị trí</option>
-                {positions.map((position) => (
+                {selectedPositions.map((position) => (
                   <option key={position} value={position}>
                     {position}
                   </option>
                 ))}
               </select>
               <select
-                value={typeFilter}
-                onChange={(event) => setTypeFilter(event.target.value)}
+                value={selectedTypeFilter}
+                onChange={(event) => setSelectedTypeFilter(event.target.value)}
                 className="h-11 rounded-xl border border-gray-100 bg-[#f5f3ef] px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-green-700/20"
               >
                 <option value="">Tất cả loại cầu thủ</option>
@@ -481,8 +547,26 @@ const PlayerRegistration: React.FC<Props> = ({
                     Nhấn để chọn cầu thủ đăng ký mùa giải
                   </p>
                 </div>
+              ) : filteredSelectedPlayers.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center">
+                  <p className="text-sm font-bold text-gray-500">
+                    Khong co cau thu phu hop voi bo loc
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedSearchTerm("");
+                      setSelectedPositionFilter("");
+                      setSelectedTypeFilter("");
+                    }}
+                    className="mt-3 rounded-full bg-white px-4 py-2 text-xs font-bold text-[#0d631b] shadow-sm transition-all hover:shadow-md"
+                  >
+                    Xoa bo loc
+                  </button>
+                </div>
               ) : (
-                selectedPlayers.map((player) => {
+                <div className="max-h-[724px] space-y-3 overflow-y-auto pr-2">
+                  {filteredSelectedPlayers.map((player) => {
                   const age = calculateAge(getPlayerBirthDate(player));
                   const warnings = getPlayerWarnings(
                     player,
@@ -537,7 +621,8 @@ const PlayerRegistration: React.FC<Props> = ({
                       </button>
                     </div>
                   );
-                })
+                  })}
+                </div>
               )}
             </div>
           </section>
@@ -715,26 +800,26 @@ const PlayerRegistration: React.FC<Props> = ({
 
           <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
             <input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
+              value={availableSearchTerm}
+              onChange={(event) => setAvailableSearchTerm(event.target.value)}
               placeholder="Tìm cầu thủ..."
               className="h-10 rounded-xl border border-gray-100 bg-[#f5f3ef] px-4 text-xs font-bold outline-none"
             />
             <select
-              value={positionFilter}
-              onChange={(event) => setPositionFilter(event.target.value)}
+              value={availablePositionFilter}
+              onChange={(event) => setAvailablePositionFilter(event.target.value)}
               className="h-10 rounded-xl border border-gray-100 bg-[#f5f3ef] px-4 text-xs font-bold outline-none"
             >
               <option value="">Tất cả vị trí</option>
-              {positions.map((position) => (
+              {availablePositions.map((position) => (
                 <option key={position} value={position}>
                   {position}
                 </option>
               ))}
             </select>
             <select
-              value={typeFilter}
-              onChange={(event) => setTypeFilter(event.target.value)}
+              value={availableTypeFilter}
+              onChange={(event) => setAvailableTypeFilter(event.target.value)}
               className="h-10 rounded-xl border border-gray-100 bg-[#f5f3ef] px-4 text-xs font-bold outline-none"
             >
               <option value="">Tất cả loại</option>

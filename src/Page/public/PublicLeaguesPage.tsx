@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -12,9 +12,13 @@ import { useNavigate } from "react-router-dom";
 import { Footer } from "../../components/Footer/Footer_HomePage";
 import MatchService from "../../services/MatchService";
 import LeagueService from "../../services/LeagueService";
+import SeasonService from "../../services/SeasonService";
 import { MatchModel } from "../../model/Match/MatchModel";
 import { League } from "../../model/LeagueModel";
 import { PhanTrang } from "../../utils/PhanTrang";
+import { usePublicRealtimeEvent } from "../../hooks/usePublicRealtimeEvent";
+import type { RealtimeEventDTO } from "../../model/RealtimeEvent";
+import LoadingSpinner from "../../components/Spinner/LoadingSpinner";
 
 export const PublicLeaguesPage = () => {
   const navigate = useNavigate();
@@ -26,16 +30,16 @@ export const PublicLeaguesPage = () => {
   >([]);
   const [featuredLeagueIndex, setFeaturedLeagueIndex] = useState(0);
   const [matches, setMatches] = useState<MatchModel[]>([]);
+  const [seasons, setSeasons] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedSeasonId, setSelectedSeasonId] = useState("");
 
-  const [slideDirection, setSlideDirection] = useState<"left" | "right">(
-    "right",
-  );
+  const [, setSlideDirection] = useState<"left" | "right">("right");
   const [isSliding, setIsSliding] = useState(false);
 
   useEffect(() => {
@@ -47,58 +51,108 @@ export const PublicLeaguesPage = () => {
   }, [searchQuery]);
 
   useEffect(() => {
-    const fetchFeatured = async () => {
-      try {
-        const response = await LeagueService.getAllLeaguesNormalized(0, 12);
-        const leagues = response.content || [];
-        const enriched = await Promise.all(
-          leagues.map(async (lg: League) => {
-            const seasons = await LeagueService.getSeasonsByLeague(lg.id!);
-            return { league: lg, seasons };
-          }),
-        );
-        setFeaturedLeagues(enriched);
-        setFeaturedLeagueIndex(0);
-      } catch (err) {
-        console.error("Error fetching featured leagues:", err);
-      }
-    };
-    fetchFeatured();
+    setPage(1);
+  }, [selectedSeasonId]);
+
+  const fetchSeasons = useCallback(async () => {
+    try {
+      const response = await SeasonService.getAllSeasons(0, 200);
+      const content = response.data?.content || response.data || [];
+      setSeasons(Array.isArray(content) ? content : []);
+    } catch (err) {
+      console.warn("PublicLeaguesPage: cannot load seasons for filter", err);
+      setSeasons([]);
+    }
   }, []);
 
   useEffect(() => {
-    const fetchMatches = async () => {
-      setLoading(true);
-      try {
-        const apiStatus =
-          activeTab === "live"
-            ? "LIVE"
-            : activeTab === "upcoming"
-              ? "SCHEDULED"
-              : "FINISHED";
-        const response = await MatchService.getAllMatches(page - 1, 5, {
-          status: apiStatus,
-          search: debouncedSearch || undefined,
-        });
-        const data = response.data?.content || [];
-        setMatches(
-          data.map(
-            (m: any) =>
-              new MatchModel({
-                ...m,
-                matchDate: new Date(m.matchDate),
-              }),
-          ),
-        );
-        setTotalPages(response.data?.totalPages || 1);
-      } catch (err) {
-        console.error("Error fetching matches:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    fetchSeasons();
+  }, [fetchSeasons]);
+
+  const fetchFeatured = useCallback(async () => {
+    try {
+      const response = await LeagueService.getAllLeaguesNormalized(0, 12);
+      const leagues = response.content || [];
+
+      const enriched = await Promise.all(
+        leagues.map(async (lg: League) => {
+          const seasons = await LeagueService.getSeasonsByLeague(lg.id!);
+          return { league: lg, seasons };
+        }),
+      );
+
+      setFeaturedLeagues(enriched);
+      setFeaturedLeagueIndex(0);
+    } catch (err) {
+      console.error("Error fetching featured leagues:", err);
+    }
+  }, []);
+  useEffect(() => {
+    fetchFeatured();
+  }, [fetchFeatured]);
+
+  const fetchMatches = useCallback(async () => {
+    setLoading(true);
+    try {
+      const apiStatus =
+        activeTab === "live"
+          ? "LIVE"
+          : activeTab === "upcoming"
+            ? "SCHEDULED"
+            : "FINISHED";
+      const response = await MatchService.getAllMatches(page - 1, 5, {
+        status: apiStatus,
+        search: debouncedSearch || undefined,
+        seasonId: selectedSeasonId ? Number(selectedSeasonId) : undefined,
+      });
+      const data = response.data?.content || [];
+      setMatches(
+        data.map(
+          (m: any) =>
+            new MatchModel({
+              ...m,
+              matchDate: new Date(m.matchDate),
+            }),
+        ),
+      );
+      setTotalPages(response.data?.totalPages || 1);
+    } catch (err) {
+      console.error("Error fetching matches:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [activeTab, debouncedSearch, page, selectedSeasonId]);
+
+  useEffect(() => {
     fetchMatches();
-  }, [activeTab, page, debouncedSearch]);
+  }, [fetchMatches]);
+
+  const handlePublicRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (
+        event.action === "REFETCH_MATCHES" ||
+        event.action === "REFETCH_MATCH_DETAIL" ||
+        event.action === "REFETCH_MATCH_EVENTS" ||
+        event.action === "REFETCH_MATCH_STATS" ||
+        event.action === "REFETCH_LINEUPS"
+      ) {
+        void fetchMatches();
+      }
+
+      if (
+        event.action === "REFETCH_LEAGUES" ||
+        event.action === "REFETCH_SEASONS" ||
+        event.action === "REFETCH_ROUNDS" ||
+        event.action === "REFETCH_SEASON_TEAMS"
+      ) {
+        void fetchFeatured();
+        void fetchSeasons();
+      }
+    },
+    [fetchMatches, fetchFeatured, fetchSeasons],
+  );
+
+  usePublicRealtimeEvent(["matches", "leagues"], handlePublicRealtimeEvent);
 
   const groupedMatches = useMemo(() => {
     const groups: { [key: string]: MatchModel[] } = {};
@@ -111,6 +165,18 @@ export const PublicLeaguesPage = () => {
   }, [matches]);
   const activeFeaturedLeague = featuredLeagues[featuredLeagueIndex];
   const activeSeason = activeFeaturedLeague?.seasons?.[0];
+  const seasonOptions = useMemo(
+    () =>
+      [...seasons]
+        .filter((season) => season?.id != null)
+        .sort((a, b) =>
+          String(a.name || a.year || "").localeCompare(
+            String(b.name || b.year || ""),
+            "vi",
+          ),
+        ),
+    [seasons],
+  );
 
   const goToPreviousFeaturedLeague = () => {
     if (featuredLeagues.length === 0 || isSliding) return;
@@ -156,8 +222,8 @@ export const PublicLeaguesPage = () => {
               </p>
             </div>
 
-            <div className="flex items-center gap-4 w-full md:w-auto">
-              <div className="relative w-full md:w-64">
+            <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
+              <div className="relative w-full sm:w-72">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Filter size={16} className="text-gray-400" />
                 </div>
@@ -169,6 +235,18 @@ export const PublicLeaguesPage = () => {
                   className="bg-gray-100 rounded-lg pl-10 pr-4 py-2.5 w-full font-semibold text-gray-700 text-sm outline-none focus:ring-2 focus:ring-[#1a6e38]/20 focus:bg-white transition-all border border-transparent focus:border-[#1a6e38]"
                 />
               </div>
+              <select
+                value={selectedSeasonId}
+                onChange={(event) => setSelectedSeasonId(event.target.value)}
+                className="h-[42px] w-full rounded-lg border border-transparent bg-gray-100 px-4 text-sm font-semibold text-gray-700 outline-none transition-all focus:border-[#1a6e38] focus:bg-white focus:ring-2 focus:ring-[#1a6e38]/20 sm:w-56"
+              >
+                <option value="">Tất cả mùa giải</option>
+                {seasonOptions.map((season) => (
+                  <option key={season.id} value={String(season.id)}>
+                    {season.name || season.year || `Mùa giải #${season.id}`}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -358,7 +436,7 @@ export const PublicLeaguesPage = () => {
             <div className="space-y-8">
               {loading ? (
                 <div className="text-center py-12 text-gray-500 font-bold">
-                  Đang tải dữ liệu trận đấu...
+                  <LoadingSpinner />
                 </div>
               ) : matches.length === 0 ? (
                 <div className="text-center py-12 text-gray-500 font-bold">
@@ -427,8 +505,7 @@ function MatchCard({
       className="bg-white rounded-2xl p-6 md:px-10 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-[#1a6e38]/30 transition-all group"
     >
       <div className="text-sm font-bold text-gray-500 tracking-wider mb-6 text-center md:text-left uppercase group-hover:text-[#1a6e38] transition-colors">
-        {match.league?.name || "Giải đấu"}{" "}
-        {match.season?.year ? `• ${match.season.year}` : ""}
+        {match.season?.name ? ` ${match.season.name}` : ""}
       </div>
       <div className="flex flex-col md:flex-row items-center justify-between gap-6 md:gap-0">
         {/* Home Team */}
@@ -487,8 +564,8 @@ function MatchCard({
           </div>
 
           <div className="flex items-center gap-1.5 text-gray-400 text-xs font-semibold">
-            <MapPin size={12} /> Sân nhà{" "}
-            {match.homeTeam?.name || "Đang cập nhật"}
+            <MapPin size={12} />{" "}
+            {match.homeTeam?.stadiumName || "Đang cập nhật"}
           </div>
 
           {hasPrediction && (

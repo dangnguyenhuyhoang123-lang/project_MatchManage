@@ -1,5 +1,5 @@
 import axiosClient from "../axiosClient";
-import type { NotificationDTO } from "./NotificationSocketService";
+import type { NotificationDTO } from "../../model/RealtimeEvent";
 
 const API_BASE_URL = "/notifications";
 

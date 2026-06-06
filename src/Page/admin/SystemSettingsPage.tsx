@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import ConfirmModal from "../../components/ConfirmModal";
 import { AppLayout } from "../../layouts/AppLayout";
@@ -16,6 +16,9 @@ import type { AuthUser } from "../../types/AuthUser";
 import TeamService from "../../services/TeamService";
 import { TeamModel } from "../../model/TeamModel";
 import { UserModal } from "./UserModal";
+import { useRealtimeEvent } from "../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../model/RealtimeEvent";
+import LoadingSpinner from "../../components/Spinner/LoadingSpinner";
 
 export default function SystemSettingsPage() {
   const [users, setUsers] = useState<AuthUser[]>([]);
@@ -38,16 +41,16 @@ export default function SystemSettingsPage() {
   );
   const [confirmLoading, setConfirmLoading] = useState(false);
 
-  const fetchTeams = async () => {
+  const fetchTeams = useCallback(async () => {
     try {
       const res = await TeamService.getAllTeamsNormalized(0, 100);
       setTeams(res.content || []);
     } catch (error) {
       console.error("Lỗi khi tải danh sách CLB:", error);
     }
-  };
+  }, []);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       const res = await UserService.getAllUsers(0, 100);
@@ -60,12 +63,23 @@ export default function SystemSettingsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchUsers();
     fetchTeams();
-  }, []);
+  }, [fetchTeams, fetchUsers]);
+
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (event.action === "REFETCH_USERS") {
+        void fetchUsers();
+      }
+    },
+    [fetchUsers],
+  );
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   const handleRoleChange = async (user: AuthUser, role: string) => {
     try {
@@ -360,7 +374,7 @@ export default function SystemSettingsPage() {
           {/* Table Rows */}
           <div className="space-y-2">
             {loading ? (
-              <div className="text-center py-4 text-gray-500">Đang tải...</div>
+              <LoadingSpinner />
             ) : filteredUsers.length === 0 ? (
               <div className="text-center py-4 text-gray-500">
                 Không tìm thấy người dùng nào.

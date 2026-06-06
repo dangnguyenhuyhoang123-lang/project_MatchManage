@@ -8,6 +8,7 @@ import RefereeService, {
   type RefereeRequest,
 } from "../../../services/RefereeService";
 import { extractApiErrorMessage } from "../../../utils/apiError";
+import LoadingSpinner from "../../../components/Spinner/LoadingSpinner";
 
 const emptyForm: RefereeRequest = {
   name: "",
@@ -212,7 +213,7 @@ export default function RefereeManagementPage() {
                   colSpan={5}
                   className="p-8 text-center font-bold text-gray-500"
                 >
-                  Đang tải...
+                  <LoadingSpinner />
                 </td>
               </tr>
             ) : filtered.length === 0 ? (

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import MatchService from "../../services/MatchService";
 import type { MatchModel } from "../../model/Match/MatchModel";
@@ -12,12 +12,14 @@ import {
 } from "lucide-react";
 
 import { Footer } from "../../components/Footer/Footer_HomePage";
+import { usePublicRealtimeEvent } from "../../hooks/usePublicRealtimeEvent";
+import type { RealtimeEventDTO } from "../../model/RealtimeEvent";
 
 const HomePage = () => {
   const [dsSanPham, setDsSanPham] = useState<MatchModel[]>([]);
   const navigate = useNavigate();
 
-  useEffect(() => {
+  const loadFeaturedMatches = useCallback(() => {
     // Lấy 2 trận đấu nổi bật
     MatchService.getListMatches(1).then((data) => {
       if (data && data.ketQua) {
@@ -25,6 +27,27 @@ const HomePage = () => {
       }
     });
   }, []);
+
+  useEffect(() => {
+    loadFeaturedMatches();
+  }, [loadFeaturedMatches]);
+
+  const handlePublicRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (
+        event.action === "REFETCH_MATCHES" ||
+        event.action === "REFETCH_MATCH_DETAIL" ||
+        event.action === "REFETCH_MATCH_EVENTS" ||
+        event.action === "REFETCH_MATCH_STATS" ||
+        event.action === "REFETCH_LINEUPS"
+      ) {
+        loadFeaturedMatches();
+      }
+    },
+    [loadFeaturedMatches],
+  );
+
+  usePublicRealtimeEvent(["matches"], handlePublicRealtimeEvent);
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -361,7 +384,7 @@ const HomePage = () => {
 
             <p className="text-green-100 text-lg max-w-2xl mx-auto mb-10 relative z-10 leading-relaxed">
               Tham gia cùng hàng trăm nhà tổ chức giải đấu chuyên nghiệp đã tin
-              dùng PitchPro.
+              dùng HDPro.
             </p>
 
             <button className="relative z-10 bg-white text-[#1a6e38] px-10 py-4 rounded-full font-bold hover:bg-gray-50 transition-colors shadow-[0_8px_30px_rgb(0,0,0,0.12)] text-lg">

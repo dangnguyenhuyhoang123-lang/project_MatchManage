@@ -92,9 +92,9 @@ const tabs: { key: TabKey; label: string; icon: ReactNode }[] = [
 ];
 
 const fallbackTeamLogo =
-  "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&q=80&w=320";
+  "https://i.pinimg.com/736x/45/a7/09/45a709b49ff148ce35634bc0b84749ac.jpg";
 const fallbackAvatar =
-  "https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&q=80&w=240";
+  "https://cellphones.com.vn/sforum/wp-content/uploads/2024/02/avatar-ff-ngau-91.jpg";
 const fallbackStadiumImage =
   "https://images.unsplash.com/photo-1577223625816-7546f13df25d?auto=format&fit=crop&q=80&w=900";
 

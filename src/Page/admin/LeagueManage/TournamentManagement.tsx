@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import CreateTournament from "./CreateTournament";
 import CreateSeasonModal from "./CreateSeasonModal";
@@ -12,6 +12,8 @@ import SeasonService from "../../../services/SeasonService";
 import SystemRuleService from "../../../services/SystemRuleService";
 import { PhanTrang } from "../../../utils/PhanTrang";
 import { League } from "../../../model/LeagueModel";
+import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
 
 type FilterState = {
   search: string;
@@ -90,7 +92,7 @@ const TournamentManagement: React.FC = () => {
     [appliedFilters],
   );
 
-  const filterClientItems = (
+  const filterClientItems = useCallback((
     leagues: LeagueWithSeasons[],
     filters: FilterState,
   ) => {
@@ -111,9 +113,9 @@ const TournamentManagement: React.FC = () => {
 
       return matchesSearch && matchesScale && matchesStatus;
     });
-  };
+  }, []);
 
-  const fetchLeagueSeasons = async (leagueId?: number) => {
+  const fetchLeagueSeasons = useCallback(async (leagueId?: number) => {
     if (!leagueId) return [];
 
     try {
@@ -122,9 +124,9 @@ const TournamentManagement: React.FC = () => {
       console.error(`Lỗi khi tải mùa giải cho league ${leagueId}:`, error);
       return [];
     }
-  };
+  }, []);
 
-  const enrichLeagues = async (leagues: League[]) => {
+  const enrichLeagues = useCallback(async (leagues: League[]) => {
     const seasonsList = await Promise.all(
       leagues.map((league) => fetchLeagueSeasons(league.id)),
     );
@@ -133,9 +135,9 @@ const TournamentManagement: React.FC = () => {
       league,
       seasons: seasonsList[index] ?? [],
     }));
-  };
+  }, [fetchLeagueSeasons]);
 
-  const fetchLeagues = async (page = 1, filters = appliedFilters) => {
+  const fetchLeagues = useCallback(async (page = 1, filters = appliedFilters) => {
     setIsLoading(true);
 
     try {
@@ -188,11 +190,27 @@ const TournamentManagement: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [appliedFilters, enrichLeagues, filterClientItems]);
 
   useEffect(() => {
     fetchLeagues(trangHienTai, appliedFilters);
-  }, [trangHienTai, appliedFilters]);
+  }, [fetchLeagues, trangHienTai, appliedFilters]);
+
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (
+        event.action === "REFETCH_LEAGUES" ||
+        event.action === "REFETCH_SEASONS" ||
+        event.action === "REFETCH_ROUNDS" ||
+        event.action === "REFETCH_SEASON_TEAMS"
+      ) {
+        void fetchLeagues(trangHienTai, appliedFilters);
+      }
+    },
+    [appliedFilters, fetchLeagues, trangHienTai],
+  );
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   const handleFilterChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,

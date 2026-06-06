@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AddPlayerModal } from "./AddPlayer";
 import ConfirmModal from "../../../components/ConfirmModal";
@@ -9,6 +9,8 @@ import { PhanTrang } from "../../../utils/PhanTrang";
 import { Player } from "../../../model/Player";
 import PlayerService from "../../../services/PlayerService";
 import TeamService from "../../../services/TeamService";
+import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
 
 type FilterState = {
   position: string;
@@ -190,7 +192,7 @@ const PlayerManagement: React.FC = () => {
     });
   };
 
-  const fetchPlayers = async (page = 1, filters = appliedFilters) => {
+  const fetchPlayers = useCallback(async (page = 1, filters = appliedFilters) => {
     setIsLoading(true);
 
     try {
@@ -246,11 +248,25 @@ const PlayerManagement: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [appliedFilters, teamOptions]);
 
   useEffect(() => {
     fetchPlayers(trangHienTai, appliedFilters);
-  }, [trangHienTai, appliedFilters]);
+  }, [fetchPlayers, trangHienTai, appliedFilters]);
+
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (
+        event.action === "REFETCH_PLAYERS" ||
+        event.action === "REFETCH_TEAMS"
+      ) {
+        void fetchPlayers(trangHienTai, appliedFilters);
+      }
+    },
+    [appliedFilters, fetchPlayers, trangHienTai],
+  );
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   const handleUpdate = (player: Player) => {
     setSelectedPlayer(player);

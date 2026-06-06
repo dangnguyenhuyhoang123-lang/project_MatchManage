@@ -4,6 +4,7 @@ import { Modal } from "../../../components/Modal";
 import type {
   EventType,
   GoalType,
+  MatchEvent,
   MatchEventUpsertRequest,
 } from "../../../model/Match/MatchEvents";
 
@@ -26,6 +27,8 @@ type MatchEventModalProps = {
   awayTeamName: string;
 
   lineups?: MatchLineupsResponse | null;
+  events?: MatchEvent[];
+  eventPlayersByTeam?: Record<number, MatchLineup[]>;
   allowedGoalTypes?: GoalType[];
   maxGoalMinute?: number | null;
 };
@@ -66,6 +69,7 @@ export default function MatchEventModal({
   awayTeamId,
   awayTeamName,
   lineups,
+  events = [],
   allowedGoalTypes,
   maxGoalMinute,
 }: MatchEventModalProps) {
@@ -79,7 +83,7 @@ export default function MatchEventModal({
     }
   }, [open]);
 
-  const selectedPlayers: MatchLineup[] = useMemo(() => {
+  const selectedTeamLineups: MatchLineup[] = useMemo(() => {
     if (!eventForm.teamId || !lineups) return [];
 
     if (eventForm.teamId === lineups.home?.teamId) {
@@ -92,6 +96,88 @@ export default function MatchEventModal({
 
     return [];
   }, [eventForm.teamId, lineups]);
+
+  const currentPlayerState = useMemo(() => {
+    const playerById = new Map<number, MatchLineup>();
+    const playingIds = new Set<number>();
+    const benchIds = new Set<number>();
+
+    selectedTeamLineups.forEach((player) => {
+      const playerId = Number(player.playerId);
+      if (!Number.isFinite(playerId) || playerId <= 0) return;
+
+      playerById.set(playerId, player);
+
+      if (player.isStarting) {
+        playingIds.add(playerId);
+      } else {
+        benchIds.add(playerId);
+      }
+    });
+
+    const substitutionEvents = events
+      .filter((event) => {
+        const playerOutId = Number(event.playerId);
+        const playerInId = Number(event.playerInId);
+
+        return (
+          event.eventType === "SUBSTITUTION" &&
+          Number(event.teamId) === Number(eventForm.teamId) &&
+          Number.isFinite(playerOutId) &&
+          Number.isFinite(playerInId) &&
+          playerOutId > 0 &&
+          playerInId > 0
+        );
+      })
+      .sort((a, b) => {
+        const minuteDiff = Number(a.minute ?? 0) - Number(b.minute ?? 0);
+        if (minuteDiff !== 0) return minuteDiff;
+
+        const extraDiff =
+          Number(a.extraMinute ?? 0) - Number(b.extraMinute ?? 0);
+        if (extraDiff !== 0) return extraDiff;
+
+        return Number(a.eventOrder ?? a.id ?? 0) - Number(b.eventOrder ?? b.id ?? 0);
+      });
+
+    substitutionEvents.forEach((event) => {
+      const playerOutId = Number(event.playerId);
+      const playerInId = Number(event.playerInId);
+
+      if (playingIds.has(playerOutId) && benchIds.has(playerInId)) {
+        playingIds.delete(playerOutId);
+        benchIds.add(playerOutId);
+
+        benchIds.delete(playerInId);
+        playingIds.add(playerInId);
+      }
+    });
+
+    const byLineupOrder = (a: MatchLineup, b: MatchLineup) => {
+      const orderA = a.lineupOrder ?? Number.MAX_SAFE_INTEGER;
+      const orderB = b.lineupOrder ?? Number.MAX_SAFE_INTEGER;
+      if (orderA !== orderB) return orderA - orderB;
+      return (a.shirtNumber ?? 999) - (b.shirtNumber ?? 999);
+    };
+
+    return {
+      playingPlayers: Array.from(playingIds)
+        .map((playerId) => playerById.get(playerId))
+        .filter((player): player is MatchLineup => Boolean(player))
+        .sort(byLineupOrder),
+      benchPlayers: Array.from(benchIds)
+        .map((playerId) => playerById.get(playerId))
+        .filter((player): player is MatchLineup => Boolean(player))
+        .sort(byLineupOrder),
+    };
+  }, [eventForm.teamId, events, selectedTeamLineups]);
+
+  const { playingPlayers, benchPlayers } = currentPlayerState;
+
+  const hasSelectedTeam = Boolean(eventForm.teamId);
+  const hasLineupForSelectedTeam = selectedTeamLineups.length > 0;
+  const mainPlayerOptions = playingPlayers;
+  const playerInOptions = benchPlayers;
 
   const handleChangeEventType = (eventType: EventType) => {
     setErrors({});
@@ -190,6 +276,38 @@ export default function MatchEventModal({
     ) {
       nextErrors.assistPlayerId =
         "Cầu thủ kiến tạo không được trùng với cầu thủ ghi bàn.";
+    }
+
+    if (eventForm.teamId && !hasLineupForSelectedTeam) {
+      nextErrors.teamId = "Doi nay chua co doi hinh thi dau.";
+    }
+
+    if (
+      eventForm.playerId &&
+      !playingPlayers.some((player) => player.playerId === eventForm.playerId)
+    ) {
+      nextErrors.playerId =
+        eventForm.eventType === "SUBSTITUTION"
+          ? "Cau thu roi san phai dang thi dau."
+          : "Cau thu phai dang thi dau.";
+    }
+
+    if (
+      eventForm.eventType === "SUBSTITUTION" &&
+      eventForm.playerInId &&
+      !benchPlayers.some((player) => player.playerId === eventForm.playerInId)
+    ) {
+      nextErrors.playerInId = "Cau thu vao san phai dang o danh sach du bi.";
+    }
+
+    if (
+      eventForm.eventType === "GOAL" &&
+      eventForm.assistPlayerId &&
+      !playingPlayers.some(
+        (player) => player.playerId === eventForm.assistPlayerId,
+      )
+    ) {
+      nextErrors.assistPlayerId = "Cau thu kien tao phai dang thi dau.";
     }
 
     setErrors(nextErrors);
@@ -338,19 +456,29 @@ export default function MatchEventModal({
                 clearError("playerId");
                 clearError("assistPlayerId");
               }}
-              disabled={!eventForm.teamId}
+              disabled={!hasSelectedTeam || mainPlayerOptions.length === 0}
               className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-700/20 disabled:bg-gray-100"
             >
               <option value={0}>
                 {eventForm.teamId ? "Chọn cầu thủ" : "Vui lòng chọn đội trước"}
               </option>
 
-              {selectedPlayers.map((player) => (
+              {mainPlayerOptions.map((player) => (
                 <option key={player.playerId} value={player.playerId}>
                   {renderPlayerLabel(player)}
                 </option>
               ))}
             </select>
+            {hasSelectedTeam && !hasLineupForSelectedTeam && (
+              <p className="mt-1 text-xs font-bold text-amber-600">
+                Doi nay chua co doi hinh thi dau.
+              </p>
+            )}
+            {hasLineupForSelectedTeam && mainPlayerOptions.length === 0 && (
+              <p className="mt-1 text-xs font-bold text-amber-600">
+                Khong co cau thu dang thi dau phu hop.
+              </p>
+            )}
             {errors.playerId && (
               <p className="mt-1 text-xs font-bold text-red-600">
                 {errors.playerId}
@@ -374,7 +502,7 @@ export default function MatchEventModal({
                   }));
                   clearError("playerInId");
                 }}
-                disabled={!eventForm.teamId}
+                disabled={!hasSelectedTeam || playerInOptions.length === 0}
                 className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-700/20 disabled:bg-gray-100"
               >
                 <option value={0}>
@@ -383,12 +511,17 @@ export default function MatchEventModal({
                     : "Vui lòng chọn đội trước"}
                 </option>
 
-                {selectedPlayers.map((player) => (
+                {playerInOptions.map((player) => (
                   <option key={player.playerId} value={player.playerId}>
                     {renderPlayerLabel(player)}
                   </option>
                 ))}
               </select>
+              {hasLineupForSelectedTeam && playerInOptions.length === 0 && (
+                <p className="mt-1 text-xs font-bold text-amber-600">
+                  Khong con cau thu du bi de thay vao san.
+                </p>
+              )}
               {errors.playerInId && (
                 <p className="mt-1 text-xs font-bold text-red-600">
                   {errors.playerInId}
@@ -414,12 +547,12 @@ export default function MatchEventModal({
                     }));
                     clearError("assistPlayerId");
                   }}
-                  disabled={!eventForm.teamId}
+                  disabled={!hasSelectedTeam || mainPlayerOptions.length === 0}
                   className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-700/20 disabled:bg-gray-100"
                 >
                   <option value={0}>Không có / bỏ trống</option>
 
-                  {selectedPlayers
+                  {mainPlayerOptions
                     .filter((p) => p.playerId !== eventForm.playerId)
                     .map((player) => (
                       <option key={player.playerId} value={player.playerId}>

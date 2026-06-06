@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../utils/useAuth";
 import UserService from "../../services/UserService";
+import { ArrowBigLeft } from "lucide-react";
 
 interface UpdateProfilePayload {
   username: string;
@@ -256,7 +257,7 @@ const UserProfilePage = () => {
           to="/"
           className="inline-flex items-center rounded-xl border border-emerald-200 bg-white px-5 py-3 font-semibold text-emerald-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-50"
         >
-          Quay về trang chủ
+          <ArrowBigLeft />
         </Link>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_1.9fr]">

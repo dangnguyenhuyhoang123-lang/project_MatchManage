@@ -19,9 +19,9 @@ const AboutPage = () => {
                 bóng đá.
               </h1>
               <p className="text-gray-500 text-lg leading-relaxed max-w-md">
-                PitchPro ra đời với sứ mệnh tối ưu hóa quản lý thể thao, mang
-                lại sự chuyên nghiệp chuẩn quốc tế cho mọi cấp độ bóng đá tại
-                Việt Nam.
+                HDPro ra đời với sứ mệnh tối ưu hóa quản lý thể thao, mang lại
+                sự chuyên nghiệp chuẩn quốc tế cho mọi cấp độ bóng đá tại Việt
+                Nam.
               </p>
             </div>
             <div className="w-full md:w-1/2">
@@ -114,7 +114,7 @@ const AboutPage = () => {
 
           <section className="mb-32">
             <h2 className="text-4xl font-extrabold text-center text-gray-900 mb-16">
-              Hành trình <span className="text-[#1a6e38]">PitchPro</span>
+              Hành trình <span className="text-[#1a6e38]">HDPro</span>
             </h2>
             <div className="max-w-4xl mx-auto relative border-l-2 border-gray-200 ml-4 md:mx-auto">
               <div className="mb-16 md:flex justify-between items-center w-full relative">
@@ -124,8 +124,8 @@ const AboutPage = () => {
                     Khởi nguồn ý tưởng
                   </h3>
                   <p className="text-sm text-gray-500 line-clamp-3">
-                    Dự án PitchPro được thành lập bởi một nhóm chuyên gia phân
-                    tích dữ liệu thể thao và các cựu cầu thủ chuyên nghiệp.
+                    Dự án HDPro được thành lập bởi một nhóm chuyên gia phân tích
+                    dữ liệu thể thao và các cựu cầu thủ chuyên nghiệp.
                   </p>
                 </div>
                 <div className="absolute -left-2.25 md:left-1/2 md:-ml-4.25 mt-1.5 md:mt-0 w-8 h-8 rounded-full bg-green-700 border-4 border-white flex items-center justify-center -translate-y-4 md:translate-y-0">
@@ -254,7 +254,7 @@ const AboutPage = () => {
                         CTO
                       </span>
                       <span className="text-white font-bold text-xs mt-1">
-                        PITCHPRO
+                        HDPRO
                       </span>
                     </div>
                   </div>

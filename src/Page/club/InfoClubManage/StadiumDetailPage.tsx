@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AppLayout } from "../../../layouts/AppLayout";
 import TeamService from "../../../services/TeamService";
@@ -13,6 +13,8 @@ import {
   getStadiumName,
   useCurrentClubId,
 } from "./clubInfoHelpers";
+import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
 
 interface StadiumState {
   team: TeamModel | null;
@@ -78,6 +80,7 @@ const StadiumDetailPage: React.FC = () => {
   const [stadiumFormErrors, setStadiumFormErrors] = useState<StadiumFormErrors>(
     {},
   );
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -118,7 +121,18 @@ const StadiumDetailPage: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [authLoading, currentClubId]);
+  }, [authLoading, currentClubId, reloadKey]);
+
+  const handleRealtimeEvent = useCallback((event: RealtimeEventDTO) => {
+    if (
+      event.action === "REFETCH_STADIUMS" ||
+      event.action === "REFETCH_TEAMS"
+    ) {
+      setReloadKey((current) => current + 1);
+    }
+  }, []);
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   const openEditModal = () => {
     if (!state.team) {
@@ -667,7 +681,7 @@ function EditStadiumModal({
         />
         <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-[#008C2F]/30 bg-[#008C2F]/5 px-4 py-3 text-sm font-black text-[#008C2F] transition hover:bg-[#008C2F]/10 sm:col-span-2">
           <span className="material-symbols-outlined text-[18px]">upload</span>
-          Chọn file ảnh sân từ máy
+          Chọn ảnh sân
           <input
             type="file"
             accept="image/*"

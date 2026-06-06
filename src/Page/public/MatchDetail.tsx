@@ -17,8 +17,8 @@ import type {
 
 import { getTeamDetailPath } from "../../utils/teamRoute";
 import { AnimatedPanel } from "../../components/AnimationPanel/AnimatedPanel";
-import { useRealtimeEvent } from "../../hooks/useRealtimeEvent";
-import type { RealtimeEventDTO } from "../../services/websocket/NotificationSocketService";
+import { usePublicRealtimeEvent } from "../../hooks/usePublicRealtimeEvent";
+import type { RealtimeEventDTO } from "../../model/RealtimeEvent";
 
 type MatchDetailPlayer = MatchLineup & {
   teamId?: number;
@@ -309,6 +309,8 @@ const LineupField = ({ players }: { players: PlayerRender[] }) => {
 
 const MatchDetail = () => {
   const { id } = useParams();
+  const matchId = Number(id);
+  const hasValidMatchId = Boolean(id) && Number.isFinite(matchId);
 
   const [match, setMatch] = useState<MatchModel | null>(null);
   const [matchStats, setMatchStats] = useState<MatchStats[]>([]);
@@ -321,17 +323,77 @@ const MatchDetail = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedLabel, setSelectedLabel] = useState("stats");
   const [loading, setLoading] = useState(true);
-  const [reloadKey, setReloadKey] = useState(0);
+
+  const resetMatchData = useCallback((message?: string) => {
+    setMatch(null);
+    setMatchStats([]);
+    setListEventMatch([]);
+    setListPlayerInLineUp([]);
+    setOfficials([]);
+    setError(message ?? null);
+  }, []);
+
+  const loadMatchDetail = useCallback(async () => {
+    if (!hasValidMatchId) return null;
+
+    const matchData = await MatchService.getMatchById(matchId);
+    setMatch(matchData);
+    return matchData;
+  }, [hasValidMatchId, matchId]);
+
+  const loadMatchStats = useCallback(async () => {
+    if (!hasValidMatchId) return;
+
+    try {
+      const statsData = await MatchService.getStatsMatch(matchId);
+      setMatchStats(statsData);
+    } catch (error) {
+      console.warn("Cannot load public match stats", error);
+      setMatchStats([]);
+    }
+  }, [hasValidMatchId, matchId]);
+
+  const loadMatchEvents = useCallback(async () => {
+    if (!hasValidMatchId) return;
+
+    try {
+      const eventsData = await MatchService.getListEventMatch(matchId);
+      setListEventMatch(sortEventsByMinute(eventsData));
+    } catch (error) {
+      console.warn("Cannot load public match events", error);
+      setListEventMatch([]);
+    }
+  }, [hasValidMatchId, matchId]);
+
+  const loadLineups = useCallback(async () => {
+    if (!hasValidMatchId) return;
+
+    try {
+      const lineupData = await MatchService.getMatchLineups(matchId);
+      setListPlayerInLineUp(normalizeTacticsLineups(lineupData));
+    } catch (error) {
+      console.warn("Cannot load public match lineups", error);
+      setListPlayerInLineUp([]);
+    }
+  }, [hasValidMatchId, matchId]);
+
+  const loadOfficials = useCallback(async () => {
+    if (!hasValidMatchId) return;
+
+    try {
+      const officialsResponse = await MatchRefereeService.getByMatch(matchId);
+      setOfficials(
+        Array.isArray(officialsResponse.data) ? officialsResponse.data : [],
+      );
+    } catch (error) {
+      console.warn("Cannot load public match officials", error);
+      setOfficials([]);
+    }
+  }, [hasValidMatchId, matchId]);
 
   useEffect(() => {
-    const matchId = Number(id);
-
-    if (!id || Number.isNaN(matchId)) {
-      setMatch(null);
-      setMatchStats([]);
-      setListEventMatch([]);
-      setListPlayerInLineUp([]);
-      setOfficials([]);
+    if (!hasValidMatchId) {
+      resetMatchData();
       setError("Mã trận đấu không hợp lệ.");
       setLoading(false);
       return;
@@ -344,53 +406,20 @@ const MatchDetail = () => {
       setError(null);
 
       try {
-        const matchData = await MatchService.getMatchById(matchId);
-
         if (cancelled) return;
 
-        setMatch(matchData);
-
-        const [statsResult, eventsResult, lineupResult, officialsResult] =
-          await Promise.allSettled([
-            MatchService.getStatsMatch(matchId),
-            MatchService.getListEventMatch(matchId),
-            MatchService.getMatchLineups(matchId),
-            MatchRefereeService.getByMatch(matchId),
-          ]);
-
-        if (cancelled) return;
-
-        setMatchStats(
-          statsResult.status === "fulfilled" ? statsResult.value : [],
-        );
-
-        setListEventMatch(
-          eventsResult.status === "fulfilled"
-            ? sortEventsByMinute(eventsResult.value)
-            : [],
-        );
-
-        setListPlayerInLineUp(
-          lineupResult.status === "fulfilled"
-            ? normalizeTacticsLineups(lineupResult.value)
-            : [],
-        );
-        setOfficials(
-          officialsResult.status === "fulfilled" &&
-            Array.isArray(officialsResult.value.data)
-            ? officialsResult.value.data
-            : [],
-        );
+        await loadMatchDetail();
+        await Promise.all([
+          loadMatchStats(),
+          loadMatchEvents(),
+          loadLineups(),
+          loadOfficials(),
+        ]);
       } catch (error) {
         if (cancelled) return;
 
         console.error("Lỗi khi tải chi tiết trận đấu:", error);
 
-        setMatch(null);
-        setMatchStats([]);
-        setListEventMatch([]);
-        setListPlayerInLineUp([]);
-        setOfficials([]);
         setError("Không thể tải dữ liệu chi tiết trận đấu.");
       } finally {
         if (!cancelled) {
@@ -404,30 +433,68 @@ const MatchDetail = () => {
     return () => {
       cancelled = true;
     };
-  }, [id, reloadKey]);
+  }, [
+    hasValidMatchId,
+    loadLineups,
+    loadMatchDetail,
+    loadMatchEvents,
+    loadMatchStats,
+    loadOfficials,
+    resetMatchData,
+  ]);
 
-  const handleRealtimeEvent = useCallback(
+  const handlePublicRealtimeEvent = useCallback(
     (event: RealtimeEventDTO) => {
-      const matchId = Number(id);
-      if (event.referenceId && event.referenceId !== matchId) return;
+      const referenceId =
+        event.referenceId == null ? Number.NaN : Number(event.referenceId);
+
+      const isCurrentMatchEvent =
+        !Number.isFinite(referenceId) ||
+        referenceId === matchId ||
+        event.referenceType === "MATCH_EVENT" ||
+        event.referenceType === "MATCH_STATS" ||
+        event.referenceType === "MATCH_LINEUP";
+
+      if (!isCurrentMatchEvent) return;
 
       if (
         event.action === "REFETCH_MATCH_DETAIL" ||
-        event.action === "REFETCH_MATCH_EVENTS" ||
-        event.action === "REFETCH_MATCH_STATS" ||
-        event.action === "REFETCH_LINEUPS" ||
-        event.referenceType === "MATCH" ||
-        event.referenceType === "MATCH_EVENT" ||
-        event.referenceType === "MATCH_STATS" ||
-        event.referenceType === "MATCH_LINEUP"
+        event.action === "REFETCH_MATCHES"
       ) {
-        setReloadKey((current) => current + 1);
+        void loadMatchDetail();
+      }
+
+      if (event.action === "REFETCH_MATCH_EVENTS") {
+        void loadMatchEvents();
+        void loadMatchDetail();
+      }
+
+      if (event.action === "REFETCH_MATCH_STATS") {
+        void loadMatchStats();
+      }
+
+      if (event.action === "REFETCH_LINEUPS") {
+        void loadLineups();
+      }
+
+      if (event.action === "REFETCH_MATCH_REFEREES") {
+        void loadOfficials();
       }
     },
-    [id],
+    [
+      loadLineups,
+      loadMatchDetail,
+      loadMatchEvents,
+      loadMatchStats,
+      loadOfficials,
+      matchId,
+    ],
   );
 
-  useRealtimeEvent(handleRealtimeEvent);
+  usePublicRealtimeEvent(
+    ["matches", hasValidMatchId ? `matches/${matchId}` : null],
+    handlePublicRealtimeEvent,
+  );
 
   if (loading) {
     return (
@@ -507,8 +574,7 @@ const MatchDetail = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#1a6e38]"></div>
         <div className="z-10 text-center px-4">
           <span className="inline-block px-3 py-1 bg-white/10 backdrop-blur-md border border-white/20 text-white rounded-full text-[10px] font-bold uppercase tracking-widest mb-3">
-            {match.league?.name || "Giải đấu"} •{" "}
-            {match.season?.year || "Mùa giải"}
+            {match.season?.name || "Mùa giải"}
           </span>
           <h1 className="text-white text-3xl md:text-5xl font-black tracking-tight font-headline">
             Chi tiết trận đấu

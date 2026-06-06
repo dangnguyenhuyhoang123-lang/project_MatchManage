@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import ConfirmModal from "../../components/ConfirmModal";
 import SystemRuleService, {
   type SystemRule,
   type SystemRulePayload,
 } from "../../services/SystemRuleService";
+import { useRealtimeEvent } from "../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../model/RealtimeEvent";
 
 type FormState = {
   ruleName: string;
@@ -342,29 +344,43 @@ const SystemRulesPage: React.FC = () => {
     };
   }, [rules]);
 
-  useEffect(() => {
-    const loadRules = async () => {
-      try {
-        setLoading(true);
+  const loadRules = useCallback(async () => {
+    try {
+      setLoading(true);
 
-        const response = await SystemRuleService.getAll();
-        const rules = Array.isArray(response.data)
-          ? response.data
-          : Array.isArray(response.data.content)
-            ? response.data.content
-            : [];
+      const response = await SystemRuleService.getAll();
+      const rules = Array.isArray(response.data)
+        ? response.data
+        : Array.isArray(response.data.content)
+          ? response.data.content
+          : [];
 
-        setRules(rules);
-      } catch (error) {
-        console.error("Cannot load system rules", error);
-        setRules([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadRules();
+      setRules(rules);
+    } catch (error) {
+      console.error("Cannot load system rules", error);
+      setRules([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadRules();
+  }, [loadRules]);
+
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (
+        event.action === "REFETCH_SYSTEM_RULES" ||
+        event.action === "REFETCH_SEASONS"
+      ) {
+        void loadRules();
+      }
+    },
+    [loadRules],
+  );
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   const openCreateModal = () => {
     setEditingRule(null);

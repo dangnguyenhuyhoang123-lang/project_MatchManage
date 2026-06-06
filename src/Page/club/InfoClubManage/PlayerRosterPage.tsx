@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AppLayout } from "../../../layouts/AppLayout";
 import LoadingSpinner from "../../../components/Spinner/LoadingSpinner";
@@ -16,6 +16,8 @@ import {
   statusLabel,
   useCurrentClubId,
 } from "./clubInfoHelpers";
+import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
 
 interface RosterPlayer {
   id: number;
@@ -68,7 +70,7 @@ const PlayerRosterPage: React.FC = () => {
   const [deleteTarget, setDeleteTarget] = useState<RosterPlayer | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const loadPlayers = async () => {
+  const loadPlayers = useCallback(async () => {
     if (authLoading) return;
 
     if (!currentClubId) {
@@ -106,12 +108,26 @@ const PlayerRosterPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authLoading, currentClubId, currentPage]);
 
   useEffect(() => {
     loadPlayers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, currentClubId, currentPage]);
+  }, [loadPlayers]);
+
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (
+        event.action === "REFETCH_PLAYERS" ||
+        event.action === "REFETCH_TEAM_SEASON" ||
+        event.action === "REFETCH_SEASON_TEAMS"
+      ) {
+        void loadPlayers();
+      }
+    },
+    [loadPlayers],
+  );
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   const filteredPlayers = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();

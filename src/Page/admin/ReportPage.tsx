@@ -14,6 +14,7 @@ import PlayerSuspensionService, {
 import SeasonService from "../../services/SeasonService";
 import StandingService from "../../services/StandingService";
 import { extractApiErrorMessage } from "../../utils/apiError";
+import LoadingSpinner from "../../components/Spinner/LoadingSpinner";
 
 type TabKey = "standings" | "scorers" | "cards" | "suspensions" | "motm";
 
@@ -372,9 +373,7 @@ export default function ReportPage() {
         <section className="rounded-[2rem] border border-gray-100 bg-white p-4 shadow-sm md:p-6">
           <div className="max-h-[calc(100vh-260px)] overflow-y-auto pr-2">
             {loading ? (
-              <div className="py-16 text-center text-sm font-bold text-gray-500">
-                Đang tải dữ liệu báo cáo...
-              </div>
+              <LoadingSpinner />
             ) : activeTab === "standings" ? (
               <StandingsTable rows={standings} />
             ) : activeTab === "scorers" ? (

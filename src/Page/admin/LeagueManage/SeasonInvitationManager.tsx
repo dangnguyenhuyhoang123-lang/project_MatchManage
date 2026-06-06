@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AppLayout } from "../../../layouts/AppLayout";
 import SeasonInvitationService, {
@@ -8,6 +8,9 @@ import SeasonInvitationService, {
 import SeasonService from "../../../services/SeasonService";
 import TeamService from "../../../services/TeamService";
 import { extractApiErrorMessage } from "../../../utils/apiError";
+import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
+import LoadingSpinner from "../../../components/Spinner/LoadingSpinner";
 
 type SeasonOption = {
   id: number;
@@ -81,34 +84,34 @@ export default function SeasonInvitationManager() {
   const [errorMessage, setErrorMessage] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        const [seasonRes, teamRes] = await Promise.all([
-          SeasonService.getAllSeasons(0, 100),
-          TeamService.getAllTeamsNormalized(0, 200),
-        ]);
-        const seasonList = readArray<SeasonOption>(seasonRes.data);
-        const teamList = readArray<TeamOption>(teamRes);
+  const loadInitialData = useCallback(async () => {
+    try {
+      const [seasonRes, teamRes] = await Promise.all([
+        SeasonService.getAllSeasons(0, 100),
+        TeamService.getAllTeamsNormalized(0, 200),
+      ]);
+      const seasonList = readArray<SeasonOption>(seasonRes.data);
+      const teamList = readArray<TeamOption>(teamRes);
 
-        setSeasons(seasonList);
-        setTeams(teamList.filter((team) => team.id != null));
-        setSelectedSeasonId((current) => current || seasonList[0]?.id || "");
-      } catch (error) {
-        console.error("Cannot load seasons or teams", error);
-        setErrorMessage(extractApiErrorMessage(error));
-      }
-    };
-
-    loadInitialData();
+      setSeasons(seasonList);
+      setTeams(teamList.filter((team) => team.id != null));
+      setSelectedSeasonId((current) => current || seasonList[0]?.id || "");
+    } catch (error) {
+      console.error("Cannot load seasons or teams", error);
+      setErrorMessage(extractApiErrorMessage(error));
+    }
   }, []);
+
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
 
   const selectedSeason = useMemo(
     () => seasons.find((season) => season.id === selectedSeasonId),
     [seasons, selectedSeasonId],
   );
 
-  const loadInvitations = async (seasonId: number) => {
+  const loadInvitations = useCallback(async (seasonId: number) => {
     try {
       setLoading(true);
       setErrorMessage("");
@@ -121,7 +124,7 @@ export default function SeasonInvitationManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (selectedSeasonId) {
@@ -129,7 +132,26 @@ export default function SeasonInvitationManager() {
     } else {
       setInvitations([]);
     }
-  }, [selectedSeasonId]);
+  }, [loadInvitations, selectedSeasonId]);
+
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (
+        event.action === "REFETCH_INVITATIONS" ||
+        event.action === "REFETCH_SEASON_TEAMS"
+      ) {
+        if (event.action === "REFETCH_SEASON_TEAMS") {
+          void loadInitialData();
+        }
+        if (selectedSeasonId) {
+          void loadInvitations(Number(selectedSeasonId));
+        }
+      }
+    },
+    [loadInitialData, loadInvitations, selectedSeasonId],
+  );
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   const handleInvite = async () => {
     const nextErrors: Record<string, string> = {};
@@ -275,9 +297,7 @@ export default function SeasonInvitationManager() {
           </div>
 
           {loading ? (
-            <div className="py-16 text-center text-sm font-bold text-gray-500">
-              Đang tải lời mời...
-            </div>
+            <LoadingSpinner />
           ) : invitations.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-gray-200 bg-[#f5f3ef] p-10 text-center text-sm font-bold text-gray-500">
               Chưa có lời mời nào cho mùa giải này.

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -21,6 +21,8 @@ import PlayerSuspensionService, {
 } from "../../../services/PlayerSuspensionService";
 import SeasonService from "../../../services/SeasonService";
 import StandingService from "../../../services/StandingService";
+import { usePublicRealtimeEvent } from "../../../hooks/usePublicRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
 
 type TabKey =
   | "overview"
@@ -269,123 +271,181 @@ export default function SeasonDetailPage() {
   const [loading, setLoading] = useState(true);
   const [warnings, setWarnings] = useState<string[]>([]);
 
-  useEffect(() => {
-    let mounted = true;
+  const fetchStandings = useCallback(async () => {
+    if (!numericSeasonId) {
+      setStandings([]);
+      return;
+    }
 
-    const loadSeason = async () => {
-      if (!numericSeasonId) {
-        setLoading(false);
-        setWarnings(["Đường dẫn mùa giải không hợp lệ."]);
+    try {
+      const response = await StandingService.getAllStandings(numericSeasonId);
+      setStandings(readArray<StandingRow>(response.data));
+    } catch (error) {
+      console.warn("SeasonDetailPage: cannot reload standings", error);
+    }
+  }, [numericSeasonId]);
+
+  const fetchSeasonMatches = useCallback(async () => {
+    if (!numericSeasonId) {
+      setMatches([]);
+      return;
+    }
+
+    try {
+      const response = await MatchService.getAllMatches(0, 100, {
+        seasonId: numericSeasonId,
+      });
+      setMatches(readArray<PublicMatch>(response.data));
+    } catch (error) {
+      console.warn("SeasonDetailPage: cannot reload matches", error);
+    }
+  }, [numericSeasonId]);
+
+  const loadSeason = useCallback(async () => {
+    if (!numericSeasonId) {
+      setLoading(false);
+      setWarnings(["Đường dẫn mùa giải không hợp lệ."]);
+      return;
+    }
+
+    setLoading(true);
+    const nextWarnings: string[] = [];
+    const [
+      seasonRes,
+      standingRes,
+      teamsRes,
+      matchesRes,
+      scorerRes,
+      cardRes,
+      suspensionRes,
+      motmRes,
+    ] = await Promise.allSettled([
+      SeasonService.getSeasonById(numericSeasonId),
+      StandingService.getAllStandings(numericSeasonId),
+      SeasonService.getTeamsBySeason(numericSeasonId),
+      MatchService.getAllMatches(0, 100, { seasonId: numericSeasonId }),
+      PlayerStatsService.getTopScorers(numericSeasonId),
+      PlayerStatsService.getCards(numericSeasonId),
+      PlayerSuspensionService.getBySeason(numericSeasonId),
+      MatchService.getManOfTheMatchStats(numericSeasonId),
+    ]);
+
+    if (seasonRes.status === "fulfilled") {
+      setSeason(seasonRes.value.data);
+    } else {
+      nextWarnings.push("Không tải được thông tin mùa giải.");
+      console.warn("SeasonDetailPage: cannot load season", seasonRes.reason);
+    }
+
+    if (standingRes.status === "fulfilled") {
+      setStandings(readArray<StandingRow>(standingRes.value.data));
+    } else {
+      nextWarnings.push("Không tải được bảng xếp hạng.");
+      console.warn(
+        "SeasonDetailPage: cannot load standings",
+        standingRes.reason,
+      );
+    }
+
+    if (teamsRes.status === "fulfilled") {
+      setTeams(readArray<PublicTeam>(teamsRes.value.data));
+    } else {
+      nextWarnings.push("Không tải được đội tham gia.");
+      console.warn("SeasonDetailPage: cannot load teams", teamsRes.reason);
+    }
+
+    if (matchesRes.status === "fulfilled") {
+      setMatches(readArray<PublicMatch>(matchesRes.value.data));
+    } else {
+      nextWarnings.push("Không tải được lịch và kết quả.");
+      console.warn("SeasonDetailPage: cannot load matches", matchesRes.reason);
+    }
+
+    if (scorerRes.status === "fulfilled") {
+      setTopScorers(readArray<PlayerStatsResponse>(scorerRes.value.data));
+    } else {
+      nextWarnings.push("Không tải được vua phá lưới.");
+      console.warn(
+        "SeasonDetailPage: cannot load top scorers",
+        scorerRes.reason,
+      );
+    }
+
+    if (cardRes.status === "fulfilled") {
+      setCards(readArray<PlayerStatsResponse>(cardRes.value.data));
+    } else {
+      nextWarnings.push("Không tải được thống kê thẻ phạt.");
+      console.warn("SeasonDetailPage: cannot load cards", cardRes.reason);
+    }
+
+    if (suspensionRes.status === "fulfilled") {
+      setSuspensions(
+        readArray<PlayerSuspensionResponse>(suspensionRes.value.data),
+      );
+    } else {
+      nextWarnings.push("Không tải được danh sách treo giò.");
+      console.warn(
+        "SeasonDetailPage: cannot load suspensions",
+        suspensionRes.reason,
+      );
+    }
+
+    if (motmRes.status === "fulfilled") {
+      setMotmStats(readArray<ManOfTheMatchStatsResponse>(motmRes.value.data));
+    } else {
+      nextWarnings.push("Không tải được cầu thủ xuất sắc.");
+      console.warn("SeasonDetailPage: cannot load MOTM stats", motmRes.reason);
+    }
+
+    setWarnings(nextWarnings);
+    setLoading(false);
+  }, [numericSeasonId]);
+
+  useEffect(() => {
+    void loadSeason();
+  }, [loadSeason]);
+
+  const handlePublicRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (
+        event.action === "REFETCH_LEAGUES" ||
+        event.action === "REFETCH_SEASONS" ||
+        event.action === "REFETCH_ROUNDS" ||
+        event.action === "REFETCH_SEASON_TEAMS" ||
+        event.action === "REFETCH_MATCH_EVENTS" ||
+        event.action === "REFETCH_MATCH_STATS"
+      ) {
+        void loadSeason();
         return;
       }
 
-      setLoading(true);
-      const nextWarnings: string[] = [];
-      const [
-        seasonRes,
-        standingRes,
-        teamsRes,
-        matchesRes,
-        scorerRes,
-        cardRes,
-        suspensionRes,
-        motmRes,
-      ] = await Promise.allSettled([
-        SeasonService.getSeasonById(numericSeasonId),
-        StandingService.getAllStandings(numericSeasonId),
-        SeasonService.getTeamsBySeason(numericSeasonId),
-        MatchService.getAllMatches(0, 100, { seasonId: numericSeasonId }),
-        PlayerStatsService.getTopScorers(numericSeasonId),
-        PlayerStatsService.getCards(numericSeasonId),
-        PlayerSuspensionService.getBySeason(numericSeasonId),
-        MatchService.getManOfTheMatchStats(numericSeasonId),
-      ]);
-
-      if (!mounted) return;
-
-      if (seasonRes.status === "fulfilled") {
-        setSeason(seasonRes.value.data);
-      } else {
-        nextWarnings.push("Không tải được thông tin mùa giải.");
-        console.warn("SeasonDetailPage: cannot load season", seasonRes.reason);
+      if (
+        event.action === "REFETCH_STANDINGS" ||
+        event.action === "REFETCH_TEAM_STATS"
+      ) {
+        void fetchStandings();
+        return;
       }
 
-      if (standingRes.status === "fulfilled") {
-        setStandings(readArray<StandingRow>(standingRes.value.data));
-      } else {
-        nextWarnings.push("Không tải được bảng xếp hạng.");
-        console.warn(
-          "SeasonDetailPage: cannot load standings",
-          standingRes.reason,
-        );
+      if (
+        event.action === "REFETCH_MATCHES" ||
+        event.action === "REFETCH_MATCH_DETAIL" ||
+        event.action === "REFETCH_LINEUPS"
+      ) {
+        void fetchSeasonMatches();
       }
+    },
+    [fetchSeasonMatches, fetchStandings, loadSeason],
+  );
 
-      if (teamsRes.status === "fulfilled") {
-        setTeams(readArray<PublicTeam>(teamsRes.value.data));
-      } else {
-        nextWarnings.push("Không tải được đội tham gia.");
-        console.warn("SeasonDetailPage: cannot load teams", teamsRes.reason);
-      }
-
-      if (matchesRes.status === "fulfilled") {
-        setMatches(readArray<PublicMatch>(matchesRes.value.data));
-      } else {
-        nextWarnings.push("Không tải được lịch và kết quả.");
-        console.warn(
-          "SeasonDetailPage: cannot load matches",
-          matchesRes.reason,
-        );
-      }
-
-      if (scorerRes.status === "fulfilled") {
-        setTopScorers(readArray<PlayerStatsResponse>(scorerRes.value.data));
-      } else {
-        nextWarnings.push("Không tải được vua phá lưới.");
-        console.warn(
-          "SeasonDetailPage: cannot load top scorers",
-          scorerRes.reason,
-        );
-      }
-
-      if (cardRes.status === "fulfilled") {
-        setCards(readArray<PlayerStatsResponse>(cardRes.value.data));
-      } else {
-        nextWarnings.push("Không tải được thống kê thẻ phạt.");
-        console.warn("SeasonDetailPage: cannot load cards", cardRes.reason);
-      }
-
-      if (suspensionRes.status === "fulfilled") {
-        setSuspensions(
-          readArray<PlayerSuspensionResponse>(suspensionRes.value.data),
-        );
-      } else {
-        nextWarnings.push("Không tải được danh sách treo giò.");
-        console.warn(
-          "SeasonDetailPage: cannot load suspensions",
-          suspensionRes.reason,
-        );
-      }
-
-      if (motmRes.status === "fulfilled") {
-        setMotmStats(readArray<ManOfTheMatchStatsResponse>(motmRes.value.data));
-      } else {
-        nextWarnings.push("Không tải được cầu thủ xuất sắc.");
-        console.warn(
-          "SeasonDetailPage: cannot load MOTM stats",
-          motmRes.reason,
-        );
-      }
-
-      setWarnings(nextWarnings);
-      setLoading(false);
-    };
-
-    loadSeason();
-
-    return () => {
-      mounted = false;
-    };
-  }, [numericSeasonId]);
+  usePublicRealtimeEvent(
+    [
+      "matches",
+      "leagues",
+      numericSeasonId ? `seasons/${numericSeasonId}/standings` : null,
+    ],
+    handlePublicRealtimeEvent,
+  );
 
   const sortedStandings = useMemo(
     () =>

@@ -20,7 +20,8 @@ import type {
 import type { MatchEventUpsertRequest } from "../../../model/Match/MatchEvents";
 import type { PlayerSeason } from "../../../model/PlayerSeason";
 import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
-import type { RealtimeEventDTO } from "../../../services/websocket/NotificationSocketService";
+import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
+import { getErrorMessage } from "../../../utils/errorUtils";
 
 interface MatchResultUpdateProps {
   matchData: any;
@@ -135,7 +136,6 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
 
   const [currentMatch, setCurrentMatch] = useState(matchData);
   const [events, setEvents] = useState<MatchEvent[]>([]);
-  const [stats, setStats] = useState<MatchStats[]>([]);
   const [homeStatsDraft, setHomeStatsDraft] =
     useState<EditableMatchStats>(EMPTY_EDITABLE_STATS);
   const [awayStatsDraft, setAwayStatsDraft] =
@@ -306,7 +306,6 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
     setCurrentMatch(updatedMatch);
     setSelectedMotmPlayerId(updatedMatch.manOfTheMatchPlayerId ?? "");
     setEvents(eventsData || []);
-    setStats(statsData || []);
 
     const nextHomeStats = (statsData || []).find(
       (item) => item.teamId === updatedMatch?.homeTeam?.id,
@@ -346,10 +345,12 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
           event.action === "REFETCH_MATCH_EVENTS" ||
           event.action === "REFETCH_MATCH_STATS" ||
           event.action === "REFETCH_LINEUPS" ||
+          event.action === "REFETCH_MATCH_REFEREES" ||
           event.referenceType === "MATCH" ||
           event.referenceType === "MATCH_EVENT" ||
           event.referenceType === "MATCH_STATS" ||
-          event.referenceType === "MATCH_LINEUP")
+          event.referenceType === "MATCH_LINEUP" ||
+          event.referenceType === "MATCH_REFEREE")
       ) {
         reloadMatchData();
       }
@@ -500,7 +501,12 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
       setIsEventModalOpen(false);
     } catch (error) {
       console.error("Lỗi khi thêm sự kiện:", error);
-      toast.error("Thêm sự kiện thất bại.");
+      toast.error(
+        getErrorMessage(
+          error,
+          "Không thể thêm sự kiện. Vui lòng kiểm tra lại dữ liệu.",
+        ),
+      );
     } finally {
       setLoading(false);
     }
@@ -535,12 +541,7 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
         { teamId: awayTeamId, ...awayStatsDraft },
       ];
 
-      const updatedStats = await MatchService.upsertStatsMatch(
-        currentMatch.id,
-        payload,
-      );
-
-      setStats(updatedStats);
+      await MatchService.upsertStatsMatch(currentMatch.id, payload);
       toast.success("Đã lưu thống kê trận đấu.");
       await reloadMatchData();
     } catch (error) {
@@ -901,6 +902,7 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
         awayTeamId={awayTeamId}
         awayTeamName={awayTeamName}
         lineups={lineups}
+        events={events}
         eventPlayersByTeam={eventPlayersByTeam}
         allowedGoalTypes={systemRule?.allowedGoalTypes
           ?.split(",")
@@ -1096,42 +1098,6 @@ const StatsInputRow = ({
       onChange={(event) => onChange("away", field, event.target.value)}
       className="w-full rounded-lg bg-white px-2 py-1.5 text-center text-sm font-black text-indigo-600 outline-none focus:ring-2 focus:ring-indigo-600/20"
     />
-  </div>
-);
-
-const StatBar = ({ label, homeVal, awayVal }: any) => {
-  const total = homeVal + awayVal;
-  const homePct = total > 0 ? (homeVal / total) * 100 : 50;
-  const awayPct = total > 0 ? (awayVal / total) * 100 : 50;
-
-  return (
-    <div className="space-y-1.5">
-      <div className="flex justify-between text-xs font-bold font-['Be_Vietnam_Pro']">
-        <span className="text-green-700">{homeVal}%</span>
-        <span className="text-gray-400">{label}</span>
-        <span className="text-indigo-600">{awayVal}%</span>
-      </div>
-      <div className="flex h-2 rounded-full overflow-hidden bg-gray-100">
-        <div className="bg-green-600" style={{ width: `${homePct}%` }}></div>
-        <div className="bg-indigo-500" style={{ width: `${awayPct}%` }}></div>
-      </div>
-    </div>
-  );
-};
-
-const StatRow = ({ label, homeVal, awayVal, last = false }: any) => (
-  <div
-    className={`flex items-center justify-between py-1.5 ${last ? "" : "border-b border-gray-50"}`}
-  >
-    <span className="text-lg font-black text-green-700 w-8 text-center">
-      {homeVal}
-    </span>
-    <span className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-tighter flex-1 text-center">
-      {label}
-    </span>
-    <span className="text-lg font-black text-indigo-600 w-8 text-center">
-      {awayVal}
-    </span>
   </div>
 );
 

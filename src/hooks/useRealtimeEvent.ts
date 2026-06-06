@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { RealtimeEventDTO } from "../services/websocket/NotificationSocketService";
+import type { RealtimeEventDTO } from "../model/RealtimeEvent";
 
 type RealtimeEventHandler = (event: RealtimeEventDTO) => void;
 
@@ -7,7 +7,9 @@ export function useRealtimeEvent(handler: RealtimeEventHandler) {
   useEffect(() => {
     const listener = (event: Event) => {
       const customEvent = event as CustomEvent<RealtimeEventDTO>;
-      handler(customEvent.detail);
+      if (customEvent.detail) {
+        handler(customEvent.detail);
+      }
     };
 
     window.addEventListener("app-realtime-event", listener);

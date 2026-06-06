@@ -527,7 +527,6 @@ const AdminRegistrationManager: React.FC = () => {
       toast.success("Đã duyệt hồ sơ đăng ký.");
       setPendingApproveId(null);
     } catch (error) {
-      console.error("Lá»—i khi duyá»‡t há»“ sÆ¡:", error);
       toast.error("Không thể duyệt hồ sơ đăng ký.");
     } finally {
       setProcessingId(null);

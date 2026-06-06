@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import ConfirmModal from "../../../components/ConfirmModal";
 import { Modal } from "../../../components/Modal";
@@ -10,6 +10,8 @@ import { RoundModel } from "../../../model/RoundModel";
 import RoundService from "../../../services/RoundService";
 import SeasonService from "../../../services/SeasonService";
 import { PhanTrang } from "../../../utils/PhanTrang";
+import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
 
 const PAGE_SIZE = 10;
 
@@ -86,7 +88,7 @@ const RoundManagement: React.FC = () => {
     fetchSeasons();
   }, []);
 
-  const fetchRounds = async (page = 1, seasonId?: number) => {
+  const fetchRounds = useCallback(async (page = 1, seasonId?: number) => {
     setIsLoading(true);
 
     try {
@@ -108,14 +110,31 @@ const RoundManagement: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchRounds(
       trangHienTai,
       selectedSeasonId ? Number(selectedSeasonId) : undefined,
     );
-  }, [trangHienTai, selectedSeasonId]);
+  }, [fetchRounds, trangHienTai, selectedSeasonId]);
+
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (
+        event.action === "REFETCH_ROUNDS" ||
+        event.action === "REFETCH_SEASONS"
+      ) {
+        void fetchRounds(
+          trangHienTai,
+          selectedSeasonId ? Number(selectedSeasonId) : undefined,
+        );
+      }
+    },
+    [fetchRounds, selectedSeasonId, trangHienTai],
+  );
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   const handleDelete = async (round: RoundModel) => {
     if (!round.id) return;

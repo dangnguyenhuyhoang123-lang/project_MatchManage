@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import type { AppWorkspace } from "../layouts/AppLayout";
-import { ArrowBigLeftDashIcon, ArrowBigLeftIcon } from "lucide-react";
+import { ArrowBigLeftIcon } from "lucide-react";
 
 type MenuItem = {
   label: string;
@@ -161,7 +161,7 @@ export const Sidebar = ({ workspace }: SidebarProps) => {
         className="mb-7 block"
       >
         <p className="text-2xl font-black tracking-tight text-[#008C2F]">
-          PitchPro
+          HDPro
         </p>
         <p className="mt-1 text-xs font-semibold text-gray-500">
           {isClubArea ? "Không gian quản lý CLB" : "Bảng điều khiển quản trị"}

@@ -17,7 +17,7 @@ export interface MatchStats {
   passAccuracy: number;
 }
 
-export interface MatchStatsUpsertRequest = {
+export type MatchStatsUpsertRequest = {
   teamId: number;
   possession: number;
   shots: number;

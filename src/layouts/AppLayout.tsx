@@ -96,8 +96,10 @@ export const AppLayout = ({ children, workspace }: AppLayoutProps) => {
   const navigate = useNavigate();
   useEffect(() => {
     if (alreadyInsideAppLayout) return;
-    if (currentWorkspace === "public") return;
-    if (!user?.id) return;
+    if (!user?.id || currentWorkspace === "public") {
+      NotificationSocketService.disconnect();
+      return;
+    }
 
     NotificationService.getByUser(user.id)
       .then((res) => {
@@ -123,6 +125,11 @@ export const AppLayout = ({ children, workspace }: AppLayoutProps) => {
       user.id,
       (notification) => {
         console.log("New notification:", notification);
+        window.dispatchEvent(
+          new CustomEvent("app-notification", {
+            detail: notification,
+          }),
+        );
 
         setNotifications((prev) => {
           const existed = prev.some((item) => item.id === notification.id);

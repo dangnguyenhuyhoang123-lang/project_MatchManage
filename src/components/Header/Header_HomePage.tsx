@@ -85,7 +85,7 @@ export const Header_HomePage = () => {
           to="/"
           className="text-2xl font-black tracking-tight text-[#1a6e38] transition-transform hover:scale-[1.02]"
         >
-          PitchPro
+          HDPro
         </Link>
       </div>
 

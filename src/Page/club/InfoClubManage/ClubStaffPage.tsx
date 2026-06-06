@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AppLayout } from "../../../layouts/AppLayout";
 import LoadingSpinner from "../../../components/Spinner/LoadingSpinner";
@@ -17,6 +17,8 @@ import {
   useCurrentClubId,
 } from "./clubInfoHelpers";
 import type { TeamModel } from "../../../model/TeamModel";
+import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
+import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
 
 interface StaffMember {
   id: number;
@@ -73,7 +75,7 @@ const ClubStaffPage: React.FC = () => {
   const [deleteTarget, setDeleteTarget] = useState<StaffMember | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const loadStaff = async () => {
+  const loadStaff = useCallback(async () => {
     if (authLoading) return;
 
     if (!currentClubId) {
@@ -109,12 +111,25 @@ const ClubStaffPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authLoading, currentClubId, currentPage]);
 
   useEffect(() => {
     loadStaff();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, currentClubId, currentPage]);
+  }, [loadStaff]);
+
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEventDTO) => {
+      if (
+        event.action === "REFETCH_COACHES" ||
+        event.action === "REFETCH_TEAMS"
+      ) {
+        void loadStaff();
+      }
+    },
+    [loadStaff],
+  );
+
+  useRealtimeEvent(handleRealtimeEvent);
 
   const { coachingStaff, medicalStaff } = useMemo(() => {
     const medicalKeywords = ["BAC SI", "Y TE", "PHYSIO", "FITNESS", "MEDICAL"];

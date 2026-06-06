@@ -17,6 +17,7 @@ import LeagueDetailPage from "./Page/public/explorePage/LeagueDetailPage";
 import SeasonDetailPage from "./Page/public/explorePage/SeasonDetailPage";
 import TeamPublicDetailPage from "./Page/public/explorePage/TeamPublicDetailPage";
 import PlayerPublicDetailPage from "./Page/public/explorePage/PlayerPublicDetailPage";
+import CoachPublicDetailPage from "./Page/public/explorePage/CoachPublicDetailPage";
 import MatchDetail from "./Page/public/MatchDetail";
 import UserProfilePage from "./Page/public/UserProfilePage";
 
@@ -111,6 +112,10 @@ const AppRoutes = () => {
             <Route
               path="/players/:playerId"
               element={<PlayerPublicDetailPage />}
+            />
+            <Route
+              path="/coaches/:coachId"
+              element={<CoachPublicDetailPage />}
             />
             <Route
               path="/public-leagues"

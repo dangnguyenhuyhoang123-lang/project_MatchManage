@@ -84,9 +84,7 @@ export const Modal: React.FC<ModalProps> = ({
             hover:bg-stone-100
             hover:text-black
           "
-        >
-          ✕
-        </button>
+        ></button>
 
         {/* Scrollable Content */}
         <div
