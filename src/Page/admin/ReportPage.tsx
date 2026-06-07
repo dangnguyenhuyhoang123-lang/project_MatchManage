@@ -57,7 +57,7 @@ const tabs: Array<{ key: TabKey; label: string; icon: string }> = [
   { key: "standings", label: "Bảng xếp hạng", icon: "leaderboard" },
   { key: "scorers", label: "Vua phá lưới", icon: "sports_soccer" },
   { key: "cards", label: "Thẻ phạt", icon: "style" },
-  { key: "suspensions", label: "Cầu thủ bị treo giò", icon: "gpp_bad" },
+  // { key: "suspensions", label: "Cầu thủ bị treo giò", icon: "gpp_bad" },
   { key: "motm", label: "Cầu thủ xuất sắc", icon: "workspace_premium" },
 ];
 
@@ -143,7 +143,9 @@ export default function ReportPage() {
         setSelectedSeasonId((current) => current || list[0]?.id || "");
       } catch (error) {
         console.error("Cannot load seasons", error);
-        setErrorMessage(getErrorMessage(error, "Không thể tải dữ liệu báo cáo."));
+        setErrorMessage(
+          getErrorMessage(error, "Không thể tải dữ liệu báo cáo."),
+        );
       }
     };
 
@@ -185,7 +187,9 @@ export default function ReportPage() {
         );
       } catch (error) {
         console.error("Cannot load report data", error);
-        setErrorMessage(getErrorMessage(error, "Không thể tải dữ liệu báo cáo."));
+        setErrorMessage(
+          getErrorMessage(error, "Không thể tải dữ liệu báo cáo."),
+        );
       } finally {
         setLoading(false);
       }

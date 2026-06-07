@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import ConfirmModal from "../../components/ConfirmModal";
 import CommonStatusBadge from "../../components/common/StatusBadge";
@@ -33,12 +33,10 @@ type FormState = {
   maxGoalMinute: string;
   status: "ACTIVE" | "INACTIVE";
   allowedGoalTypes: string[];
-  rankingCriteriaOrder: string;
 };
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
-const DEFAULT_RANKING_CRITERIA =
-  "POINTS,GOAL_DIFFERENCE,GOALS_FOR,HEAD_TO_HEAD,DRAW_LOT";
+const FIXED_RANKING_CRITERIA_LABEL = "Điểm > Hiệu số > Bàn thắng";
 const goalTypeOptions = [
   { value: "NORMAL", label: "Bàn thắng thường" },
   { value: "PENALTY", label: "Penalty" },
@@ -64,57 +62,6 @@ const emptyForm: FormState = {
   maxGoalMinute: "90",
   status: "ACTIVE",
   allowedGoalTypes: ["NORMAL", "PENALTY", "OWN_GOAL"],
-  rankingCriteriaOrder: DEFAULT_RANKING_CRITERIA,
-};
-
-const RANKING_CRITERIA_OPTIONS = [
-  {
-    value: "POINTS",
-    label: "Điểm",
-  },
-  {
-    value: "GOAL_DIFFERENCE",
-    label: "Hiệu số bàn thắng bại",
-  },
-  {
-    value: "GOALS_FOR",
-    label: "Số bàn thắng",
-  },
-  {
-    value: "HEAD_TO_HEAD",
-    label: "Đối đầu trực tiếp",
-  },
-  {
-    value: "DRAW_LOT",
-    label: "Rút thăm",
-  },
-];
-
-const parseRankingCriteria = (value?: string | null): string[] => {
-  if (!value) return [];
-
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-};
-
-const formatRankingCriteriaLabel = (value?: string | null): string => {
-  const selected = parseRankingCriteria(value);
-
-  if (selected.length === 0) {
-    return "Chưa cấu hình";
-  }
-
-  return selected
-    .map((criterion) => {
-      const option = RANKING_CRITERIA_OPTIONS.find(
-        (item) => item.value === criterion,
-      );
-
-      return option?.label ?? criterion;
-    })
-    .join(" → ");
 };
 
 // Xử lý input value.
@@ -160,7 +107,6 @@ function buildFormFromRule(rule: SystemRule): FormState {
     maxGoalMinute: toInputValue(rule.maxGoalMinute),
     status: rule.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
     allowedGoalTypes: parseGoalTypes(rule.allowedGoalTypes),
-    rankingCriteriaOrder: rule.rankingCriteriaOrder || DEFAULT_RANKING_CRITERIA,
   };
 }
 
@@ -185,38 +131,7 @@ function buildPayload(form: FormState): SystemRulePayload {
     maxGoalMinute: toNullableNumber(form.maxGoalMinute),
     status: form.status,
     allowedGoalTypes: form.allowedGoalTypes.join(",") || null,
-    rankingCriteriaOrder:
-      form.rankingCriteriaOrder
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean)
-        .join(",") || DEFAULT_RANKING_CRITERIA,
   };
-}
-
-// Kiểm tra dữ liệu hợp lệ.
-function validateRankingCriteriaOrder(value: string): string | null {
-  const selected = parseRankingCriteria(value);
-
-  if (selected.length === 0) {
-    return "Thứ tự ưu tiên xếp hạng không được để trống.";
-  }
-
-  const validValues = RANKING_CRITERIA_OPTIONS.map((item) => item.value);
-
-  const invalidCriterion = selected.find(
-    (criterion) => !validValues.includes(criterion),
-  );
-
-  if (invalidCriterion) {
-    return `Tiêu chí xếp hạng không hợp lệ: ${invalidCriterion}.`;
-  }
-
-  if (!selected.includes("POINTS")) {
-    return "Thứ tự ưu tiên xếp hạng nên có tiêu chí POINTS.";
-  }
-
-  return null;
 }
 
 // Kiểm tra dữ liệu hợp lệ.
@@ -308,13 +223,6 @@ function validateForm(form: FormState) {
     errors.maxGoalMinute = "Phút tối đa ghi bàn phải lớn hơn 0.";
   }
 
-  const rankingCriteriaError = validateRankingCriteriaOrder(
-    form.rankingCriteriaOrder,
-  );
-
-  if (rankingCriteriaError) {
-    errors.rankingCriteriaOrder = rankingCriteriaError;
-  }
   return errors;
 }
 
@@ -577,6 +485,25 @@ const SystemRulesPage: React.FC = () => {
           />
         </section>
 
+        {/* <section className="rounded-[1.5rem] border border-blue-200 bg-blue-50 p-5 text-blue-700">
+          <div className="flex items-start gap-3">
+            <span className="material-symbols-outlined text-[22px]">info</span>
+            <div>
+              <h2 className="text-sm font-black uppercase tracking-wide">
+                Tiêu chí xếp hạng cố định
+              </h2>
+              <p className="mt-1 text-sm font-semibold leading-6">
+                Tiêu chí xếp hạng đang được hệ thống áp dụng cố định:{" "}
+                <span className="font-black">
+                  {FIXED_RANKING_CRITERIA_LABEL}
+                </span>
+                . Admin chỉ cần cấu hình điểm thắng, điểm hòa và điểm thua trong
+                bộ luật.
+              </p>
+            </div>
+          </div>
+        </section> */}
+
         <section className="rounded-[2rem] bg-white p-4 shadow-sm ring-1 ring-gray-100 md:p-6">
           <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
@@ -771,7 +698,7 @@ function RuleCard({
         <InfoItem
           icon="leaderboard"
           label="Ưu tiên xếp hạng"
-          value={formatRankingCriteriaLabel(rule.rankingCriteriaOrder)}
+          value={FIXED_RANKING_CRITERIA_LABEL}
         />
       </div>
 
@@ -1036,40 +963,18 @@ function RuleModal({
               onChange={(value) => onFieldChange("maxGoalMinute", value)}
             />
 
-            <div className="md:col-span-2">
-              <TextField
-                label="Thứ tự ưu tiên xếp hạng"
-                value={form.rankingCriteriaOrder}
-                error={errors.rankingCriteriaOrder}
-                onChange={(value) =>
-                  onFieldChange("rankingCriteriaOrder", value)
-                }
-              />
-
-              <div className="mt-3 rounded-2xl bg-[#F5F3EF] p-4">
-                <p className="mb-2 text-xs font-black uppercase tracking-widest text-gray-400">
-                  Gợi ý tiêu chí
-                </p>
-
-                <div className="flex flex-wrap gap-2">
-                  {RANKING_CRITERIA_OPTIONS.map((option) => (
-                    <span
-                      key={option.value}
-                      className="rounded-full bg-white px-3 py-1 text-xs font-bold text-gray-700"
-                    >
-                      {option.value} - {option.label}
-                    </span>
-                  ))}
-                </div>
-
-                <p className="mt-3 text-xs font-semibold leading-5 text-gray-500">
-                  Nhập các tiêu chí cách nhau bằng dấu phẩy. Ví dụ:{" "}
-                  <span className="font-black text-gray-700">
-                    {DEFAULT_RANKING_CRITERIA}
-                  </span>
-                </p>
-              </div>
-            </div>
+            {/* <div className="md:col-span-2 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-blue-700">
+              <p className="text-xs font-black uppercase tracking-widest">
+                Tiêu chí xếp hạng cố định
+              </p>
+              <p className="mt-2 text-sm font-semibold leading-6">
+                Hệ thống tự áp dụng thứ tự{" "}
+                <span className="font-black">
+                  {FIXED_RANKING_CRITERIA_LABEL}
+                </span>
+                . Không cần cấu hình tiêu chí xếp hạng trong bộ luật.
+              </p>
+            </div> */}
           </div>
 
           <div className="mt-8 flex flex-col-reverse gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:justify-end">

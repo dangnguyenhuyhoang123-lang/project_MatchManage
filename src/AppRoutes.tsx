@@ -24,6 +24,7 @@ import UserProfilePage from "./Page/public/UserProfilePage";
 import DashBoardPage from "./Page/testPage/DashBoardPage";
 
 import TournamentManagement from "./Page/admin/LeagueManage/TournamentManagement";
+import SeasonTeamManagement from "./Page/admin/LeagueManage/components/SeasonTeamManagement";
 import SeasonInvitationManager from "./Page/admin/LeagueManage/SeasonInvitationManager";
 import RoundManagement from "./Page/admin/RoundManage/RoundManagement";
 import ClubManagement from "./Page/admin/TeamManage/ClubManagement";
@@ -150,6 +151,10 @@ const AppRoutes = () => {
             />
             <Route path="/admin/dashboard" element={<DashBoardPage />} />
             <Route path="/admin/leagues" element={<TournamentManagement />} />
+            <Route
+              path="/admin/season-teams"
+              element={<SeasonTeamManagement />}
+            />
             <Route
               path="/admin/invitations"
               element={<SeasonInvitationManager />}

@@ -12,6 +12,8 @@ import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../services/websocket/NotificationSocketService";
 import { MatchModel } from "../../../model/Match/MatchModel";
 import { TeamModel } from "../../../model/TeamModel";
+import { PhanTrang } from "../../../utils/PhanTrang";
+import { getErrorMessage } from "../../../utils/errorUtils";
 
 // Team constants are now dynamically fetched or imported
 
@@ -40,6 +42,7 @@ const statusConfig: Record<
 
 const fallbackLogo =
   "https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=200&h=200&fit=crop";
+const PAGE_SIZE = 8;
 
 const MatchManagePageClub: React.FC = () => {
   const { currentClubId, authLoading } = useCurrentClubId();
@@ -49,6 +52,9 @@ const MatchManagePageClub: React.FC = () => {
   >(null);
   const [matches, setMatches] = useState<MatchModel[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("SCHEDULED");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [selectedMatch, setSelectedMatch] = useState<MatchModel | null>(null);
   const [modalMode, setModalMode] = useState<"edit" | "view">("edit");
   const [loading, setLoading] = useState(true);
@@ -66,8 +72,9 @@ const MatchManagePageClub: React.FC = () => {
       setLoading(true);
       setError("");
       const [response, team] = await Promise.all([
-        MatchService.getAllMatches(0, 200, {
+        MatchService.getAllMatches(currentPage - 1, PAGE_SIZE, {
           teamId: currentClubId,
+          status: statusFilter,
         }),
         TeamService.getTeamById(currentClubId),
       ]);
@@ -77,20 +84,33 @@ const MatchManagePageClub: React.FC = () => {
         .map(normalizeMatch)
         .filter(Boolean) as MatchModel[];
 
-      setMatches(
-        normalized.filter(
-          (match) =>
-            getHomeTeamId(match) === currentClubId ||
-            getAwayTeamId(match) === currentClubId,
-        ),
+      const clubMatches = normalized.filter(
+        (match) =>
+          getHomeTeamId(match) === currentClubId ||
+          getAwayTeamId(match) === currentClubId,
       );
+
+      setMatches(clubMatches);
+      const nextTotalPages = extractTotalPages(
+        response.data,
+        clubMatches.length,
+      );
+      setTotalPages(nextTotalPages);
+      setTotalItems(extractTotalItems(response.data, clubMatches.length));
+
+      if (currentPage > nextTotalPages) {
+        setCurrentPage(nextTotalPages);
+      }
     } catch (err) {
       console.error("Cannot load club matches", err);
-      setError("Không thể tải danh sách trận đấu.");
+      setMatches([]);
+      setTotalPages(1);
+      setTotalItems(0);
+      setError(getErrorMessage(err, "Không thể tải danh sách trận đấu."));
     } finally {
       setLoading(false);
     }
-  }, [authLoading, currentClubId]);
+  }, [authLoading, currentClubId, currentPage, statusFilter]);
 
   useEffect(() => {
     fetchMatches();
@@ -115,19 +135,15 @@ const MatchManagePageClub: React.FC = () => {
     [matches, statusFilter],
   );
 
-  const statusCounts = useMemo(
-    () =>
-      matches.reduce<Record<StatusFilter, number>>(
-        (total, match) => {
-          if (match.status in total) {
-            total[match.status as StatusFilter] += 1;
-          }
-          return total;
-        },
-        { SCHEDULED: 0, LIVE: 0, FINISHED: 0 },
-      ),
-    [matches],
-  );
+  const statusCounts = useMemo(() => {
+    const counts: Record<StatusFilter, number> = {
+      SCHEDULED: 0,
+      LIVE: 0,
+      FINISHED: 0,
+    };
+    counts[statusFilter] = totalItems;
+    return counts;
+  }, [statusFilter, totalItems]);
 
   const nextMatch = useMemo(() => {
     const now = Date.now();
@@ -149,6 +165,11 @@ const MatchManagePageClub: React.FC = () => {
   );
 
   // Mở modal hoac khung thao tác.
+  const handleStatusChange = useCallback((status: StatusFilter) => {
+    setStatusFilter(status);
+    setCurrentPage(1);
+  }, []);
+
   const openLineupModal = async (match: MatchModel) => {
     if (!currentClubId || !match.id) {
       setError("Không xác định được câu lạc bộ hiện tại.");
@@ -178,7 +199,7 @@ const MatchManagePageClub: React.FC = () => {
         <MatchTabs
           active={statusFilter}
           counts={statusCounts}
-          onChange={setStatusFilter}
+          onChange={handleStatusChange}
         />
 
         {error && (
@@ -205,6 +226,14 @@ const MatchManagePageClub: React.FC = () => {
               />
             ))}
           </div>
+        )}
+
+        {!loading && totalPages > 1 && (
+          <PhanTrang
+            tongSoTrang={totalPages}
+            trangHienTai={currentPage}
+            xuLyTrang={setCurrentPage}
+          />
         )}
 
         <PerformanceStats stats={stats} />
@@ -482,6 +511,8 @@ function PerformanceStats({
 }: {
   stats: { winRate: string; goalsFor: string; goalsAgainst: string };
 }) {
+  void stats;
+
   return (
     <section className="space-y-5">
       {/* <h3 className="font-['Be_Vietnam_Pro'] text-xl font-black text-gray-900">
@@ -519,37 +550,6 @@ function PerformanceStats({
   );
 }
 
-// Hiển thị StatCard.
-function StatCard({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: string;
-  icon?: string;
-}) {
-  return (
-    <div className="rounded-none border border-gray-100 bg-white p-5 shadow-sm">
-      <span className="mb-2 block text-xs font-black uppercase tracking-wider text-indigo-600">
-        {label}
-      </span>
-
-      <div className="flex items-baseline gap-2">
-        <span className="font-['Be_Vietnam_Pro'] text-3xl font-black text-gray-900">
-          {value}
-        </span>
-
-        {icon && (
-          <span className="material-symbols-outlined text-sm text-[#008C2F]">
-            {icon}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // Xử lý matches.
 function extractMatches(data: any): any[] {
   if (Array.isArray(data)) return data;
@@ -557,6 +557,33 @@ function extractMatches(data: any): any[] {
   if (Array.isArray(data?.data)) return data.data;
   if (Array.isArray(data?.data?.content)) return data.data.content;
   return [];
+}
+
+function extractTotalPages(data: any, itemCount: number) {
+  const rawTotalPages = data?.totalPages ?? data?.data?.totalPages;
+  const totalPages = Number(rawTotalPages);
+
+  if (Number.isFinite(totalPages) && totalPages > 0) {
+    return totalPages;
+  }
+
+  if (Array.isArray(data)) {
+    return Math.max(1, Math.ceil(itemCount / PAGE_SIZE));
+  }
+
+  return 1;
+}
+
+function extractTotalItems(data: any, itemCount: number) {
+  const rawTotalItems =
+    data?.totalElements ?? data?.totalItems ?? data?.data?.totalElements;
+  const totalItems = Number(rawTotalItems);
+
+  if (Number.isFinite(totalItems) && totalItems >= 0) {
+    return totalItems;
+  }
+
+  return itemCount;
 }
 
 // Chuẩn hóa match.

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import CreateTournament from "./CreateTournament";
 import CreateSeasonModal from "./CreateSeasonModal";
+import SeasonTeamManagement from "./components/SeasonTeamManagement";
 
 import ConfirmModal from "../../../components/ConfirmModal";
 import { Modal } from "../../../components/Modal";
@@ -18,7 +19,6 @@ import { getErrorMessage } from "../../../utils/errorUtils";
 
 type FilterState = {
   search: string;
-  scale: string;
   status: string;
 };
 
@@ -31,7 +31,6 @@ const PAGE_SIZE = 10;
 
 const DEFAULT_FILTERS: FilterState = {
   search: "",
-  scale: "Tất cả quy mô",
   status: "Tất cả trạng thái",
 };
 
@@ -89,13 +88,11 @@ const TournamentManagement: React.FC = () => {
   const [seasonModalOpen, setSeasonModalOpen] = useState(false);
   const [selectedSeason, setSelectedSeason] = useState<any | null>(null);
   const [seasonLeagueId, setSeasonLeagueId] = useState<number | null>(null);
-
-  const hasClientFilters = useMemo(
-    () =>
-      appliedFilters.scale !== "Tất cả quy mô" ||
-      appliedFilters.status !== "Tất cả trạng thái",
-    [appliedFilters],
-  );
+  const [seasonTeamModal, setSeasonTeamModal] = useState<{
+    seasonId: number;
+    seasonName?: string;
+    maxTeams?: number | null;
+  } | null>(null);
 
   const filterClientItems = useCallback(
     (leagues: LeagueWithSeasons[], filters: FilterState) => {
@@ -107,14 +104,11 @@ const TournamentManagement: React.FC = () => {
           normalizeKeyword(league.name).includes(keyword) ||
           normalizeKeyword(league.country).includes(keyword);
 
-        const matchesScale =
-          filters.scale === "Tất cả quy mô" || league.scale === filters.scale;
-
         const matchesStatus =
           filters.status === "Tất cả trạng thái" ||
           league.status === filters.status;
 
-        return matchesSearch && matchesScale && matchesStatus;
+        return matchesSearch && matchesStatus;
       });
     },
     [],
@@ -150,10 +144,7 @@ const TournamentManagement: React.FC = () => {
       setIsLoading(true);
 
       try {
-        if (
-          filters.scale !== "Tất cả quy mô" ||
-          filters.status !== "Tất cả trạng thái"
-        ) {
+        if (filters.status !== "Tất cả trạng thái") {
           const baseResponse = await LeagueService.getAllLeaguesNormalized(
             0,
             1,
@@ -397,14 +388,6 @@ const TournamentManagement: React.FC = () => {
             </label>
 
             <FilterSelect
-              label="Quy mô"
-              name="scale"
-              value={draftFilters.scale}
-              onChange={handleFilterChange}
-              options={["Tất cả quy mô", "Quốc gia", "Khu vực", "Quốc tế"]}
-            />
-
-            <FilterSelect
               label="Trạng thái"
               name="status"
               value={draftFilters.status}
@@ -434,11 +417,11 @@ const TournamentManagement: React.FC = () => {
             </div>
           </div>
 
-          {hasClientFilters && (
+          {/* {hasClientFilters && (
             <div className="mt-4 rounded-[1rem] bg-[#B2F746]/20 px-4 py-3 text-xs font-bold text-[#496F00]">
-              {/* Đang dùng bộ lọc phía client cho quy mô hoặc trạng thái. */}
+              Đang dùng bộ lọc phía client cho quy mô hoặc trạng thái.
             </div>
-          )}
+          )} */}
         </section>
 
         <section className="space-y-4">
@@ -477,6 +460,20 @@ const TournamentManagement: React.FC = () => {
                   setSeasonModalOpen(true);
                 }}
                 onDeleteSeason={handleDeleteSeason}
+                onManageSeasonTeams={(season, maxTeams) => {
+                  const seasonId = Number(season.id);
+
+                  if (!Number.isFinite(seasonId) || seasonId <= 0) {
+                    toast.error("Không xác định được mùa giải.");
+                    return;
+                  }
+
+                  setSeasonTeamModal({
+                    seasonId,
+                    seasonName: season.name || season.year,
+                    maxTeams,
+                  });
+                }}
               />
             ))
           ) : (
@@ -530,6 +527,19 @@ const TournamentManagement: React.FC = () => {
           onSuccess={() => fetchLeagues(trangHienTai, appliedFilters)}
         />
       </Modal>
+      <Modal
+        open={seasonTeamModal !== null}
+        onClose={() => setSeasonTeamModal(null)}
+        size="xl"
+      >
+        {seasonTeamModal && (
+          <SeasonTeamManagement
+            seasonId={seasonTeamModal.seasonId}
+            seasonName={seasonTeamModal.seasonName}
+            maxTeams={seasonTeamModal.maxTeams}
+          />
+        )}
+      </Modal>
       <ConfirmModal
         open={deletingLeague !== null}
         title="Xóa giải đấu"
@@ -567,6 +577,7 @@ const TournamentRow: React.FC<{
   onAddSeason: (leagueId: number) => void;
   onEditSeason: (season: any) => void;
   onDeleteSeason: (seasonId: number) => void;
+  onManageSeasonTeams: (season: any, maxTeams?: number | null) => void;
 }> = ({
   item,
   onEdit,
@@ -574,6 +585,7 @@ const TournamentRow: React.FC<{
   onAddSeason,
   onEditSeason,
   onDeleteSeason,
+  onManageSeasonTeams,
 }) => {
   const { league, seasons } = item;
   const [isExpanded, setIsExpanded] = useState(false);
@@ -749,6 +761,12 @@ const TournamentRow: React.FC<{
                     ? `Bộ luật #${systemRuleId}`
                     : "Chưa gán bộ luật");
 
+                const maxTeams =
+                  season.maxTeams ??
+                  season.systemRule?.maxTeams ??
+                  matchedRule?.maxTeams ??
+                  null;
+
                 const status = getSeasonStatus(season);
 
                 return (
@@ -785,6 +803,16 @@ const TournamentRow: React.FC<{
                     </div>
 
                     <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-[#E4E2DE] pt-4">
+                      <button
+                        type="button"
+                        onClick={() => onManageSeasonTeams(season, maxTeams)}
+                        className="inline-flex items-center gap-1 rounded-full bg-green-50 px-3 py-2 text-xs font-black text-[#0D631B] transition hover:bg-green-100"
+                      >
+                        <span className="material-symbols-outlined text-sm">
+                          groups
+                        </span>
+                        Quản lý đội tham gia
+                      </button>
                       <button
                         type="button"
                         onClick={() => onEditSeason(season)}

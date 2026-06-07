@@ -50,7 +50,8 @@ function buildStadiumForm(
     city: stadium?.city ?? team?.city ?? "",
     country: stadium?.country ?? "Việt Nam",
     capacity: stadium?.capacity ? String(stadium.capacity) : "",
-    grassType: stadium?.grassType ?? stadium?.surfaceType ?? "natural",
+    grassType:
+      stadium?.grass ?? stadium?.grassType ?? stadium?.surfaceType ?? "NATURAL",
     fifaStarRating: stadium?.fifaStarRating
       ? String(stadium.fifaStarRating)
       : "2",
@@ -421,7 +422,10 @@ function StadiumHeroCard({
               </div>
 
               <span className="text-sm font-black text-gray-900">
-                {stadium?.grassType ?? stadium?.surfaceType ?? "Chưa cập nhật"}
+                {stadium?.grass ??
+                  stadium?.grassType ??
+                  stadium?.surfaceType ??
+                  "Chưa cập nhật"}
               </span>
             </div>
           </div>
@@ -485,6 +489,7 @@ function FacilitiesSection({ stadium }: { stadium: any | null }) {
       icon: "grass",
       title: "Mặt sân",
       description:
+        stadium?.grass ??
         stadium?.grassType ??
         stadium?.surfaceType ??
         "Chưa cập nhật loại mặt cỏ.",

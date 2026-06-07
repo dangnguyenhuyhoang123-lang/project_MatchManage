@@ -21,6 +21,11 @@ const adminMenu: MenuItem[] = [
     aliases: ["/league"],
   },
   {
+    label: "Đội tham gia mùa giải",
+    path: "/admin/season-teams",
+    icon: "groups",
+  },
+  {
     label: "Lời mời mùa giải",
     path: "/admin/invitations",
     icon: "outgoing_mail",

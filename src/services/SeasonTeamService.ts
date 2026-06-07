@@ -16,6 +16,14 @@ class SeasonTeamService {
     });
   }
 
+  // Gọi API lấy đội tham gia theo mùa giải.
+  getSeasonTeamsBySeason(seasonId: number) {
+    return axiosClient.get(API_BASE_URL, {
+      params: { seasonId },
+      withCredentials: true,
+    });
+  }
+
   // Gọi API lấy season team by id.
   getSeasonTeamById(id: number) {
     return axiosClient.get(`${API_BASE_URL}/${id}`);
@@ -29,6 +37,14 @@ class SeasonTeamService {
   // Gọi API cập nhật season team.
   updateSeasonTeam(id: number, data: SeasonTeam) {
     return axiosClient.put(`${API_BASE_URL}/${id}`, data);
+  }
+
+  // Gọi API cập nhật trạng thái đội trong mùa giải.
+  updateSeasonTeamStatus(id: number, status: "ACTIVE" | "INACTIVE") {
+    return axiosClient.patch(`${API_BASE_URL}/${id}/status`, null, {
+      params: { status },
+      withCredentials: true,
+    });
   }
 
   // Gọi API xóa season team.
