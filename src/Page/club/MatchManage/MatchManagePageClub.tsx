@@ -86,7 +86,7 @@ const MatchManagePageClub: React.FC = () => {
       );
     } catch (err) {
       console.error("Cannot load club matches", err);
-      setError("Không thể tải danh sách trận đấu từ API.");
+      setError("Không thể tải danh sách trận đấu.");
     } finally {
       setLoading(false);
     }
@@ -148,6 +148,7 @@ const MatchManagePageClub: React.FC = () => {
     [matches, currentClubId],
   );
 
+  // Mở modal hoac khung thao tác.
   const openLineupModal = async (match: MatchModel) => {
     if (!currentClubId || !match.id) {
       setError("Không xác định được câu lạc bộ hiện tại.");
@@ -232,6 +233,7 @@ const MatchManagePageClub: React.FC = () => {
 
 export default MatchManagePageClub;
 
+// Hiển thị PageHeader.
 function PageHeader({
   nextMatch,
   teamName,
@@ -289,6 +291,7 @@ function PageHeader({
   );
 }
 
+// Hiển thị TimeUnit.
 function TimeUnit({ value, unit }: { value: string; unit: string }) {
   return (
     <span>
@@ -298,6 +301,7 @@ function TimeUnit({ value, unit }: { value: string; unit: string }) {
   );
 }
 
+// Hiển thị MatchTabs.
 function MatchTabs({
   active,
   counts,
@@ -337,6 +341,7 @@ function MatchTabs({
   );
 }
 
+// Hiển thị MatchCardItem.
 function MatchCardItem({
   match,
   onOpen,
@@ -435,6 +440,7 @@ function MatchCardItem({
   );
 }
 
+// Hiển thị TeamBlock.
 function TeamBlock({ name, logo }: { name: string; logo?: string }) {
   return (
     <div className="flex w-1/3 flex-col items-center gap-3">
@@ -453,6 +459,7 @@ function TeamBlock({ name, logo }: { name: string; logo?: string }) {
   );
 }
 
+// Hiển thị EmptyState.
 function EmptyState({ label }: { label: string }) {
   return (
     <div className="rounded-sm border border-dashed border-gray-200 bg-white p-10 text-center">
@@ -462,13 +469,14 @@ function EmptyState({ label }: { label: string }) {
       <p className="mt-3 font-['Be_Vietnam_Pro'] text-lg font-black text-gray-800">
         Không có trận {label.toLowerCase()}
       </p>
-      <p className="mt-1 text-sm text-gray-500">
+      {/* <p className="mt-1 text-sm text-gray-500">
         Dữ liệu sẽ hiển thị khi API trả về trận đấu thuộc câu lạc bộ hiện tại.
-      </p>
+      </p> */}
     </div>
   );
 }
 
+// Hiển thị PerformanceStats.
 function PerformanceStats({
   stats,
 }: {
@@ -476,7 +484,7 @@ function PerformanceStats({
 }) {
   return (
     <section className="space-y-5">
-      <h3 className="font-['Be_Vietnam_Pro'] text-xl font-black text-gray-900">
+      {/* <h3 className="font-['Be_Vietnam_Pro'] text-xl font-black text-gray-900">
         Thống kê Phong độ
       </h3>
 
@@ -506,11 +514,12 @@ function PerformanceStats({
             Báo cáo chi tiết
           </span>
         </button>
-      </div>
+      </div> */}
     </section>
   );
 }
 
+// Hiển thị StatCard.
 function StatCard({
   label,
   value,
@@ -541,6 +550,7 @@ function StatCard({
   );
 }
 
+// Xử lý matches.
 function extractMatches(data: any): any[] {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.content)) return data.content;
@@ -549,6 +559,7 @@ function extractMatches(data: any): any[] {
   return [];
 }
 
+// Chuẩn hóa match.
 function normalizeMatch(raw: any): MatchModel | null {
   const id = Number(raw?.id ?? raw?.matchId);
   if (!id) return null;
@@ -594,34 +605,42 @@ function normalizeMatch(raw: any): MatchModel | null {
   });
 }
 
+// Lấy home team id.
 function getHomeTeamId(match: MatchModel) {
   return Number(match.homeTeam?.id ?? 0);
 }
 
+// Lấy away team id.
 function getAwayTeamId(match: MatchModel) {
   return Number(match.awayTeam?.id ?? 0);
 }
 
+// Lấy home team name.
 function getHomeTeamName(match: MatchModel) {
   return match.homeTeam?.name || "Đội nhà";
 }
 
+// Lấy away team name.
 function getAwayTeamName(match: MatchModel) {
   return match.awayTeam?.name || "Đội khách";
 }
 
+// Lấy home team logo.
 function getHomeTeamLogo(match: MatchModel) {
   return match.homeTeam?.logo || "";
 }
 
+// Lấy away team logo.
 function getAwayTeamLogo(match: MatchModel) {
   return match.awayTeam?.logo || "";
 }
 
+// Lấy match stadium.
 function getMatchStadium(match: MatchModel) {
   return match.homeTeam?.stadiumName || match.homeTeam?.stadium || "";
 }
 
+// Lấy match competition.
 function getMatchCompetition(match: MatchModel) {
   const season = match.season as
     | (NonNullable<MatchModel["season"]> & { name?: string })
@@ -635,6 +654,7 @@ function getMatchCompetition(match: MatchModel) {
   );
 }
 
+// Định dạng date time.
 function formatDateTime(value: string | Date) {
   if (!value) return "Chưa cập nhật";
   const date = new Date(value);
@@ -649,6 +669,7 @@ function formatDateTime(value: string | Date) {
   }).format(date);
 }
 
+// Lấy countdown.
 function getCountdown(value?: string | Date) {
   if (!value) return { days: "00", hours: "00", minutes: "00" };
   const diff = Math.max(new Date(value).getTime() - Date.now(), 0);
@@ -664,6 +685,7 @@ function getCountdown(value?: string | Date) {
   };
 }
 
+// Tạo dữ liệu stats.
 function buildStats(matches: MatchModel[], teamId?: number) {
   const finished = matches.filter(
     (match) =>

@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { TeamModel } from "../../../model/TeamModel";
 import TeamService from "../../../services/TeamService";
 import StadiumService from "../../../services/StadiumService";
+import { getErrorMessage } from "../../../utils/errorUtils";
 
 type StadiumOption = {
   id: number;
@@ -15,6 +16,7 @@ interface Props {
   onSuccess: () => void;
 }
 
+// Tạo empty team.
 const createEmptyTeam = () =>
   new TeamModel({
     name: "",
@@ -43,6 +45,7 @@ const AddClubModal: React.FC<Props> = ({ onClose, currentTeam, onSuccess }) => {
   }, [currentTeam]);
 
   useEffect(() => {
+    // Lấy stadiums.
     const fetchStadiums = async () => {
       try {
         const response = await StadiumService.getAllStadiums();
@@ -105,6 +108,7 @@ const AddClubModal: React.FC<Props> = ({ onClose, currentTeam, onSuccess }) => {
     });
   };
 
+  // Xử lý logo file change.
   const handleLogoFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -130,6 +134,7 @@ const AddClubModal: React.FC<Props> = ({ onClose, currentTeam, onSuccess }) => {
     reader.readAsDataURL(file);
   };
 
+  // Xử lý gui biểu mẫu.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -152,7 +157,7 @@ const AddClubModal: React.FC<Props> = ({ onClose, currentTeam, onSuccess }) => {
       onClose();
     } catch (error) {
       console.error("Lỗi khi lưu đội bóng:", error);
-      toast.error("Có lỗi xảy ra khi lưu đội bóng.");
+      toast.error(getErrorMessage(error, "Có lỗi xảy ra khi lưu đội bóng."));
     } finally {
       setIsSubmitting(false);
     }
@@ -190,7 +195,7 @@ const AddClubModal: React.FC<Props> = ({ onClose, currentTeam, onSuccess }) => {
                 </h1>
 
                 <p className="text-zinc-500">
-                  Đồng bộ dữ liệu đội bóng với API quản lý đội.
+                  Đồng bộ dữ liệu đội bóng với quản lý đội.
                 </p>
               </div>
 

@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import { Header_HomePage } from "../components/Header/Header_HomePage";
 import { AppLayout } from "./AppLayout";
 
+// Hiển thị PublicLayout.
 const PublicLayout = () => {
   return (
     <AppLayout workspace="public">

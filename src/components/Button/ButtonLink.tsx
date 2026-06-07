@@ -6,6 +6,7 @@ type ButtonLinkProps = {
   className?: string;
 };
 
+// Hiển thị ButtonLink.
 const ButtonLink = ({ label, to, className = "" }: ButtonLinkProps) => {
   return (
     <Link

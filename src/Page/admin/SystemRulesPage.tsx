@@ -1,12 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import ConfirmModal from "../../components/ConfirmModal";
+import CommonStatusBadge from "../../components/common/StatusBadge";
 import SystemRuleService, {
   type SystemRule,
   type SystemRulePayload,
 } from "../../services/SystemRuleService";
 import { useRealtimeEvent } from "../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../model/RealtimeEvent";
+import { getErrorMessage } from "../../utils/errorUtils";
+import {
+  getStatusTone,
+  getSystemRuleStatusLabel,
+} from "../../utils/statusUtils";
 
 type FormState = {
   ruleName: string;
@@ -111,10 +117,12 @@ const formatRankingCriteriaLabel = (value?: string | null): string => {
     .join(" → ");
 };
 
+// Xử lý input value.
 function toInputValue(value: number | null) {
   return value == null ? "" : String(value);
 }
 
+// Xử lý nullable number.
 function toNullableNumber(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return null;
@@ -123,6 +131,7 @@ function toNullableNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+// Phân tích goal types.
 function parseGoalTypes(value: string | null) {
   return (value ?? "")
     .split(",")
@@ -130,6 +139,7 @@ function parseGoalTypes(value: string | null) {
     .filter(Boolean);
 }
 
+// Tạo dữ liệu form from rule.
 function buildFormFromRule(rule: SystemRule): FormState {
   return {
     ruleName: rule.ruleName,
@@ -154,6 +164,7 @@ function buildFormFromRule(rule: SystemRule): FormState {
   };
 }
 
+// Tạo dữ liệu payload.
 function buildPayload(form: FormState): SystemRulePayload {
   return {
     ruleName: form.ruleName.trim(),
@@ -183,6 +194,7 @@ function buildPayload(form: FormState): SystemRulePayload {
   };
 }
 
+// Kiểm tra dữ liệu hợp lệ.
 function validateRankingCriteriaOrder(value: string): string | null {
   const selected = parseRankingCriteria(value);
 
@@ -207,6 +219,7 @@ function validateRankingCriteriaOrder(value: string): string | null {
   return null;
 }
 
+// Kiểm tra dữ liệu hợp lệ.
 function validateForm(form: FormState) {
   const errors: FormErrors = {};
   const maxTeams = Number(form.maxTeams);
@@ -305,6 +318,7 @@ function validateForm(form: FormState) {
   return errors;
 }
 
+// Định dạng range.
 function formatRange(from: number | null, to: number | null, suffix = "") {
   if (from == null && to == null) return "Chưa cấu hình";
   if (from == null) return `Tối đa ${to}${suffix}`;
@@ -312,10 +326,12 @@ function formatRange(from: number | null, to: number | null, suffix = "") {
   return `${from} - ${to}${suffix}`;
 }
 
+// Định dạng value.
 function formatValue(value: number | null, fallback = "Chưa cấu hình") {
   return value == null ? fallback : String(value);
 }
 
+// Xử lý goal type label.
 function goalTypeLabel(value: string) {
   return goalTypeOptions.find((item) => item.value === value)?.label ?? value;
 }
@@ -382,6 +398,7 @@ const SystemRulesPage: React.FC = () => {
 
   useRealtimeEvent(handleRealtimeEvent);
 
+  // Mở modal hoac khung thao tác.
   const openCreateModal = () => {
     setEditingRule(null);
     setForm(emptyForm);
@@ -389,6 +406,7 @@ const SystemRulesPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  // Mở modal hoac khung thao tác.
   const openEditModal = (rule: SystemRule) => {
     setEditingRule(rule);
     setForm(buildFormFromRule(rule));
@@ -396,6 +414,7 @@ const SystemRulesPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  // Đóng modal hoac khung thao tác.
   const closeModal = () => {
     if (submitting) return;
 
@@ -405,6 +424,7 @@ const SystemRulesPage: React.FC = () => {
     setErrors({});
   };
 
+  // Cập nhật field.
   const updateField = (name: keyof FormState, value: string) => {
     setForm((prev) => ({
       ...prev,
@@ -416,6 +436,7 @@ const SystemRulesPage: React.FC = () => {
     }));
   };
 
+  // Xử lý goal type.
   const toggleGoalType = (goalType: string) => {
     setForm((prev) => {
       const exists = prev.allowedGoalTypes.includes(goalType);
@@ -429,6 +450,7 @@ const SystemRulesPage: React.FC = () => {
     });
   };
 
+  // Xử lý gui biểu mẫu.
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -466,10 +488,12 @@ const SystemRulesPage: React.FC = () => {
     }
   };
 
+  // Xử lý xóa dữ liệu.
   const handleDelete = async (rule: SystemRule) => {
     setDeletingRule(rule);
   };
 
+  // Xử lý xóa dữ liệu.
   const handleConfirmDelete = async () => {
     if (!deletingRule) return;
 
@@ -481,9 +505,7 @@ const SystemRulesPage: React.FC = () => {
       setDeletingRule(null);
     } catch (error: any) {
       console.error("Lỗi khi xóa bộ luật:", error);
-      const apiMsg = String(
-        error?.response?.data?.message || error?.response?.data || "",
-      );
+      const apiMsg = getErrorMessage(error, "");
       if (
         apiMsg.includes("season") ||
         apiMsg.includes("Season") ||
@@ -497,7 +519,10 @@ const SystemRulesPage: React.FC = () => {
         );
       } else {
         toast.error(
-          "Không thể xóa bộ luật này. Vui lòng kiểm tra xem nó có đang được liên kết với mùa giải nào không.",
+          getErrorMessage(
+            error,
+            "Không thể xóa bộ luật này. Vui lòng kiểm tra xem nó có đang được liên kết với mùa giải nào không.",
+          ),
         );
       }
     } finally {
@@ -615,6 +640,7 @@ const SystemRulesPage: React.FC = () => {
   );
 };
 
+// Hiển thị StatCard.
 function StatCard({
   icon,
   label,
@@ -644,6 +670,7 @@ function StatCard({
   );
 }
 
+// Hiển thị RuleCard.
 function RuleCard({
   rule,
   onEdit,
@@ -773,20 +800,18 @@ function RuleCard({
   );
 }
 
+// Hiển thị StatusBadge.
 function StatusBadge({ status }: { status: string }) {
-  const isActive = status === "ACTIVE";
-
   return (
-    <span
-      className={`inline-flex rounded-full px-3 py-1 text-xs font-black uppercase tracking-wide ${
-        isActive ? "bg-green-50 text-[#0D631B]" : "bg-gray-100 text-gray-500"
-      }`}
-    >
-      {isActive ? "ACTIVE" : "INACTIVE"}
-    </span>
+    <CommonStatusBadge
+      label={getSystemRuleStatusLabel(status)}
+      tone={getStatusTone(status)}
+      className="px-3 py-1 font-black uppercase tracking-wide"
+    />
   );
 }
 
+// Hiển thị InfoItem.
 function InfoItem({
   icon,
   label,
@@ -809,6 +834,7 @@ function InfoItem({
   );
 }
 
+// Hiển thị EmptyState.
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="flex min-h-[300px] flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed border-gray-200 bg-[#F5F3EF]/50 p-8 text-center">
@@ -831,6 +857,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
   );
 }
 
+// Hiển thị RuleModal.
 function RuleModal({
   form,
   errors,
@@ -1073,6 +1100,7 @@ function RuleModal({
   );
 }
 
+// Hiển thị TextField.
 function TextField({
   label,
   value,
@@ -1105,6 +1133,7 @@ function TextField({
   );
 }
 
+// Hiển thị NumberField.
 function NumberField({
   label,
   value,
@@ -1134,6 +1163,7 @@ function NumberField({
   );
 }
 
+// Hiển thị TextAreaField.
 function TextAreaField({
   label,
   value,
@@ -1158,6 +1188,7 @@ function TextAreaField({
   );
 }
 
+// Hiển thị SelectField.
 function SelectField({
   label,
   value,

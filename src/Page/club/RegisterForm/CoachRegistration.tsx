@@ -46,6 +46,7 @@ const roleLabelMap = coachRoles.reduce<Record<string, string>>((map, role) => {
   return map;
 }, {});
 
+// Chuẩn hóa staff.
 const normalizeStaff = (coach: Coach & Record<string, any>) => {
   const role = coach.description ?? coach.role ?? "Trợ lý";
 
@@ -63,18 +64,36 @@ const normalizeStaff = (coach: Coach & Record<string, any>) => {
   } satisfies Staff;
 };
 
+// Lấy coach id code.
 const getCoachIdCode = (coach: any) =>
   String(
-    coach.idCode ??
-      coach.id_code ??
-      coach.identityCode ??
-      coach.cccd ??
-      "",
+    coach.idCode ?? coach.id_code ?? coach.identityCode ?? coach.cccd ?? "",
   ).trim();
 
+// Lấy staff key.
 const getStaffKey = (staff: any) =>
   staff.assignmentId ?? staff.coachId ?? getCoachIdCode(staff) ?? staff.name;
 
+// Tạo khóa so sánh staff đã chọn.
+const getStaffSnapshot = (staff: any) =>
+  [
+    getStaffKey(staff),
+    staff.name ?? "",
+    staff.role ?? "",
+    getCoachIdCode(staff),
+    staff.status ?? "",
+  ].join("|");
+
+// Kiểm tra danh sách staff có thay đổi không.
+const areSameStaffs = (a: SelectedCoach[], b: SelectedCoach[]) => {
+  if (a.length !== b.length) return false;
+
+  return a.every((staff, index) => {
+    return getStaffSnapshot(staff) === getStaffSnapshot(b[index]);
+  });
+};
+
+// Chuẩn hóa role text.
 const normalizeRoleText = (role?: string) =>
   (role ?? "")
     .normalize("NFD")
@@ -84,6 +103,7 @@ const normalizeRoleText = (role?: string) =>
     .toLowerCase()
     .trim();
 
+// Lấy role key.
 const getRoleKey = (role?: string) => {
   const normalizedRole = normalizeRoleText(role);
 
@@ -129,6 +149,7 @@ const getRoleKey = (role?: string) => {
   return "other";
 };
 
+// Lấy role label.
 const getRoleLabel = (role: string) => {
   const mappedLabel = roleLabelMap[role];
 
@@ -177,9 +198,14 @@ const CoachRegistration: React.FC<Props> = ({
   rule,
 }) => {
   const { currentClubId, authLoading } = useCurrentClubId();
+
+  // Lưu trữ danh sách huấn luyện viên thuộc câu lạc bộ (để đưa vào hồ sơ đk)
   const [availableStaffs, setAvailableStaffs] = useState<Staff[]>([]);
+
+  // Lưu trữ danh sách huấn luyện viên được chọn
   const [selectedStaffs, setSelectedStaffs] =
     useState<SelectedCoach[]>(selectedCoaches);
+
   const [selectedStaffKeys, setSelectedStaffKeys] = useState<
     Array<string | number>
   >([]);
@@ -189,6 +215,17 @@ const CoachRegistration: React.FC<Props> = ({
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    setSelectedStaffs((currentStaffs) => {
+      if (areSameStaffs(currentStaffs, selectedCoaches)) {
+        return currentStaffs;
+      }
+
+      return selectedCoaches;
+    });
+  }, [selectedCoaches]);
+
+  useEffect(() => {
+    // Lấy danh sách ban huấn luyện theo id câu lạc bộ.
     const fetchTeamStaffs = async () => {
       if (authLoading) return;
 
@@ -238,11 +275,13 @@ const CoachRegistration: React.FC<Props> = ({
 
   useRealtimeEvent(handleRealtimeEvent);
 
+  // Lưu trữ key của huấn luyện viên đã chọn(dùng để loại khỏi available list)
   const selectedKeySet = useMemo(
     () => new Set(selectedStaffs.map(getStaffKey)),
     [selectedStaffs],
   );
 
+  // Lưu trữ danh sách huấn luyện vieen chưa được trong(Trong modal)
   const unselectedAvailableStaffs = useMemo(
     () =>
       availableStaffs.filter(
@@ -251,6 +290,7 @@ const CoachRegistration: React.FC<Props> = ({
     [availableStaffs, selectedKeySet],
   );
 
+  // Đếm số lượng HLV theo vai trò
   const roleCounts = useMemo(() => {
     return selectedStaffs.reduce<Record<string, number>>((counts, staff) => {
       const roleKey = getRoleKey(staff.role);
@@ -259,15 +299,22 @@ const CoachRegistration: React.FC<Props> = ({
     }, {});
   }, [selectedStaffs]);
 
+  // Lưu trữ số huấn luyện viên tối thiểu theo rule mùa giải
   const minCoaches = rule?.minCoaches ?? 1;
+
+  // Lưu trữ số huấn luyện viên tối đa theo rule mùa giải
   const maxCoaches = rule?.maxCoaches ?? 8;
+
+  // Kiểm tra số lượgn HLV trưởng có đúng k
   const hasExactlyOneHeadCoach = (roleCounts.headCoach ?? 0) === 1;
 
+  // Kiểm tra số lượng huấn luyện viên có đáp ứng theo rule k và kiểm tra có đúng 1 HLV không
   const hasRequiredStaff =
     selectedStaffs.length >= minCoaches &&
     selectedStaffs.length <= maxCoaches &&
     hasExactlyOneHeadCoach;
 
+  // Kiểm tra trùng HLV
   const duplicateCoaches = useMemo(() => {
     const ids = new Set<any>();
     const dupes: string[] = [];
@@ -282,10 +329,12 @@ const CoachRegistration: React.FC<Props> = ({
     return dupes;
   }, [selectedStaffs]);
 
+  // Kiểm tra các huấn luyện viện được có vai trò chưa
   const hasEmptyRole = useMemo(() => {
     return selectedStaffs.some((c) => !c.role);
   }, [selectedStaffs]);
 
+  // Số lượng huấn luyện viên thiếu idcode
   const missingIdCodeCoaches = useMemo(
     () => selectedStaffs.filter((coach) => !getCoachIdCode(coach)),
     [selectedStaffs],
@@ -297,17 +346,20 @@ const CoachRegistration: React.FC<Props> = ({
     !hasEmptyRole &&
     missingIdCodeCoaches.length === 0;
 
+  // Mở modal hoac khung thao tác.
   const openAddModal = () => {
     setSelectedStaffKeys([]);
     setIsModalOpen(true);
   };
 
+  // Xử lý select staff.
   const toggleSelectStaff = (key: string | number) => {
     setSelectedStaffKeys((prev) =>
       prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key],
     );
   };
 
+  // Xử lý xác nhận thao tác.
   const handleConfirmSelection = () => {
     const staffToAdd = unselectedAvailableStaffs.filter((staff) =>
       selectedStaffKeys.includes(getStaffKey(staff)),
@@ -329,6 +381,7 @@ const CoachRegistration: React.FC<Props> = ({
     setIsModalOpen(false);
   };
 
+  // Xóa HLV khỏi danh sách .
   const removeStaff = (key: string | number) => {
     const nextStaffs = selectedStaffs.filter(
       (staff) => getStaffKey(staff) !== key,
@@ -337,6 +390,7 @@ const CoachRegistration: React.FC<Props> = ({
     onCoachesChange?.(nextStaffs);
   };
 
+  // Xử lý role change(thực hiện cập nhật role khi đổi vai trò).
   const handleRoleChange = (key: string | number, newRole: string) => {
     if (getRoleKey(newRole) === "headCoach") {
       const hasOtherHeadCoach = selectedStaffs.some(
@@ -362,78 +416,83 @@ const CoachRegistration: React.FC<Props> = ({
 
   return (
     <>
-      {!isValid || selectedStaffs.length === 0 ? (
-        <div className="mb-8 flex items-start gap-4 rounded-xl border border-red-200 bg-red-50 p-5">
-          <span className="material-symbols-outlined text-2xl text-red-600">
-            error
-          </span>
-          <div className="space-y-1">
-            <h3 className="text-sm font-bold text-red-800">
-              Yêu cầu ban huấn luyện chưa hoàn thành
-            </h3>
-            <ul className="list-disc list-inside text-xs text-red-700 space-y-1">
-              {selectedStaffs.length === 0 && (
-                <li>
-                  Danh sách ban huấn luyện trống. Vui lòng thêm thành viên ban
-                  huấn luyện.
-                </li>
-              )}
-              {selectedStaffs.length > 0 &&
-                (selectedStaffs.length < minCoaches ||
-                  selectedStaffs.length > maxCoaches) && (
+      {
+        // Kiểm tra các validate huấn luyện viên
+        !isValid || selectedStaffs.length === 0 ? (
+          <div className="mb-8 flex items-start gap-4 rounded-xl border border-red-200 bg-red-50 p-5">
+            <span className="material-symbols-outlined text-2xl text-red-600">
+              error
+            </span>
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-red-800">
+                Yêu cầu ban huấn luyện chưa hoàn thành
+              </h3>
+              <ul className="list-disc list-inside text-xs text-red-700 space-y-1">
+                {selectedStaffs.length === 0 && (
                   <li>
-                    Ban huấn luyện phải có từ {minCoaches} đến {maxCoaches}{" "}
-                    người theo quy định mùa giải.
+                    Danh sách ban huấn luyện trống. Vui lòng thêm thành viên ban
+                    huấn luyện.
                   </li>
                 )}
-              {(roleCounts.headCoach ?? 0) < 1 && (
-                <li>
-                  Thiếu HLV trưởng: Phải đăng ký đúng 01 Huấn luyện viên trưởng.
-                </li>
-              )}
-              {(roleCounts.headCoach ?? 0) > 1 && (
-                <li>
-                  Dư HLV trưởng: Mỗi hồ sơ đăng ký chỉ được có 01 Huấn luyện
-                  viên trưởng.
-                </li>
-              )}
-              {hasEmptyRole && (
-                <li>
-                  Có thành viên chưa được phân vai trò. Vui lòng điền đầy đủ vai
-                  trò.
-                </li>
-              )}
-              {duplicateCoaches.length > 0 && (
-                <li>
-                  Trùng lặp thành viên: {duplicateCoaches.join(", ")} bị chọn
-                  trùng.
-                </li>
-              )}
-              {missingIdCodeCoaches.length > 0 && (
-                <li>
-                  Thiếu mã định danh HLV:{" "}
-                  {missingIdCodeCoaches.map((coach) => coach.name).join(", ")}.
-                </li>
-              )}
-            </ul>
+                {selectedStaffs.length > 0 &&
+                  (selectedStaffs.length < minCoaches ||
+                    selectedStaffs.length > maxCoaches) && (
+                    <li>
+                      Ban huấn luyện phải có từ {minCoaches} đến {maxCoaches}{" "}
+                      người theo quy định mùa giải.
+                    </li>
+                  )}
+                {(roleCounts.headCoach ?? 0) < 1 && (
+                  <li>
+                    Thiếu HLV trưởng: Phải đăng ký đúng 01 Huấn luyện viên
+                    trưởng.
+                  </li>
+                )}
+                {(roleCounts.headCoach ?? 0) > 1 && (
+                  <li>
+                    Dư HLV trưởng: Mỗi hồ sơ đăng ký chỉ được có 01 Huấn luyện
+                    viên trưởng.
+                  </li>
+                )}
+                {hasEmptyRole && (
+                  <li>
+                    Có thành viên chưa được phân vai trò. Vui lòng điền đầy đủ
+                    vai trò.
+                  </li>
+                )}
+                {duplicateCoaches.length > 0 && (
+                  <li>
+                    Trùng lặp thành viên: {duplicateCoaches.join(", ")} bị chọn
+                    trùng.
+                  </li>
+                )}
+                {missingIdCodeCoaches.length > 0 && (
+                  <li>
+                    Thiếu mã định danh HLV:{" "}
+                    {missingIdCodeCoaches.map((coach) => coach.name).join(", ")}
+                    .
+                  </li>
+                )}
+              </ul>
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="mb-8 flex items-start gap-4 rounded-xl border border-green-200 bg-green-50 p-5">
-          <span className="material-symbols-outlined text-2xl text-green-600">
-            check_circle
-          </span>
-          <div>
-            <h3 className="text-sm font-bold text-green-800">
-              Ban huấn luyện đã sẵn sàng
-            </h3>
-            <p className="mt-1 text-xs text-green-700/80">
-              Đã chọn đúng 01 HLV trưởng, đủ số lượng theo rule mùa giải và
-              không có vi phạm.
-            </p>
+        ) : (
+          <div className="mb-8 flex items-start gap-4 rounded-xl border border-green-200 bg-green-50 p-5">
+            <span className="material-symbols-outlined text-2xl text-green-600">
+              check_circle
+            </span>
+            <div>
+              <h3 className="text-sm font-bold text-green-800">
+                Ban huấn luyện đã sẵn sàng
+              </h3>
+              <p className="mt-1 text-xs text-green-700/80">
+                Đã chọn đúng 01 HLV trưởng, đủ số lượng theo rule mùa giải và
+                không có vi phạm.
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       <div className="grid grid-cols-12 gap-8 pb-24">
         <div className="col-span-12 xl:col-span-7">
@@ -501,15 +560,18 @@ const CoachRegistration: React.FC<Props> = ({
               </div>
             )}
 
-            {selectedStaffs.length > 0 && selectedStaffs.length < maxCoaches && (
-              <div
-                onClick={openAddModal}
-                className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-white/30 p-4 text-xs font-bold text-gray-400 transition-all hover:border-[#0d631b]/30 hover:bg-white"
-              >
-                <span className="material-symbols-outlined text-base">add</span>
-                Thêm thành viên ban huấn luyện
-              </div>
-            )}
+            {selectedStaffs.length > 0 &&
+              selectedStaffs.length < maxCoaches && (
+                <div
+                  onClick={openAddModal}
+                  className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-white/30 p-4 text-xs font-bold text-gray-400 transition-all hover:border-[#0d631b]/30 hover:bg-white"
+                >
+                  <span className="material-symbols-outlined text-base">
+                    add
+                  </span>
+                  Thêm thành viên ban huấn luyện
+                </div>
+              )}
           </div>
         </div>
 
@@ -522,6 +584,7 @@ const CoachRegistration: React.FC<Props> = ({
               Kiểm tra tính hợp lệ
             </h3>
 
+            {/* Check validate hiển thị trên UI */}
             <ul className="space-y-5">
               <CheckItem
                 passed={
@@ -548,10 +611,9 @@ const CoachRegistration: React.FC<Props> = ({
                 <p className="text-[11px] text-gray-400">
                   {missingIdCodeCoaches.length === 0
                     ? "Tất cả HLV đã có idCode"
-                    : `${missingIdCodeCoaches.length} HLV thiếu idCode`}
+                    : `${missingIdCodeCoaches.length} HLV thiếu mã định danh`}
                 </p>
               </CheckItem>
-
             </ul>
 
             <div className="mt-8 border-t border-gray-100 pt-6">
@@ -633,7 +695,7 @@ const CoachRegistration: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => setStep?.(3)}
-              disabled={!isValid}
+              disabled={isLoading}
               className="rounded-full bg-green-700 px-10 py-3 text-sm font-bold text-white shadow-lg shadow-green-700/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
             >
               Tiếp tục
@@ -757,6 +819,7 @@ type StaffCardProps = {
   onRoleChange: (role: string) => void;
 };
 
+// Hiển thị StaffCard.
 const StaffCard = ({ staff, onRemove, onRoleChange }: StaffCardProps) => (
   <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-white p-4 transition-all hover:scale-[1.01]">
     <div className="flex items-center gap-4 flex-1">
@@ -815,6 +878,7 @@ type CheckItemProps = {
   children: React.ReactNode;
 };
 
+// Hiển thị CheckItem.
 const CheckItem = ({ passed, children }: CheckItemProps) => (
   <li className="flex items-start gap-3">
     <span

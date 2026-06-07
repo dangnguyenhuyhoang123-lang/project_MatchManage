@@ -15,6 +15,7 @@ import { Footer } from "../../components/Footer/Footer_HomePage";
 import { usePublicRealtimeEvent } from "../../hooks/usePublicRealtimeEvent";
 import type { RealtimeEventDTO } from "../../model/RealtimeEvent";
 
+// Hiển thị HomePage.
 const HomePage = () => {
   const [dsSanPham, setDsSanPham] = useState<MatchModel[]>([]);
   const navigate = useNavigate();
@@ -49,6 +50,7 @@ const HomePage = () => {
 
   usePublicRealtimeEvent(["matches"], handlePublicRealtimeEvent);
 
+  // Định dạng time.
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     return `${date.getHours().toString().padStart(2, "0")}:${date

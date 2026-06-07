@@ -4,12 +4,14 @@ import UserService from "../services/UserService";
 import CurrentUser from "./CurrentUser";
 import { AuthContext, type User } from "./AuthContextCore";
 
+// Hiển thị AuthProvider.
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUserState] = useState<User | null>(() =>
     CurrentUser.getUser(),
   );
   const [loading, setLoading] = useState(true);
 
+  // Xử lý set user.
   const setUser = (nextUser: User | null) => {
     CurrentUser.setUser(nextUser);
     setUserState(nextUser);
@@ -31,15 +33,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .finally(() => setLoading(false));
   }, []);
 
+  // Xử lý logout.
   const logout = () => {
     UserService.logout();
     setUser(null);
   };
 
+  // Xử lý has role.
   const hasRole = (role: string) => {
     return user?.roles?.includes(role) ?? false;
   };
 
+  // Xử lý has any role.
   const hasAnyRole = (roles: string[]) => {
     return roles.some((role) => user?.roles?.includes(role));
   };

@@ -11,6 +11,7 @@ import {
 
 import { Footer } from "../../components/Footer/Footer_HomePage";
 
+// Hiển thị FeaturePage.
 const FeaturePage = () => {
   return (
     <div>

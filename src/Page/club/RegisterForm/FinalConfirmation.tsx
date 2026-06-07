@@ -7,6 +7,14 @@ import type { RegistrationDraft, SelectedPlayer } from "./RegisterFormMatch";
 import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../services/websocket/NotificationSocketService";
 import { getErrorMessage } from "../../../utils/errorUtils";
+import {
+  mapRegistrationCoaches,
+  mapRegistrationPlayers,
+} from "../../../utils/registrationMapper";
+import {
+  calculateAge,
+  hasMissingIdCode,
+} from "../../../utils/registrationValidationUtils";
 type Props = {
   setStep: (step: number) => void;
   draft: RegistrationDraft;
@@ -29,38 +37,31 @@ const grassLabels = {
   Premium: "Hybrid",
 };
 
+// Lấy player shirt number.
 const getPlayerShirtNumber = (player: SelectedPlayer) =>
   Number(player.shirtNumber ?? player.number ?? 0);
 
+// Lấy player position.
 const getPlayerPosition = (player: SelectedPlayer) =>
   player.position || "Cầu thủ";
 
+// Lấy player id code.
 const getPlayerIdCode = (player: SelectedPlayer) =>
   String(
     player.idCode ?? player.id_code ?? player.identityCode ?? player.cccd ?? "",
   ).trim();
 
+// Lấy player birth date.
 const getPlayerBirthDate = (player: SelectedPlayer) =>
   player.birthDay ?? player.birthDate ?? player.dateOfBirth ?? "";
 
-const calculateAge = (birthDate?: string | null) => {
-  if (!birthDate) return null;
-  const date = new Date(birthDate);
-  if (Number.isNaN(date.getTime())) return null;
-  const today = new Date();
-  let age = today.getFullYear() - date.getFullYear();
-  const monthDiff = today.getMonth() - date.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
-    age -= 1;
-  }
-  return age;
-};
-
+// Lấy coach id code.
 const getCoachIdCode = (coach: RegistrationDraft["coaches"][number]) =>
   String(
     coach.idCode ?? coach.id_code ?? coach.identityCode ?? coach.cccd ?? "",
   ).trim();
 
+// Xử lý is vietnam country.
 const isVietnamCountry = (value?: string) => {
   const normalized = (value ?? "")
     .normalize("NFD")
@@ -73,6 +74,7 @@ const isVietnamCountry = (value?: string) => {
   return ["viet nam", "vietnam", "vn"].includes(normalized);
 };
 
+// Chuẩn hóa coach role.
 const normalizeCoachRole = (role?: string) =>
   (role ?? "")
     .normalize("NFD")
@@ -82,6 +84,7 @@ const normalizeCoachRole = (role?: string) =>
     .toLowerCase()
     .trim();
 
+// Xử lý is head coach role.
 const isHeadCoachRole = (role?: string) => {
   const normalized = normalizeCoachRole(role);
   return (
@@ -135,12 +138,15 @@ const FinalConfirmation: React.FC<Props> = ({
       missing.push("Ban huấn luyện phải có đúng 01 HLV trưởng");
     }
 
-    const coachIdCodes = draft.coaches.map(getCoachIdCode).filter(Boolean);
-    if (coachIdCodes.length !== draft.coaches.length) {
+    if (
+      hasMissingIdCode(
+        draft.coaches.map((coach) => ({ idCode: getCoachIdCode(coach) })),
+      )
+    ) {
       missing.push("Có HLV thiếu mã định danh idCode");
     }
 
-    const minPlayers = rule?.minPlayers ?? 14;
+    const minPlayers = rule?.minRegistrationPlayers ?? rule?.minPlayers ?? 14;
     const maxPlayers = rule?.maxPlayers ?? 30;
     const minAge = rule?.minAge ?? 16;
     const maxAge = rule?.maxAge ?? 40;
@@ -154,8 +160,11 @@ const FinalConfirmation: React.FC<Props> = ({
       missing.push(`Danh sách cầu thủ vượt quá tối đa ${maxPlayers} người`);
     }
 
-    const playerIdCodes = allPlayers.map(getPlayerIdCode).filter(Boolean);
-    if (playerIdCodes.length !== allPlayers.length) {
+    if (
+      hasMissingIdCode(
+        allPlayers.map((player) => ({ idCode: getPlayerIdCode(player) })),
+      )
+    ) {
       missing.push("Có cầu thủ thiếu mã định danh idCode");
     }
 
@@ -190,22 +199,11 @@ const FinalConfirmation: React.FC<Props> = ({
       missing.push("Thông tin sân vận động chưa đầy đủ");
     }
 
-    if (Number(draft.stadium.capacity) < 10000) {
-      missing.push("Sân phải có sức chứa tối thiểu 10.000 người");
-    }
-
-    if (Number(draft.stadium.fifaStarRating) < 2) {
-      missing.push("Chuẩn sao sân phải tối thiểu 2");
-    }
-
-    if (!isVietnamCountry(draft.stadium.country)) {
-      missing.push("Quốc gia sân phải là Việt Nam/Vietnam/Viet Nam/VN");
-    }
-
     return missing;
   }, [allPlayers.length, draft, rule]);
 
-  const canSubmit = missingItems.length === 0 && isConfirmed && !isSubmitting;
+  const canSubmitRegistration =
+    missingItems.length === 0 && isConfirmed && !isSubmitting;
   const foreignPlayerCount = useMemo(
     () =>
       allPlayers.filter((player) => {
@@ -245,25 +243,15 @@ const FinalConfirmation: React.FC<Props> = ({
         fifaStarRating: Number(draft.stadium.fifaStarRating) || 2,
         certificateUrl: draft.stadium.certificateUrl || null,
       },
-      listPlayerInfo: allPlayers
-        .filter((player) => Number.isFinite(Number(player.id)))
-        .map((player) => ({
-          playerId: Number(player.id),
-          shirtNumber: getPlayerShirtNumber(player),
-          position: getPlayerPosition(player),
-        })),
-      listCoachInfo: draft.coaches
-        .filter((coach) => coach.coachId != null)
-        .map((coach) => ({
-          coachId: Number(coach.coachId),
-          role: coach.role,
-        })),
+      listPlayerInfo: mapRegistrationPlayers(allPlayers),
+      listCoachInfo: mapRegistrationCoaches(draft.coaches),
     };
   }, [allPlayers, draft]);
   const completionPercent = Math.round(((5 - missingItems.length) / 5) * 100);
 
+  // Xử lý gui form.
   const handleSubmit = async () => {
-    if (!payload || !canSubmit) {
+    if (!payload || !canSubmitRegistration) {
       return;
     }
 
@@ -603,8 +591,12 @@ const FinalConfirmation: React.FC<Props> = ({
                       .length === 1,
                 },
                 {
-                  text: `Danh sách cầu thủ đủ tối thiểu ${rule?.minPlayers ?? 14} người`,
-                  passed: allPlayers.length >= (rule?.minPlayers ?? 14),
+                  text: `Danh sách cầu thủ đủ tối thiểu ${
+                    rule?.minRegistrationPlayers ?? rule?.minPlayers ?? 14
+                  } người`,
+                  passed:
+                    allPlayers.length >=
+                    (rule?.minRegistrationPlayers ?? rule?.minPlayers ?? 14),
                 },
                 {
                   text: "Thông tin sân vận động đầy đủ",
@@ -692,7 +684,7 @@ const FinalConfirmation: React.FC<Props> = ({
 
             <button
               type="button"
-              disabled={!canSubmit}
+              disabled={!canSubmitRegistration}
               onClick={handleSubmit}
               className="px-10 py-3 rounded-full bg-green-700 text-white font-bold shadow-lg shadow-green-700/20 hover:scale-105 active:scale-95 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -809,6 +801,7 @@ const ReviewSection = ({
   </div>
 );
 
+// Hiển thị EmptyLine.
 const EmptyLine = ({ text }: { text: string }) => (
   <div className="rounded-2xl border border-dashed border-gray-200 bg-[#f5f3ef] p-4 text-sm font-bold text-gray-400">
     {text}

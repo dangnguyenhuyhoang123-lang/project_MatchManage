@@ -13,8 +13,8 @@ import PlayerSuspensionService, {
 } from "../../services/PlayerSuspensionService";
 import SeasonService from "../../services/SeasonService";
 import StandingService from "../../services/StandingService";
-import { extractApiErrorMessage } from "../../utils/apiError";
 import LoadingSpinner from "../../components/Spinner/LoadingSpinner";
+import { getErrorMessage } from "../../utils/errorUtils";
 
 type TabKey = "standings" | "scorers" | "cards" | "suspensions" | "motm";
 
@@ -67,6 +67,7 @@ function readArray<T>(data: unknown): T[] {
   return Array.isArray(page?.content) ? page.content : [];
 }
 
+// Định dạng goal difference.
 function formatGoalDifference(row: StandingRow) {
   const value =
     row.goalDifference ?? (row.goalsFor ?? 0) - (row.goalsAgainst ?? 0);
@@ -74,6 +75,7 @@ function formatGoalDifference(row: StandingRow) {
   return value > 0 ? `+${value}` : String(value);
 }
 
+// Xử lý csv escape.
 function csvEscape(value: ReactNode) {
   const text = String(value ?? "")
     .replace(/\s+/g, " ")
@@ -81,6 +83,7 @@ function csvEscape(value: ReactNode) {
   return `"${text.replace(/"/g, '""')}"`;
 }
 
+// Xử lý download csv.
 function downloadCsv(
   filename: string,
   headers: string[],
@@ -103,6 +106,7 @@ function downloadCsv(
   URL.revokeObjectURL(url);
 }
 
+// Xử lý team initials.
 function teamInitials(name: string) {
   return name
     .trim()
@@ -112,6 +116,7 @@ function teamInitials(name: string) {
     .join("");
 }
 
+// Hiển thị ReportPage.
 export default function ReportPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("standings");
   const [seasons, setSeasons] = useState<SeasonOption[]>([]);
@@ -129,6 +134,7 @@ export default function ReportPage() {
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
+    // Tải seasons.
     const loadSeasons = async () => {
       try {
         const response = await SeasonService.getAllSeasons(0, 100);
@@ -137,7 +143,7 @@ export default function ReportPage() {
         setSelectedSeasonId((current) => current || list[0]?.id || "");
       } catch (error) {
         console.error("Cannot load seasons", error);
-        setErrorMessage(extractApiErrorMessage(error));
+        setErrorMessage(getErrorMessage(error, "Không thể tải dữ liệu báo cáo."));
       }
     };
 
@@ -154,6 +160,7 @@ export default function ReportPage() {
       return;
     }
 
+    // Tải report data.
     const loadReportData = async () => {
       setLoading(true);
       setErrorMessage("");
@@ -178,7 +185,7 @@ export default function ReportPage() {
         );
       } catch (error) {
         console.error("Cannot load report data", error);
-        setErrorMessage(extractApiErrorMessage(error));
+        setErrorMessage(getErrorMessage(error, "Không thể tải dữ liệu báo cáo."));
       } finally {
         setLoading(false);
       }
@@ -276,6 +283,7 @@ export default function ReportPage() {
     };
   };
 
+  // Xử lý export report.
   const handleExportReport = () => {
     if (!selectedSeasonId) {
       toast.warning("Vui lòng chọn mùa giải trước khi xuất báo cáo.");
@@ -392,6 +400,7 @@ export default function ReportPage() {
   );
 }
 
+// Hiển thị StandingsTable.
 function StandingsTable({ rows }: { rows: StandingRow[] }) {
   return (
     <DataTable
@@ -423,6 +432,7 @@ function StandingsTable({ rows }: { rows: StandingRow[] }) {
   );
 }
 
+// Hiển thị TopScorersTable.
 function TopScorersTable({ rows }: { rows: PlayerStatsResponse[] }) {
   return (
     <DataTable
@@ -439,6 +449,7 @@ function TopScorersTable({ rows }: { rows: PlayerStatsResponse[] }) {
   );
 }
 
+// Hiển thị CardsTable.
 function CardsTable({ rows }: { rows: PlayerStatsResponse[] }) {
   return (
     <DataTable
@@ -454,6 +465,7 @@ function CardsTable({ rows }: { rows: PlayerStatsResponse[] }) {
   );
 }
 
+// Hiển thị SuspensionsTable.
 function SuspensionsTable({ rows }: { rows: PlayerSuspensionResponse[] }) {
   return (
     <DataTable
@@ -476,6 +488,7 @@ function SuspensionsTable({ rows }: { rows: PlayerSuspensionResponse[] }) {
   );
 }
 
+// Hiển thị ManOfTheMatchTable.
 function ManOfTheMatchTable({ rows }: { rows: ManOfTheMatchStatsResponse[] }) {
   return (
     <DataTable
@@ -491,6 +504,7 @@ function ManOfTheMatchTable({ rows }: { rows: ManOfTheMatchStatsResponse[] }) {
   );
 }
 
+// Hiển thị DataTable.
 function DataTable({
   headers,
   rows,
@@ -542,6 +556,7 @@ function DataTable({
   );
 }
 
+// Hiển thị TeamCell.
 function TeamCell({ name }: { name: string }) {
   return (
     <div className="flex items-center gap-3">

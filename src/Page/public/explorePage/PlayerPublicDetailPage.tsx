@@ -74,17 +74,20 @@ function readArray<T>(data: unknown): T[] {
   return [];
 }
 
+// Lấy numeric id.
 function getNumericId(value: unknown) {
   const numeric = Number(value);
   return Number.isFinite(numeric) && numeric > 0 ? numeric : undefined;
 }
 
+// Lấy string field.
 function getStringField(item: unknown, field: string) {
   if (!item || typeof item !== "object") return "";
   const value = (item as Record<string, unknown>)[field];
   return typeof value === "string" ? value : "";
 }
 
+// Định dạng date.
 function formatDate(value?: string | Date | null) {
   if (!value) return "Đang cập nhật";
   const date = value instanceof Date ? value : new Date(value);
@@ -92,6 +95,7 @@ function formatDate(value?: string | Date | null) {
   return date.toLocaleDateString("vi-VN");
 }
 
+// Tính toán age.
 function calculateAge(value?: string | null) {
   if (!value) return "";
   const birthDate = new Date(value);
@@ -108,6 +112,7 @@ function calculateAge(value?: string | null) {
   return Number.isFinite(age) && age > 0 ? `${age} tuổi` : "";
 }
 
+// Xử lý player type label.
 function playerTypeLabel(player: Player | null) {
   const rawType =
     getStringField(player, "playerType") || getStringField(player, "type");
@@ -119,6 +124,7 @@ function playerTypeLabel(player: Player | null) {
     : "Nội binh";
 }
 
+// Xử lý status label.
 function statusLabel(value?: string | null) {
   if (!value) return "Đang cập nhật";
   if (value === "ACTIVE") return "Đang hoạt động";
@@ -130,6 +136,7 @@ function statusLabel(value?: string | null) {
   return value;
 }
 
+// Xử lý match team names.
 function matchTeamNames(match: PublicMatch) {
   return {
     home: match.homeTeam?.name || match.homeTeamName || "Đội nhà",
@@ -195,6 +202,7 @@ async function loadStatsForPlayer(
     .sort((a, b) => Number(b.seasonId) - Number(a.seasonId));
 }
 
+// Hiển thị EmptyState.
 function EmptyState({ message }: { message: string }) {
   return (
     <div className="rounded-2xl border border-dashed border-gray-200 bg-white/80 p-8 text-center text-sm font-bold text-gray-500">
@@ -203,6 +211,7 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
+// Hiển thị MetricCard.
 function MetricCard({
   label,
   value,
@@ -225,6 +234,7 @@ function MetricCard({
   );
 }
 
+// Hiển thị InfoItem.
 function InfoItem({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-2xl bg-[#f5f3ef] p-4">
@@ -238,6 +248,7 @@ function InfoItem({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
+// Hiển thị PlayerPublicDetailPage.
 export default function PlayerPublicDetailPage() {
   const navigate = useNavigate();
   const { playerId } = useParams();
@@ -254,6 +265,7 @@ export default function PlayerPublicDetailPage() {
   useEffect(() => {
     let mounted = true;
 
+    // Tải player.
     const loadPlayer = async () => {
       if (!numericPlayerId) {
         setWarnings(["Đường dẫn cầu thủ không hợp lệ."]);

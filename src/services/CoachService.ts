@@ -17,6 +17,7 @@ const normalizeCoach = (raw: any): Coach => ({
 });
 
 class CoachService {
+  // Gọi API lấy coaches.
   getAllCoaches(page = 0, size = 10, filters?: any) {
     return axiosClient.get(`${API_BASE_URL}/getCoaches`, {
       params: {
@@ -31,6 +32,7 @@ class CoachService {
     });
   }
 
+  // Gọi API lấy coaches normalized.
   async getAllCoachesNormalized(page = 0, size = 10, filters?: any) {
     const response = await this.getAllCoaches(page, size, filters);
     const data = response.data;
@@ -45,12 +47,14 @@ class CoachService {
     };
   }
 
+  // Gọi API lấy coaches by team id.
   getCoachesByTeamId(teamId: number, page = 0, size = 8) {
     return axiosClient.get(`${API_BASE_URL}/getCoachesByTeam/${teamId}`, {
       params: { page, size },
     });
   }
 
+  // Gọi API lấy coaches by team normalized.
   async getCoachesByTeamNormalized(teamId: number, page = 0, size = 8) {
     const response = await this.getCoachesByTeamId(teamId, page, size);
     const data = response.data;
@@ -63,18 +67,22 @@ class CoachService {
     };
   }
 
+  // Gọi API lấy coach by id.
   getCoachById(id: number) {
     return axiosClient.get(`${API_BASE_URL}/getCoach/${id}`);
   }
 
+  // Gọi API tạo coach.
   addCoach(coach: any) {
     return axiosClient.post(`${API_BASE_URL}/addCoach`, coach);
   }
 
+  // Gọi API cập nhật coach.
   updateCoach(id: number, coach: any) {
     return axiosClient.put(`${API_BASE_URL}/updateCoach/${id}`, coach);
   }
 
+  // Gọi API xóa coach.
   deleteCoach(id: number) {
     return axiosClient.delete(`${API_BASE_URL}/deleteCoach/${id}`);
   }

@@ -96,7 +96,7 @@ const RegistrationDetail: React.FC = () => {
         <div className="flex justify-between items-start mb-8">
           <div>
             <h2 className="text-3xl font-black text-gray-900 font-['Be_Vietnam_Pro'] leading-tight">
-              Chi tiết Đơn đăng ký: CLB Hà Nội - Mùa giải 2024
+              Chi tiết Đơn đăng ký: CLB Hà Nội - Mùa giải 2026
             </h2>
             <div className="flex items-center gap-4 mt-3">
               <span className="px-4 py-1 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black uppercase">

@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import ConfirmModal from "../../components/ConfirmModal";
+import StatusBadge from "../../components/common/StatusBadge";
 import SeasonInvitationService, {
-  type InvitationStatus,
   type SeasonInvitationResponse,
 } from "../../services/SeasonInvitationService";
 import { useRealtimeEvent } from "../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../model/RealtimeEvent";
+import { getErrorMessage } from "../../utils/errorUtils";
+import {
+  getInvitationStatusLabel,
+  getStatusTone,
+} from "../../utils/statusUtils";
 
 type FilterKey = "ALL" | "INVITED";
 
@@ -25,6 +30,7 @@ const declineReasons = [
   "Lý do khác",
 ];
 
+// Định dạng date.
 function formatDate(value?: string | null) {
   if (!value) return "-";
 
@@ -37,6 +43,7 @@ function formatDate(value?: string | null) {
   return date.toLocaleDateString("vi-VN");
 }
 
+// Xử lý is deadline tomorrow.
 function isDeadlineTomorrow(value?: string | null) {
   if (!value) return false;
 
@@ -52,42 +59,14 @@ function isDeadlineTomorrow(value?: string | null) {
   );
 }
 
+// Xử lý is expired.
 function isExpired(value?: string | null) {
   if (!value) return false;
 
   return new Date(value).getTime() < Date.now();
 }
 
-function statusLabel(status: InvitationStatus) {
-  switch (status) {
-    case "INVITED":
-      return "INVITED";
-    case "ACCEPTED":
-      return "ACCEPTED";
-    case "DECLINED":
-      return "DECLINED";
-    case "EXPIRED":
-      return "EXPIRED";
-    default:
-      return status;
-  }
-}
-
-function statusBadgeClass(status: InvitationStatus) {
-  switch (status) {
-    case "INVITED":
-      return "bg-[#E0E0FF] text-[#343D96]";
-    case "ACCEPTED":
-      return "bg-green-100 text-[#0D631B]";
-    case "DECLINED":
-      return "bg-red-100 text-red-700";
-    case "EXPIRED":
-      return "bg-gray-200 text-gray-600";
-    default:
-      return "bg-gray-100 text-gray-700";
-  }
-}
-
+// Hiển thị ClubInvitationPage.
 export default function ClubInvitationPage() {
   const [filter, setFilter] = useState<FilterKey>("ALL");
   const [loading, setLoading] = useState(false);
@@ -116,9 +95,7 @@ export default function ClubInvitationPage() {
       setInvitations(response.data ?? []);
     } catch (err) {
       console.error("Cannot load club invitations", err);
-      setError(
-        "Không thể tải danh sách lời mời. Vui lòng kiểm tra API /invitations/my.",
-      );
+      setError("Không thể tải danh sách lời mời. Vui lòng kiểm tra.");
     } finally {
       setLoading(false);
     }
@@ -175,10 +152,12 @@ export default function ClubInvitationPage() {
     (item) => item.status !== "INVITED",
   );
 
+  // Xử lý accept.
   const handleAccept = async (invitation: SeasonInvitationResponse) => {
     setAcceptingInvitation(invitation);
   };
 
+  // Xử lý xác nhận thao tác.
   const handleConfirmAccept = async () => {
     if (!acceptingInvitation) return;
 
@@ -198,6 +177,7 @@ export default function ClubInvitationPage() {
     }
   };
 
+  // Mở modal hoac khung thao tác.
   const openDeclineModal = (invitation: SeasonInvitationResponse) => {
     setDeclineModal({
       open: true,
@@ -207,6 +187,7 @@ export default function ClubInvitationPage() {
     });
   };
 
+  // Đóng modal hoac khung thao tác.
   const closeDeclineModal = () => {
     setDeclineModal({
       open: false,
@@ -216,6 +197,7 @@ export default function ClubInvitationPage() {
     });
   };
 
+  // Xử lý xác nhận thao tác.
   const handleConfirmDecline = async () => {
     if (!declineModal.invitation) return;
 
@@ -234,7 +216,9 @@ export default function ClubInvitationPage() {
       await loadInvitations();
     } catch (err) {
       console.error("Cannot decline invitation", err);
-      toast.error("Không thể từ chối lời mời. Vui lòng thử lại.");
+      toast.error(
+        getErrorMessage(err, "Không thể từ chối lời mời. Vui lòng thử lại."),
+      );
     } finally {
       setActionLoadingId(null);
     }
@@ -389,6 +373,7 @@ export default function ClubInvitationPage() {
   );
 }
 
+// Hiển thị InvitationCard.
 function InvitationCard({
   invitation,
   loading,
@@ -410,14 +395,11 @@ function InvitationCard({
       <div className="flex flex-col gap-6 pl-2 sm:flex-row sm:justify-between">
         <div className="flex-1">
           <div className="mb-3 flex flex-wrap items-center gap-3">
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider ${statusBadgeClass(
-                invitation.status,
-              )}`}
-            >
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
-              {statusLabel(invitation.status)}
-            </span>
+            <StatusBadge
+              label={getInvitationStatusLabel(invitation.status)}
+              tone={getStatusTone(invitation.status)}
+              className="gap-1.5 px-3 py-1 font-black uppercase tracking-wider"
+            />
 
             <span
               className={`flex items-center gap-1 text-xs font-semibold ${
@@ -491,36 +473,17 @@ function InvitationCard({
   );
 }
 
-function getErrorMessage(error: unknown, fallback: string) {
-  if (typeof error === "object" && error !== null && "response" in error) {
-    const response = (error as { response?: { data?: unknown } }).response;
-    const data = response?.data;
-
-    if (typeof data === "string") return data;
-
-    if (
-      typeof data === "object" &&
-      data !== null &&
-      "message" in data &&
-      typeof (data as { message?: unknown }).message === "string"
-    ) {
-      return (data as { message: string }).message;
-    }
-  }
-
-  return fallback;
-}
-
+// Hiển thị HistoryCard.
 function HistoryCard({ invitation }: { invitation: SeasonInvitationResponse }) {
   return (
     <article className="rounded-[32px] border border-[#E4E2DE] bg-[#F5F3EF]/70 p-5">
       <div className="flex flex-col justify-between gap-4 sm:flex-row">
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-3">
-            <span
-              className={`inline-flex items-center gap-1 rounded-md px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wider ${statusBadgeClass(
-                invitation.status,
-              )}`}
+            <StatusBadge
+              label={getInvitationStatusLabel(invitation.status)}
+              tone={getStatusTone(invitation.status)}
+              className="gap-1 rounded-md text-[11px] font-black uppercase tracking-wider"
             >
               <span className="material-symbols-outlined text-[14px]">
                 {invitation.status === "ACCEPTED"
@@ -529,8 +492,7 @@ function HistoryCard({ invitation }: { invitation: SeasonInvitationResponse }) {
                     ? "schedule"
                     : "close"}
               </span>
-              {statusLabel(invitation.status)}
-            </span>
+            </StatusBadge>
 
             <span className="text-xs font-medium text-[#707A6C]">
               Phản hồi: {formatDate(invitation.respondedAt)}
@@ -561,6 +523,7 @@ function HistoryCard({ invitation }: { invitation: SeasonInvitationResponse }) {
   );
 }
 
+// Hiển thị SummaryCard.
 function SummaryCard({
   pendingCount,
   acceptedCount,
@@ -625,6 +588,7 @@ function SummaryCard({
   );
 }
 
+// Hiển thị SummaryRow.
 function SummaryRow({
   label,
   value,
@@ -657,6 +621,7 @@ function SummaryRow({
   );
 }
 
+// Hiển thị InvitationSkeleton.
 function InvitationSkeleton() {
   return (
     <div className="animate-pulse rounded-[32px] bg-white p-6 shadow-[0_12px_48px_rgba(27,28,26,0.06)]">
@@ -674,6 +639,7 @@ function InvitationSkeleton() {
   );
 }
 
+// Hiển thị EmptyState.
 function EmptyState() {
   return (
     <div className="rounded-[32px] border border-dashed border-[#BFCABA] bg-white p-10 text-center">
@@ -691,6 +657,7 @@ function EmptyState() {
   );
 }
 
+// Hiển thị DeclineModal.
 function DeclineModal({
   state,
   loading,

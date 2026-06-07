@@ -33,6 +33,7 @@ const legacyClubPaths = [
   "/registrations",
 ];
 
+// Xử lý resolve workspace.
 function resolveWorkspace(pathname: string, workspace?: AppWorkspace) {
   if (workspace) {
     return workspace;
@@ -49,6 +50,7 @@ function resolveWorkspace(pathname: string, workspace?: AppWorkspace) {
   return "public";
 }
 
+// Lấy notification icon.
 function getNotificationIcon(type?: string) {
   switch (type) {
     case "MATCH_CREATED":
@@ -66,6 +68,7 @@ function getNotificationIcon(type?: string) {
   }
 }
 
+// Lấy notification icon class.
 function getNotificationIconClass(type?: string) {
   switch (type) {
     case "REGISTRATION_APPROVED":
@@ -83,6 +86,7 @@ function getNotificationIconClass(type?: string) {
   }
 }
 
+// Hiển thị AppLayout.
 export const AppLayout = ({ children, workspace }: AppLayoutProps) => {
   const alreadyInsideAppLayout = useContext(AppLayoutContext);
   const location = useLocation();
@@ -156,6 +160,7 @@ export const AppLayout = ({ children, workspace }: AppLayoutProps) => {
     };
   }, [alreadyInsideAppLayout, currentWorkspace, user?.id]);
 
+  // Xử lý notification click.
   const handleNotificationClick = async (item: NotificationDTO) => {
     try {
       if (!item.isRead) {

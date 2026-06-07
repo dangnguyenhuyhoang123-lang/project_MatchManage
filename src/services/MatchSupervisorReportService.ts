@@ -17,12 +17,14 @@ export type MatchSupervisorReportResponse = MatchSupervisorReportRequest & {
 };
 
 class MatchSupervisorReportService {
+  // Gọi API lấy by match.
   getByMatch(matchId: number) {
     return axiosClient.get<MatchSupervisorReportResponse | null>(
       `${API_BASE_URL}/${matchId}/supervisor-report`,
     );
   }
 
+  // Xử lý dữ liệu upsert.
   upsert(matchId: number, payload: MatchSupervisorReportRequest) {
     return axiosClient.put<MatchSupervisorReportResponse>(
       `${API_BASE_URL}/${matchId}/supervisor-report`,

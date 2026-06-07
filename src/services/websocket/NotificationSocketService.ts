@@ -107,6 +107,7 @@ const NotificationSocketService = {
     stompClient.activate();
   },
 
+  // Ngắt kết nối dịch vụ realtime.
   disconnect() {
     const client = stompClient;
     stompClient = null;

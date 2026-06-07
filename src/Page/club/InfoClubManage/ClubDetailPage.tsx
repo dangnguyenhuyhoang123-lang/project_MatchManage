@@ -17,6 +17,7 @@ import {
   statusLabel,
   useCurrentClubId,
 } from "./clubInfoHelpers";
+import { getErrorMessage } from "../../../utils/errorUtils";
 
 interface ClubOverview {
   team: TeamModel | null;
@@ -46,6 +47,7 @@ interface ClubFormState {
 
 type ClubFormErrors = Partial<Record<keyof ClubFormState, string>>;
 
+// Tạo dữ liệu club form.
 function buildClubForm(team: TeamModel | null): ClubFormState {
   return {
     name: team?.name ?? "",
@@ -73,6 +75,7 @@ const ClubDetailPage: React.FC = () => {
   useEffect(() => {
     let mounted = true;
 
+    // Tải club info.
     const loadClubInfo = async () => {
       if (authLoading) return;
 
@@ -119,7 +122,7 @@ const ClubDetailPage: React.FC = () => {
       } catch (err) {
         console.error("Cannot load club info", err);
         if (mounted) {
-          setError("Không thể tải thông tin câu lạc bộ từ API.");
+          setError("Không thể tải thông tin câu lạc bộ.");
         }
       } finally {
         if (mounted) setLoading(false);
@@ -135,6 +138,7 @@ const ClubDetailPage: React.FC = () => {
 
   const team = overview.team;
 
+  // Mở modal hoac khung thao tác.
   const openEditModal = () => {
     if (!team) {
       toast.warning("Chưa tải được thông tin câu lạc bộ.");
@@ -146,11 +150,13 @@ const ClubDetailPage: React.FC = () => {
     setIsEditOpen(true);
   };
 
+  // Cập nhật club form.
   const updateClubForm = (field: keyof ClubFormState, value: string) => {
     setClubForm((prev) => ({ ...prev, [field]: value }));
     setClubFormErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
+  // Kiểm tra dữ liệu hợp lệ.
   const validateClubForm = () => {
     const errors: ClubFormErrors = {};
     const establishedYear = Number(clubForm.establishedYear);
@@ -170,6 +176,7 @@ const ClubDetailPage: React.FC = () => {
     return Object.keys(errors).length === 0;
   };
 
+  // Xử lý lưu dữ liệu.
   const handleSaveClub = async () => {
     if (!team?.id) {
       toast.error("Không xác định được câu lạc bộ cần cập nhật.");
@@ -198,7 +205,9 @@ const ClubDetailPage: React.FC = () => {
       toast.success("Cập nhật thông tin câu lạc bộ thành công.");
     } catch (err) {
       console.error("Cannot update club info", err);
-      toast.error("Không thể cập nhật thông tin câu lạc bộ.");
+      toast.error(
+        getErrorMessage(err, "Không thể cập nhật thông tin câu lạc bộ."),
+      );
     } finally {
       setSavingClub(false);
     }
@@ -258,6 +267,7 @@ async function loadStadium(team: TeamModel) {
   return null;
 }
 
+// Hiển thị PageHeader.
 function PageHeader({
   team,
   loading,
@@ -293,6 +303,7 @@ function PageHeader({
   );
 }
 
+// Hiển thị ClubIdentityCard.
 function ClubIdentityCard({
   team,
   loading,
@@ -336,6 +347,7 @@ function ClubIdentityCard({
   );
 }
 
+// Hiển thị MiniInfoCard.
 function MiniInfoCard({
   label,
   value,
@@ -357,6 +369,7 @@ function MiniInfoCard({
   );
 }
 
+// Hiển thị ContactDetailsCard.
 function ContactDetailsCard({
   team,
   stadium,
@@ -413,6 +426,7 @@ function ContactDetailsCard({
   );
 }
 
+// Hiển thị StatsOverview.
 function StatsOverview({
   overview,
   loading,
@@ -471,6 +485,7 @@ function StatsOverview({
   );
 }
 
+// Hiển thị ClubHistoryCard.
 function ClubHistoryCard({ team }: { team: TeamModel | null }) {
   return (
     <article className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
@@ -490,6 +505,7 @@ function ClubHistoryCard({ team }: { team: TeamModel | null }) {
   );
 }
 
+// Hiển thị SeasonInfoCard.
 function SeasonInfoCard({ overview }: { overview: ClubOverview }) {
   const rows = [
     {
@@ -549,6 +565,7 @@ function SeasonInfoCard({ overview }: { overview: ClubOverview }) {
   );
 }
 
+// Hiển thị EditClubModal.
 function EditClubModal({
   open,
   form,
@@ -566,6 +583,7 @@ function EditClubModal({
   onClose: () => void;
   onSubmit: () => void;
 }) {
+  // Xử lý logo file change.
   const handleLogoFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -677,6 +695,7 @@ function EditClubModal({
   );
 }
 
+// Hiển thị ClubTextField.
 function ClubTextField({
   label,
   value,
@@ -714,6 +733,7 @@ function ClubTextField({
   );
 }
 
+// Hiển thị ClubTextAreaField.
 function ClubTextAreaField({
   label,
   value,

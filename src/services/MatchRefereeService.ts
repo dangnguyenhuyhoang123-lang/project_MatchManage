@@ -20,16 +20,19 @@ export type MatchRefereeResponse = {
 };
 
 class MatchRefereeService {
+  // Xử lý dữ liệu assign.
   assign(payload: MatchRefereeAssignRequest) {
     return axiosClient.post<MatchRefereeResponse>(API_BASE_URL, payload);
   }
 
+  // Gọi API lấy by match.
   getByMatch(matchId: number) {
     return axiosClient.get<MatchRefereeResponse[]>(
       `${API_BASE_URL}/match/${matchId}`,
     );
   }
 
+  // Gọi API xóa remove.
   remove(id: number) {
     return axiosClient.delete(`${API_BASE_URL}/${id}`);
   }

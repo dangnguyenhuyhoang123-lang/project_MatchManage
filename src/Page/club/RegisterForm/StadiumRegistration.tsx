@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import type { StadiumDraft } from "./RegisterFormMatch";
 
 type Props = {
@@ -55,9 +56,8 @@ const StadiumRegistration: React.FC<Props> = ({
   const fifaPercent = useMemo(() => {
     return Math.min(Math.round((capacity / 86000) * 100), 100);
   }, [capacity]);
-
-  const saveDraft = () => {
-    onStadiumChange({
+  const currentStadiumDraft = useMemo(
+    () => ({
       name: stadiumName,
       clubName,
       address,
@@ -67,14 +67,68 @@ const StadiumRegistration: React.FC<Props> = ({
       country,
       fifaStarRating,
       certificateUrl: certificateUrl.trim() || undefined,
-    });
+    }),
+    [
+      address,
+      capacity,
+      certificateUrl,
+      clubName,
+      country,
+      fifaStarRating,
+      grassType,
+      stadiumImage,
+      stadiumName,
+    ],
+  );
+
+  useEffect(() => {
+    onStadiumChange(currentStadiumDraft);
+  }, [currentStadiumDraft, onStadiumChange]);
+
+  // Xử lý draft.
+  const saveDraft = () => {
+    onStadiumChange(currentStadiumDraft);
   };
 
+  // Kiểm tra thông tin sân trước khi qua bước tiếp theo.
+  const validateStadiumStep = () => {
+    if (!stadiumName.trim()) {
+      toast.error("Vui lòng nhập tên sân vận động.");
+      return false;
+    }
+
+    if (!address.trim()) {
+      toast.error("Vui lòng nhập địa chỉ sân vận động.");
+      return false;
+    }
+
+    if (!country.trim()) {
+      toast.error("Vui lòng nhập quốc gia của sân vận động.");
+      return false;
+    }
+
+    if (capacity < 10000) {
+      toast.error("Sân vận động cần có sức chứa tối thiểu 10.000 người.");
+      return false;
+    }
+
+    if (fifaStarRating < 2) {
+      toast.error("Chuẩn sao sân vận động tối thiểu là 2.");
+      return false;
+    }
+
+    return true;
+  };
+
+  // Xử lý next.
   const handleNext = () => {
+    if (!validateStadiumStep()) return;
+
     saveDraft();
     setStep(5);
   };
 
+  // Xử lý reset image.
   const handleResetImage = () => {
     setStadiumImage(defaultStadiumImage);
   };
@@ -402,13 +456,6 @@ const StadiumRegistration: React.FC<Props> = ({
             <button
               type="button"
               onClick={handleNext}
-              disabled={
-                !stadiumName.trim() ||
-                !address.trim() ||
-                !country.trim() ||
-                capacity < 10000 ||
-                fifaStarRating < 2
-              }
               className="px-10 py-3 rounded-full bg-green-700 text-white font-bold shadow-lg shadow-green-700/20 hover:scale-105 active:scale-95 transition-all text-sm disabled:opacity-50"
             >
               Tiếp tục
@@ -425,6 +472,7 @@ type InputGroupProps = {
   children: React.ReactNode;
 };
 
+// Hiển thị InputGroup.
 const InputGroup = ({ label, children }: InputGroupProps) => (
   <div className="col-span-2 md:col-span-1 flex flex-col gap-2">
     <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">

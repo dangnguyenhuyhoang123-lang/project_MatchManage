@@ -15,6 +15,7 @@ import {
 } from "./clubInfoHelpers";
 import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
+import { getErrorMessage } from "../../../utils/errorUtils";
 
 interface StadiumState {
   team: TeamModel | null;
@@ -36,6 +37,7 @@ interface StadiumFormState {
 
 type StadiumFormErrors = Partial<Record<keyof StadiumFormState, string>>;
 
+// Tạo dữ liệu stadium form.
 function buildStadiumForm(
   stadium: any | null,
   team: TeamModel | null,
@@ -85,6 +87,7 @@ const StadiumDetailPage: React.FC = () => {
   useEffect(() => {
     let mounted = true;
 
+    // Tải stadium info.
     const loadStadiumInfo = async () => {
       if (authLoading) return;
 
@@ -109,7 +112,7 @@ const StadiumDetailPage: React.FC = () => {
       } catch (err) {
         console.error("Cannot load stadium info", err);
         if (mounted) {
-          setError("Không thể tải thông tin sân vận động từ API.");
+          setError("Không thể tải thông tin sân vận động.");
         }
       } finally {
         if (mounted) setLoading(false);
@@ -134,6 +137,7 @@ const StadiumDetailPage: React.FC = () => {
 
   useRealtimeEvent(handleRealtimeEvent);
 
+  // Mở modal hoac khung thao tác.
   const openEditModal = () => {
     if (!state.team) {
       toast.warning("Chưa tải được thông tin câu lạc bộ.");
@@ -145,11 +149,13 @@ const StadiumDetailPage: React.FC = () => {
     setIsEditOpen(true);
   };
 
+  // Cập nhật stadium form.
   const updateStadiumForm = (field: keyof StadiumFormState, value: string) => {
     setStadiumForm((prev) => ({ ...prev, [field]: value }));
     setStadiumFormErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
+  // Kiểm tra dữ liệu hợp lệ.
   const validateStadiumForm = () => {
     const errors: StadiumFormErrors = {};
     const capacity = Number(stadiumForm.capacity);
@@ -175,6 +181,7 @@ const StadiumDetailPage: React.FC = () => {
     return Object.keys(errors).length === 0;
   };
 
+  // Xử lý lưu dữ liệu.
   const handleSaveStadium = async () => {
     if (!state.team?.id) {
       toast.error("Không xác định được câu lạc bộ cần cập nhật sân nhà.");
@@ -239,7 +246,9 @@ const StadiumDetailPage: React.FC = () => {
       );
     } catch (err) {
       console.error("Cannot save stadium", err);
-      toast.error("Không thể lưu thông tin sân vận động.");
+      toast.error(
+        getErrorMessage(err, "Không thể lưu thông tin sân vận động."),
+      );
     } finally {
       setSavingStadium(false);
     }
@@ -299,6 +308,7 @@ async function loadStadium(team: TeamModel) {
   return null;
 }
 
+// Hiển thị PageHeader.
 function PageHeader({
   team,
   loading,
@@ -341,6 +351,7 @@ function PageHeader({
   );
 }
 
+// Hiển thị StadiumHeroCard.
 function StadiumHeroCard({
   team,
   stadium,
@@ -427,6 +438,7 @@ function StadiumHeroCard({
   );
 }
 
+// Hiển thị MetricBlock.
 function MetricBlock({
   label,
   value,
@@ -454,6 +466,7 @@ function MetricBlock({
   );
 }
 
+// Hiển thị FacilitiesSection.
 function FacilitiesSection({ stadium }: { stadium: any | null }) {
   const facilities = [
     {
@@ -500,6 +513,7 @@ function FacilitiesSection({ stadium }: { stadium: any | null }) {
   );
 }
 
+// Hiển thị FacilityCard.
 function FacilityCard({
   facility,
 }: {
@@ -542,6 +556,7 @@ function FacilityCard({
   );
 }
 
+// Hiển thị EditStadiumModal.
 function EditStadiumModal({
   open,
   form,
@@ -715,6 +730,7 @@ function EditStadiumModal({
   );
 }
 
+// Hiển thị StadiumTextField.
 function StadiumTextField({
   label,
   value,
@@ -752,6 +768,7 @@ function StadiumTextField({
   );
 }
 
+// Hiển thị StadiumTextAreaField.
 function StadiumTextAreaField({
   label,
   value,

@@ -4,6 +4,7 @@ import type { NotificationDTO } from "../../model/RealtimeEvent";
 const API_BASE_URL = "/notifications";
 
 const NotificationService = {
+  // Gọi API lấy by user.
   getByUser(userId: number) {
     return axiosClient.get<NotificationDTO[]>(`${API_BASE_URL}/user/${userId}`);
   },

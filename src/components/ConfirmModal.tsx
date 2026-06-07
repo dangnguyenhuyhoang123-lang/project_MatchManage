@@ -13,6 +13,7 @@ interface ConfirmModalProps {
   children?: ReactNode;
 }
 
+// Hiển thị ConfirmModal.
 export default function ConfirmModal({
   open,
   title,

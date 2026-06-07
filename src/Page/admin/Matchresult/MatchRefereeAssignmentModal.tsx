@@ -9,21 +9,8 @@ import MatchRefereeService, {
 import RefereeService, { type Referee } from "../../../services/RefereeService";
 import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
+import { getErrorMessage } from "../../../utils/errorUtils";
 
-function extractApiErrorMessage(error: unknown) {
-  const maybe = error as {
-    response?: { data?: unknown; status?: number };
-    message?: string;
-  };
-  const data = maybe.response?.data;
-  if (typeof data === "string") return data;
-  if (data && typeof data === "object") {
-    const obj = data as Record<string, unknown>;
-    if (typeof obj.message === "string") return obj.message;
-    if (typeof obj.error === "string") return obj.error;
-  }
-  return maybe.message || "Không thể xử lý yêu cầu.";
-}
 
 type RefereeRole =
   | "MAIN_REFEREE"
@@ -47,6 +34,7 @@ const roleOptions: Array<{ value: RefereeRole; label: string }> = [
   { value: "VAR_REFEREE", label: "Trọng tài VAR" },
 ];
 
+// Hiển thị MatchRefereeAssignmentModal.
 export default function MatchRefereeAssignmentModal({
   open,
   matchId,
@@ -84,7 +72,7 @@ export default function MatchRefereeAssignmentModal({
       setAssignments(Array.isArray(assignedRefs.data) ? assignedRefs.data : []);
     } catch (error) {
       console.error("Cannot load referees", error);
-      setErrorMessage(extractApiErrorMessage(error));
+      setErrorMessage(getErrorMessage(error, "Không thể xử lý yêu cầu."));
     } finally {
       setLoading(false);
     }
@@ -115,6 +103,7 @@ export default function MatchRefereeAssignmentModal({
 
   useRealtimeEvent(handleRealtimeEvent);
 
+  // Xử lý assign referee.
   const handleAssignReferee = async () => {
     if (!matchId) return;
     const normalizedRefereeId = Number(refereeId);
@@ -146,12 +135,13 @@ export default function MatchRefereeAssignmentModal({
       await loadData();
       onChanged?.();
     } catch (error) {
-      setErrorMessage(extractApiErrorMessage(error));
+      setErrorMessage(getErrorMessage(error, "Không thể xử lý yêu cầu."));
     } finally {
       setSubmitting(false);
     }
   };
 
+  // Xử lý role label.
   const roleLabel = (value?: string | null) =>
     roleOptions.find((r) => r.value === value)?.label || value || "--";
 
@@ -275,7 +265,7 @@ export default function MatchRefereeAssignmentModal({
               await loadData();
               onChanged?.();
             } catch (e) {
-              setErrorMessage(extractApiErrorMessage(e));
+              setErrorMessage(getErrorMessage(e, "Không thể xóa phân công trọng tài."));
             } finally {
               setSubmitting(false);
             }

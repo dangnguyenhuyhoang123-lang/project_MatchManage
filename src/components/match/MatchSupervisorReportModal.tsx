@@ -4,7 +4,7 @@ import { Modal } from "../Modal";
 import MatchSupervisorReportService, {
   type MatchSupervisorReportRequest,
 } from "../../services/MatchSupervisorReportService";
-import { extractApiErrorMessage } from "../../utils/apiError";
+import { getErrorMessage } from "../../utils/errorUtils";
 
 type MatchSupervisorReportModalProps = {
   open: boolean;
@@ -22,6 +22,7 @@ const emptyForm: MatchSupervisorReportRequest = {
   disciplineRecommendation: "",
 };
 
+// Chuẩn hóa form.
 function normalizeForm(
   form: MatchSupervisorReportRequest,
 ): MatchSupervisorReportRequest {
@@ -35,6 +36,7 @@ function normalizeForm(
   };
 }
 
+// Hiển thị MatchSupervisorReportModal.
 export default function MatchSupervisorReportModal({
   open,
   matchId,
@@ -49,6 +51,7 @@ export default function MatchSupervisorReportModal({
   useEffect(() => {
     if (!open) return;
 
+    // Tải report.
     const loadReport = async () => {
       if (!matchId) {
         setForm(emptyForm);
@@ -67,7 +70,7 @@ export default function MatchSupervisorReportModal({
           setForm(emptyForm);
         } else {
           console.error("Cannot load supervisor report", error);
-          setErrorMessage(extractApiErrorMessage(error));
+          setErrorMessage(getErrorMessage(error, "Không thể tải báo cáo giám sát."));
         }
       } finally {
         setLoading(false);
@@ -87,6 +90,7 @@ export default function MatchSupervisorReportModal({
     }));
   };
 
+  // Xử lý gui biểu mẫu.
   const handleSubmit = async () => {
     if (!matchId) {
       setErrorMessage("Không tìm thấy trận đấu để lưu báo cáo.");
@@ -102,7 +106,7 @@ export default function MatchSupervisorReportModal({
       onClose();
     } catch (error) {
       console.error("Cannot save supervisor report", error);
-      setErrorMessage(extractApiErrorMessage(error));
+      setErrorMessage(getErrorMessage(error, "Không thể lưu báo cáo giám sát."));
     } finally {
       setSubmitting(false);
     }
@@ -190,6 +194,7 @@ export default function MatchSupervisorReportModal({
   );
 }
 
+// Hiển thị TextInput.
 function TextInput({
   label,
   value,
@@ -213,6 +218,7 @@ function TextInput({
   );
 }
 
+// Hiển thị TextArea.
 function TextArea({
   label,
   value,

@@ -9,6 +9,7 @@ import TeamService from "../../../services/TeamService";
 import { PhanTrang } from "../../../utils/PhanTrang";
 import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
+import { getErrorMessage } from "../../../utils/errorUtils";
 
 type FilterState = {
   search: string;
@@ -33,7 +34,9 @@ const STATUS_LABELS: Record<string, string> = {
   INACTIVE: "Ngừng hoạt động",
 };
 
+// Chuẩn hóa keyword.
 const normalizeKeyword = (value: string) => value.trim().toLowerCase();
+// Lấy status label.
 const getStatusLabel = (status: string) => STATUS_LABELS[status] ?? status;
 
 const ClubManagement: React.FC = () => {
@@ -60,6 +63,7 @@ const ClubManagement: React.FC = () => {
     [appliedFilters],
   );
 
+  // Xử lý teams on client.
   const filterTeamsOnClient = (items: TeamModel[], filters: FilterState) => {
     const keyword = normalizeKeyword(filters.search);
     const cityKeyword = normalizeKeyword(filters.city);
@@ -166,6 +170,7 @@ const ClubManagement: React.FC = () => {
     setDraftFilters((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Xử lý apply filters.
   const applyFilters = () => {
     setTrangHienTai(1);
     setAppliedFilters({
@@ -175,17 +180,20 @@ const ClubManagement: React.FC = () => {
     });
   };
 
+  // Xử lý filters.
   const resetFilters = () => {
     setDraftFilters(DEFAULT_FILTERS);
     setTrangHienTai(1);
     setAppliedFilters(DEFAULT_FILTERS);
   };
 
+  // Xử lý xóa dữ liệu.
   const handleDelete = async (team: TeamModel) => {
     if (!team.id) return;
     setDeletingTeam(team);
   };
 
+  // Xử lý xóa dữ liệu.
   const handleConfirmDelete = async () => {
     if (!deletingTeam?.id) return;
 
@@ -197,17 +205,19 @@ const ClubManagement: React.FC = () => {
       fetchTeams(trangHienTai, appliedFilters);
     } catch (error) {
       console.error("Lỗi khi xóa đội bóng:", error);
-      toast.error("Không thể xóa đội bóng này.");
+      toast.error(getErrorMessage(error, "Không thể xóa đội bóng này."));
     } finally {
       setDeleteLoading(false);
     }
   };
 
+  // Mở modal hoac khung thao tác.
   const openCreateModal = () => {
     setSelectedTeam(null);
     setOpen(true);
   };
 
+  // Mở modal hoac khung thao tác.
   const openEditModal = (team: TeamModel) => {
     setSelectedTeam(team);
     setOpen(true);
@@ -222,10 +232,7 @@ const ClubManagement: React.FC = () => {
           </h2>
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-[#0d631b]" />
-            <p className="font-medium text-gray-500">
-              Quản lý đội bóng đồng bộ với API và hỗ trợ đầy đủ thêm, sửa, xóa,
-              tìm kiếm, bộ lọc, phân trang.
-            </p>
+            <p className="font-medium text-gray-500">Quản lý đội bóng.</p>
           </div>
         </div>
         <button
@@ -381,7 +388,7 @@ const ClubManagement: React.FC = () => {
         <StatCard
           label="Hệ thống"
           value="Ổn định"
-          sub="Đồng bộ dữ liệu API"
+          sub="Đồng bộ dữ liệu"
           isStatus
         />
       </div>
@@ -523,6 +530,7 @@ const ClubCard = ({
   </div>
 );
 
+// Hiển thị SkeletonCard.
 const SkeletonCard = () => (
   <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm animate-pulse">
     <div className="mb-6 flex items-start justify-between">
@@ -539,6 +547,7 @@ const SkeletonCard = () => (
   </div>
 );
 
+// Hiển thị EmptyState.
 const EmptyState = () => (
   <div className="col-span-full rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-12 text-center text-gray-500">
     Không có đội bóng phù hợp với bộ lọc hiện tại.

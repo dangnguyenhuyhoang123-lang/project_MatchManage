@@ -38,6 +38,7 @@ export type ManOfTheMatchStatsResponse = {
 };
 
 class MatchService {
+  // Gọi API lấy matches.
   getAllMatches(page: number, size: number, filters?: any) {
     return axiosClient.get(`${API_BASE_URL}/getAllMatches`, {
       params: {
@@ -53,10 +54,12 @@ class MatchService {
     });
   }
 
+  // Gọi API tạo match.
   addMatch(match: any) {
     return axiosClient.post(`${API_BASE_URL}/addMatch`, match);
   }
 
+  // Gọi API cập nhật match.
   updateMatch(id: number, match: any) {
     return axiosClient.put(`${API_BASE_URL}/updateMatch/${id}`, match);
   }
@@ -86,6 +89,7 @@ class MatchService {
     });
   }
 
+  // Gọi API xóa match.
   deleteMatch(id: number) {
     return axiosClient.delete(`${API_BASE_URL}/deleteMatch/${id}`);
   }
@@ -115,10 +119,12 @@ class MatchService {
     return response.data;
   }
 
+  // Gọi API xóa match event.
   async deleteMatchEvent(matchId: number, eventId: number): Promise<void> {
     await axiosClient.delete(`${API_BASE_URL}/${matchId}/events/${eventId}`);
   }
 
+  // Gọi API lấy list event match.
   async getListEventMatch(matchID: number): Promise<MatchEvent[]> {
     const response = await axiosClient.get<MatchEvent[]>(
       `${API_BASE_URL}/${matchID}/events`,
@@ -127,6 +133,7 @@ class MatchService {
     return response.data;
   }
 
+  // Gọi API lấy stats match.
   async getStatsMatch(matchID: number): Promise<MatchStats[]> {
     const response = await axiosClient.get<MatchStats[]>(
       `${API_BASE_URL}/${matchID}/stats`,
@@ -146,6 +153,7 @@ class MatchService {
 
     return Array.isArray(response.data) ? response.data : [];
   }
+  // Gọi API lấy match lineups.
   async getMatchLineups(matchId: number): Promise<MatchLineupsResponse> {
     const response = await axiosClient.get<MatchLineupsResponse>(
       `${API_BASE_URL}/${matchId}/lineups`,
@@ -154,6 +162,7 @@ class MatchService {
     return response.data;
   }
 
+  // Gọi API lấy team lineup.
   async getTeamLineup(matchId: number, teamId: number): Promise<MatchTactics> {
     const response = await axiosClient.get<MatchTactics>(
       `${API_BASE_URL}/${matchId}/teams/${teamId}/lineup`,
@@ -175,6 +184,7 @@ class MatchService {
     return response.data;
   }
 
+  // Gọi API lấy match tactics.
   async getMatchTactics(matchId: number): Promise<MatchTactics[]> {
     const response = await axiosClient.get<MatchTactics[]>(
       `${API_BASE_URL}/${matchId}/tactics`,
@@ -183,6 +193,7 @@ class MatchService {
     return response.data;
   }
 
+  // Gọi API lấy list matches.
   async getListMatches(trangHienTai: number): Promise<KetQuaInterface> {
     const response = await axiosClient.get(`${API_BASE_URL}/getAllMatches`, {
       params: {
@@ -218,6 +229,7 @@ class MatchService {
     };
   }
 
+  // Gọi API lấy match by id.
   async getMatchById(matchID: number): Promise<MatchModel> {
     const response = await axiosClient.get(`${API_BASE_URL}/${matchID}`);
 
@@ -238,6 +250,7 @@ class MatchService {
     });
   }
 
+  // Gọi API lấy team season by match and team.
   getTeamSeasonByMatchAndTeam(matchId: number, teamId: number) {
     return axiosClient.get<MatchTeamSeasonDTO>(
       `${API_BASE_URL}/${matchId}/teams/${teamId}/team-season`,
@@ -248,12 +261,14 @@ class MatchService {
     return axiosClient.post<MatchModel>(`${API_BASE_URL}/${matchId}/predict`);
   }
 
+  // Gọi API cập nhật man of the match.
   updateManOfTheMatch(matchId: number, playerId: number) {
     return axiosClient.patch<MatchModel>(
       `${API_BASE_URL}/${matchId}/man-of-the-match/${playerId}`,
     );
   }
 
+  // Gọi API lấy man of the match stats.
   getManOfTheMatchStats(seasonId: number) {
     return axiosClient.get<ManOfTheMatchStatsResponse[]>(
       `${API_BASE_URL}/man-of-the-match-stats`,

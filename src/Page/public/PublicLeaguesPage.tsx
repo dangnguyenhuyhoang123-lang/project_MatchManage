@@ -20,6 +20,7 @@ import { usePublicRealtimeEvent } from "../../hooks/usePublicRealtimeEvent";
 import type { RealtimeEventDTO } from "../../model/RealtimeEvent";
 import LoadingSpinner from "../../components/Spinner/LoadingSpinner";
 
+// Hiển thị PublicLeaguesPage.
 export const PublicLeaguesPage = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"live" | "upcoming" | "finished">(
@@ -178,6 +179,7 @@ export const PublicLeaguesPage = () => {
     [seasons],
   );
 
+  // Xử lý go to previous featured league.
   const goToPreviousFeaturedLeague = () => {
     if (featuredLeagues.length === 0 || isSliding) return;
 
@@ -193,6 +195,7 @@ export const PublicLeaguesPage = () => {
     }, 180);
   };
 
+  // Xử lý go to next featured league.
   const goToNextFeaturedLeague = () => {
     if (featuredLeagues.length === 0 || isSliding) return;
 
@@ -479,6 +482,7 @@ export const PublicLeaguesPage = () => {
   );
 };
 
+// Hiển thị MatchCard.
 function MatchCard({
   match,
   type,
@@ -492,6 +496,7 @@ function MatchCard({
   const isUpcoming = type === "upcoming";
   const hasPrediction = hasPredictedScore(match);
 
+  // Định dạng time.
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString("vi-VN", {
       hour: "2-digit",
@@ -601,6 +606,7 @@ function MatchCard({
   );
 }
 
+// Xử lý has predicted score.
 function hasPredictedScore(match: MatchModel) {
   return match.predictedHomeScore != null && match.predictedAwayScore != null;
 }

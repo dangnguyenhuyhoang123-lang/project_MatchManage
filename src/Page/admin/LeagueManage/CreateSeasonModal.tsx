@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import type { SystemRule } from "../../../model/SystemRule";
 import SystemRuleService from "../../../services/SystemRuleService";
 import SeasonService from "../../../services/SeasonService";
-import { extractApiErrorMessage } from "../../../utils/apiError";
+import { getErrorMessage } from "../../../utils/errorUtils";
 
 interface Props {
   onClose: () => void;
@@ -17,9 +17,11 @@ function extractArray<T>(value: any): T[] {
   if (Array.isArray(value?.data?.content)) return value.data.content;
   return [];
 }
+// Xử lý date input value.
 const toDateInputValue = (value?: string | null) =>
   value ? value.split("T")[0] : "";
 
+// Tạo season modal.
 export default function CreateSeasonModal({
   onClose,
   leagueId,
@@ -39,6 +41,7 @@ export default function CreateSeasonModal({
   const isEditMode = Boolean(currentSeason?.id);
 
   useEffect(() => {
+    // Tải rules.
     const loadRules = async () => {
       try {
         const response = await SystemRuleService.getAllNoPaging();
@@ -100,6 +103,7 @@ export default function CreateSeasonModal({
     return `${days} ngày thi đấu`;
   }, [startDate, endDate]);
 
+  // Xử lý gui biểu mẫu.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
@@ -144,7 +148,7 @@ export default function CreateSeasonModal({
       onSuccess();
       onClose();
     } catch (err) {
-      setErrorMsg(extractApiErrorMessage(err));
+      setErrorMsg(getErrorMessage(err, "Không thể lưu mùa giải."));
     } finally {
       setIsSubmitting(false);
     }
@@ -402,6 +406,7 @@ type InputFieldProps = {
   required?: boolean;
 };
 
+// Hiển thị InputField.
 function InputField({
   label,
   value,
@@ -425,6 +430,7 @@ function InputField({
   );
 }
 
+// Hiển thị DateField.
 function DateField({
   label,
   value,
@@ -450,6 +456,7 @@ function DateField({
   );
 }
 
+// Hiển thị MiniStat.
 function MiniStat({
   icon,
   label,
@@ -472,6 +479,7 @@ function MiniStat({
   );
 }
 
+// Hiển thị RuleMetric.
 function RuleMetric({
   label,
   value,

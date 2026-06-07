@@ -1,6 +1,7 @@
 import { Award, PlaySquare, AtSign } from "lucide-react";
 import { Link } from "react-router-dom";
 
+// Hiển thị Footer.
 export const Footer = () => {
   return (
     <footer className="bg-[#FAF9F9] pt-20 pb-10 border-t border-gray-100">
@@ -132,7 +133,7 @@ export const Footer = () => {
 
         <div className="border-t border-gray-200/60 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-[13px] text-gray-500 font-medium">
-            © 2024 Tactical Organicism. All rights reserved.
+            © 2026 Tactical Organicism. All rights reserved.
           </p>
 
           <div className="flex gap-8 text-[13px] text-gray-500 font-medium">

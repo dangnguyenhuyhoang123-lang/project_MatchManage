@@ -7,6 +7,7 @@ import ConfirmModal from "../../../components/ConfirmModal";
 import GenerateScheduleModal from "../../../components/match/GenerateScheduleModal";
 import MatchRefereeAssignmentModal from "../../../components/match/MatchRefereeAssignmentModal";
 import { Modal } from "../../../components/Modal";
+import StatusBadge from "../../../components/common/StatusBadge";
 import LoadingSpinner from "../../../components/Spinner/LoadingSpinner";
 import { AppLayout } from "../../../layouts/AppLayout";
 import { PhanTrang } from "../../../utils/PhanTrang";
@@ -18,13 +19,20 @@ import LeagueService from "../../../services/LeagueService";
 import RoundService from "../../../services/RoundService";
 import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../services/websocket/NotificationSocketService";
+import { getErrorMessage } from "../../../utils/errorUtils";
+import {
+  getMatchStatusLabel,
+  getStatusTone,
+} from "../../../utils/statusUtils";
 
 const SO_TRAN_MOI_TRANG = 8;
 const CLIENT_FETCH_SIZE = 1000;
 
+// Lấy match time.
 const getMatchTime = (match: MatchModel) =>
   new Date(match?.matchDate || 0).getTime();
 
+// Xử lý matches by upcoming priority.
 const sortMatchesByUpcomingPriority = (items: MatchModel[]) => {
   const now = Date.now();
 
@@ -46,6 +54,7 @@ const sortMatchesByUpcomingPriority = (items: MatchModel[]) => {
   });
 };
 
+// Xử lý unique matches by id.
 const uniqueMatchesById = (items: MatchModel[]) => {
   const map = new Map<number | string, MatchModel>();
   items.forEach((item, index) => {
@@ -58,6 +67,7 @@ const uniqueMatchesById = (items: MatchModel[]) => {
   return Array.from(map.values());
 };
 
+// Hiển thị MatchSchedule.
 export default function MatchSchedule() {
   const [open, setOpen] = useState(false);
   const [matches, setMatches] = useState<MatchModel[]>([]);
@@ -89,6 +99,7 @@ export default function MatchSchedule() {
     search: "",
   });
 
+  // Xử lý lưu dữ liệu.
   const handleSaveMatch = async (payload: any) => {
     try {
       if (editingMatch) {
@@ -103,14 +114,16 @@ export default function MatchSchedule() {
       fetchMatches(trangHienTai);
     } catch (error) {
       console.error("Lỗi khi lưu trận đấu:", error);
-      toast.error("Có lỗi xảy ra khi lưu trận đấu!");
+      toast.error(getErrorMessage(error, "Có lỗi xảy ra khi lưu trận đấu!"));
     }
   };
 
+  // Xử lý xóa dữ liệu.
   const handleDeleteMatch = async (id: number) => {
     setDeletingMatchId(id);
   };
 
+  // Xử lý xóa dữ liệu.
   const handleConfirmDeleteMatch = async () => {
     if (!deletingMatchId) return;
 
@@ -122,12 +135,13 @@ export default function MatchSchedule() {
       fetchMatches(trangHienTai);
     } catch (error) {
       console.error("Lỗi khi xóa trận đấu:", error);
-      toast.error("Có lỗi xảy ra khi xóa trận đấu!");
+      toast.error(getErrorMessage(error, "Có lỗi xảy ra khi xóa trận đấu!"));
     } finally {
       setDeleteLoading(false);
     }
   };
 
+  // Xử lý predict match.
   const handlePredictMatch = async (match: MatchModel) => {
     if (!match.id) return;
 
@@ -147,7 +161,7 @@ export default function MatchSchedule() {
       fetchMatches(trangHienTai);
     } catch (error) {
       console.error("Lỗi khi dự đoán trận đấu:", error);
-      toast.error("Không thể dự đoán trận đấu. Vui lòng thử lại!");
+      toast.error(getErrorMessage(error, "Không thể dự đoán trận đấu. Vui lòng thử lại!"));
     } finally {
       setPredictingIds((current) => {
         const next = new Set(current);
@@ -158,6 +172,7 @@ export default function MatchSchedule() {
   };
 
   useEffect(() => {
+    // Lấy leagues.
     const fetchLeagues = async () => {
       try {
         const response = await LeagueService.getAllLeaguesNormalized(0, 100);
@@ -170,6 +185,7 @@ export default function MatchSchedule() {
   }, []);
 
   useEffect(() => {
+    // Lấy seasons.
     const fetchSeasons = async () => {
       if (!selectedLeague) {
         setSeasons([]);
@@ -196,6 +212,7 @@ export default function MatchSchedule() {
 
   useEffect(() => {
     if (selectedSeason) {
+      // Lấy rounds.
       const fetchRounds = async () => {
         try {
           const response = await RoundService.getAllRoundsNormalized(
@@ -568,10 +585,12 @@ export default function MatchSchedule() {
   );
 }
 
+// Xử lý has predicted score.
 function hasPredictedScore(match: MatchModel) {
   return match.predictedHomeScore != null && match.predictedAwayScore != null;
 }
 
+// Hiển thị MatchRow.
 function MatchRow({
   match,
   onEdit,
@@ -593,33 +612,18 @@ function MatchRow({
   const isConflict = String(match.status) === "CONFLICT";
   const hasPrediction = hasPredictedScore(match);
 
+  // Hiển thị status.
   const renderStatus = (status: string) => {
-    switch (status) {
-      case "SCHEDULED":
-        return (
-          <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-600">
-            Chưa diễn ra
-          </span>
-        );
-      case "FINISHED":
-        return (
-          <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-600">
-            Đã kết thúc
-          </span>
-        );
-      case "CONFLICT":
-        return (
-          <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-600">
-            Xung đột
-          </span>
-        );
-      default:
-        return (
-          <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600">
-            {status}
-          </span>
-        );
+    if (status === "CONFLICT") {
+      return <StatusBadge label="Xung đột" tone="danger" />;
     }
+
+    return (
+      <StatusBadge
+        label={getMatchStatusLabel(status)}
+        tone={getStatusTone(status)}
+      />
+    );
   };
 
   return (

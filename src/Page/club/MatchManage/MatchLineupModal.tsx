@@ -15,6 +15,7 @@ import SystemRuleService, {
   type SystemRule,
 } from "../../../services/SystemRuleService";
 import type { MatchModel } from "../../../model/Match/MatchModel";
+import { getErrorMessage } from "../../../utils/errorUtils";
 type PositionGroup = "GK" | "DF" | "MF" | "FW";
 type PlayerFilter = "ALL" | PositionGroup;
 
@@ -112,6 +113,7 @@ const fallbackAvatar =
 const fallbackLogo =
   "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=200&h=200&fit=crop";
 
+// Xử lý slot.
 function slot(
   key: string,
   label: string,
@@ -166,6 +168,7 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
   useEffect(() => {
     let mounted = true;
 
+    // Tải data.
     const loadData = async () => {
       try {
         setLoading(true);
@@ -228,9 +231,7 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
       } catch (err) {
         console.error("Cannot load lineup modal data", err);
         if (mounted) {
-          setError(
-            "Không thể tải dữ liệu đội hình hoặc cầu thủ đã đăng ký từ API.",
-          );
+          setError("Không thể tải dữ liệu đội hình hoặc cầu thủ đã đăng ký.");
         }
       } finally {
         if (mounted) setLoading(false);
@@ -247,6 +248,7 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
   useEffect(() => {
     let mounted = true;
 
+    // Tải season rule.
     const loadSeasonRule = async () => {
       const season = match?.season as
         | (NonNullable<MatchModel["season"]> & {
@@ -335,6 +337,7 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
     });
   }, [players, positionFilter]);
 
+  // Xử lý formation change.
   const handleFormationChange = (value: string) => {
     setFormation(value);
     setSlotMap(createEmptySlotMap(value));
@@ -343,17 +346,20 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
     setPositionFilter("ALL");
   };
 
+  // Xử lý slot select.
   const handleSlotSelect = (slotKey: string) => {
     setSelectedSlotKey(slotKey);
     setSelectedBenchIndex(null);
   };
 
+  // Xử lý bench slot select.
   const handleBenchSlotSelect = (index: number) => {
     if (isReadOnly) return;
     setSelectedBenchIndex(index);
     setSelectedSlotKey(null);
   };
 
+  // Xử lý assign player.
   const assignPlayer = (player: SlotPlayer) => {
     if (isReadOnly || player.status !== "available") return;
 
@@ -391,6 +397,7 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
     setSelectedBenchIndex(null);
   };
 
+  // Xử lý player pick.
   const handlePlayerPick = (player: SlotPlayer) => {
     if (selectedBenchIndex !== null) {
       assignBenchPlayer(player, selectedBenchIndex);
@@ -399,11 +406,13 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
     assignPlayer(player);
   };
 
+  // Xóa player.
   const removePlayer = (slotKey: string) => {
     if (isReadOnly) return;
     setSlotMap((current) => ({ ...current, [slotKey]: null }));
   };
 
+  // Xóa bench player.
   const removeBenchPlayer = (index: number) => {
     if (isReadOnly) return;
     setBenchPlayers((current) =>
@@ -411,6 +420,7 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
     );
   };
 
+  // Xử lý assign bench player.
   const assignBenchPlayer = (player: SlotPlayer, preferredIndex?: number) => {
     if (isReadOnly || player.status !== "available") return;
 
@@ -448,6 +458,7 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
     });
   };
 
+  // Kiểm tra dữ liệu hợp lệ.
   const validateLineupWithRule = (selectedBenchPlayers: SlotPlayer[]) => {
     const selectedStartingPlayers = Object.values(slotMap).filter(
       (player): player is SlotPlayer => Boolean(player),
@@ -518,6 +529,7 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
     return "";
   };
 
+  // Xử lý lineup.
   const saveLineup = async () => {
     const missingSlots = slots.filter((item) => !slotMap[item.key]);
     if (missingSlots.length > 0) {
@@ -592,13 +604,17 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
     } catch (err) {
       console.error("Cannot submit lineup", err);
       setError(
-        "Không thể lưu đội hình. Vui lòng kiểm tra cầu thủ bị treo giò hoặc dữ liệu đội hình.",
+        getErrorMessage(
+          err,
+          "Không thể lưu đội hình. Vui lòng kiểm tra cầu thủ bị treo giò hoặc dữ liệu đội hình.",
+        ),
       );
     } finally {
       setSaving(false);
     }
   };
 
+  // Xử lý hydrate lineup.
   const hydrateLineup = (lineup: TeamLineupResponse) => {
     const nextFormation = getKnownFormation(lineup.formationName);
     const nextSlots = FORMATIONS[nextFormation];
@@ -662,6 +678,7 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
     setSelectedBenchIndex(null);
   };
 
+  // Xóa lineup action.
   const deleteLineupAction = async () => {
     try {
       setSaving(true);
@@ -678,7 +695,9 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
       setNotice("Đã xóa đội hình thành công.");
     } catch (err) {
       console.error("Cannot delete lineup", err);
-      setError("Không thể xóa đội hình. Vui lòng thử lại.");
+      setError(
+        getErrorMessage(err, "Không thể xóa đội hình. Vui lòng thử lại."),
+      );
     } finally {
       setSaving(false);
     }
@@ -800,6 +819,7 @@ const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
 
 export default MatchLineupModal;
 
+// Hiển thị MatchHeader.
 function MatchHeader({ match }: { match: MatchModel }) {
   return (
     <section className="relative overflow-hidden rounded-[2rem] bg-[#f5f3ef] px-6 py-7 shadow-sm">
@@ -864,6 +884,7 @@ function MatchHeader({ match }: { match: MatchModel }) {
   );
 }
 
+// Hiển thị TeamHeader.
 function TeamHeader({
   logo,
   name,
@@ -896,6 +917,7 @@ function TeamHeader({
   );
 }
 
+// Hiển thị StrategyRow.
 function StrategyRow({
   formation,
   filledSlots,
@@ -956,6 +978,7 @@ function StrategyRow({
   );
 }
 
+// Hiển thị PitchCard.
 function PitchCard({
   slots,
   slotMap,
@@ -994,6 +1017,7 @@ function PitchCard({
   );
 }
 
+// Hiển thị PlayerSlotItem.
 function PlayerSlotItem({
   slot,
   player,
@@ -1075,6 +1099,7 @@ function PlayerSlotItem({
   );
 }
 
+// Hiển thị BenchSlotsRow.
 function BenchSlotsRow({
   benchPlayers,
   selectedBenchIndex,
@@ -1176,6 +1201,7 @@ function BenchSlotsRow({
   );
 }
 
+// Hiển thị AvailablePlayersPanel.
 function AvailablePlayersPanel({
   players,
   allCount,
@@ -1273,6 +1299,7 @@ function AvailablePlayersPanel({
   );
 }
 
+// Hiển thị StatusLegend.
 function StatusLegend({
   label,
   className,
@@ -1287,6 +1314,7 @@ function StatusLegend({
   );
 }
 
+// Hiển thị AvailablePlayerRow.
 function AvailablePlayerRow({
   player,
   selected,
@@ -1366,6 +1394,7 @@ function AvailablePlayerRow({
   );
 }
 
+// Tạo empty slot map.
 function createEmptySlotMap(formation: string): SlotMap {
   return FORMATIONS[formation].reduce<SlotMap>((map, item) => {
     map[item.key] = null;
@@ -1373,6 +1402,7 @@ function createEmptySlotMap(formation: string): SlotMap {
   }, {});
 }
 
+// Tạo empty bench slots.
 function createEmptyBenchSlots(): BenchSlotMap {
   return Array.from({ length: BENCH_SLOT_COUNT }, () => null);
 }
@@ -1394,6 +1424,7 @@ async function loadLineup(matchId: number, teamId: number) {
   }
 }
 
+// Xử lý player seasons.
 function extractPlayerSeasons(data: any): Array<PlayerSeason | any> {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.content)) return data.content;
@@ -1402,6 +1433,7 @@ function extractPlayerSeasons(data: any): Array<PlayerSeason | any> {
   return [];
 }
 
+// Xử lý has team season id.
 function hasTeamSeasonId(
   playerSeason: PlayerSeason | any,
   teamSeasonId: number,
@@ -1416,6 +1448,7 @@ function hasTeamSeasonId(
   return Number(rawTeamSeasonId) === teamSeasonId;
 }
 
+// Chuẩn hóa registered player.
 function normalizeRegisteredPlayer(
   playerSeason: PlayerSeason | any,
   suspendedPlayerIds: Set<number> = new Set(),
@@ -1457,6 +1490,7 @@ function normalizeRegisteredPlayer(
   };
 }
 
+// Chuẩn hóa position.
 function normalizePosition(value: string): PositionGroup {
   const normalized = removeVietnameseMark(value).toUpperCase();
   const compact = normalized.replace(/[^A-Z0-9]/g, "");
@@ -1509,10 +1543,12 @@ function normalizePosition(value: string): PositionGroup {
   return "MF";
 }
 
+// Xử lý matches position.
 function matchesPosition(value: string, candidates: string[]) {
   return candidates.some((candidate) => value.includes(candidate));
 }
 
+// Chuẩn hóa player status.
 function normalizePlayerStatus(value: string): PlayerStatusKey {
   const normalized = removeVietnameseMark(value).toUpperCase();
   if (normalized.includes("INJURED") || normalized.includes("CHAN THUONG")) {
@@ -1529,6 +1565,7 @@ function normalizePlayerStatus(value: string): PlayerStatusKey {
   return "available";
 }
 
+// Xử lý is foreign player.
 function isForeignPlayer(player: SlotPlayer) {
   const playerType = removeVietnameseMark(
     player.playerType ?? "",
@@ -1549,6 +1586,7 @@ function isForeignPlayer(player: SlotPlayer) {
   return !["VIETNAM", "VIETNAM", "VN"].includes(nationality);
 }
 
+// Lấy player status meta.
 function getPlayerStatusMeta(status: PlayerStatusKey) {
   if (status === "injured") {
     return {
@@ -1573,11 +1611,13 @@ function getPlayerStatusMeta(status: PlayerStatusKey) {
   };
 }
 
+// Lấy known formation.
 function getKnownFormation(value?: string) {
   const normalized = value?.match(/\d-\d-\d(?:-\d)?/)?.[0] ?? value ?? "4-3-3";
   return FORMATIONS[normalized] ? normalized : "4-3-3";
 }
 
+// Lấy status label.
 function getStatusLabel(status: MatchStatus) {
   if (status === MatchStatus.SCHEDULED) return "Sắp thi đấu";
   if (status === MatchStatus.LIVE) return "Đang diễn ra";
@@ -1585,6 +1625,7 @@ function getStatusLabel(status: MatchStatus) {
   return "Tạm hoãn";
 }
 
+// Định dạng date time.
 function formatDateTime(value: string) {
   if (!value) return "Chưa cập nhật";
   const date = new Date(value);
@@ -1599,6 +1640,7 @@ function formatDateTime(value: string) {
   }).format(date);
 }
 
+// Xóa vietnamese mark.
 function removeVietnameseMark(value: string) {
   return value
     .normalize("NFD")

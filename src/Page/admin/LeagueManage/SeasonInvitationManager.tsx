@@ -7,10 +7,10 @@ import SeasonInvitationService, {
 } from "../../../services/SeasonInvitationService";
 import SeasonService from "../../../services/SeasonService";
 import TeamService from "../../../services/TeamService";
-import { extractApiErrorMessage } from "../../../utils/apiError";
 import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
 import LoadingSpinner from "../../../components/Spinner/LoadingSpinner";
+import { getErrorMessage } from "../../../utils/errorUtils";
 
 type SeasonOption = {
   id: number;
@@ -56,6 +56,7 @@ function readArray<T>(data: unknown): T[] {
   return Array.isArray(page?.content) ? page.content : [];
 }
 
+// Định dạng date time.
 function formatDateTime(value?: string | null) {
   if (!value) return "--";
   const date = new Date(value);
@@ -70,6 +71,7 @@ function formatDateTime(value?: string | null) {
   });
 }
 
+// Hiển thị SeasonInvitationManager.
 export default function SeasonInvitationManager() {
   const [seasons, setSeasons] = useState<SeasonOption[]>([]);
   const [teams, setTeams] = useState<TeamOption[]>([]);
@@ -98,7 +100,7 @@ export default function SeasonInvitationManager() {
       setSelectedSeasonId((current) => current || seasonList[0]?.id || "");
     } catch (error) {
       console.error("Cannot load seasons or teams", error);
-      setErrorMessage(extractApiErrorMessage(error));
+      setErrorMessage(getErrorMessage(error, "Không thể xử lý lời mời mùa giải."));
     }
   }, []);
 
@@ -120,7 +122,7 @@ export default function SeasonInvitationManager() {
     } catch (error) {
       console.error("Cannot load season invitations", error);
       setInvitations([]);
-      setErrorMessage(extractApiErrorMessage(error));
+      setErrorMessage(getErrorMessage(error, "Không thể xử lý lời mời mùa giải."));
     } finally {
       setLoading(false);
     }
@@ -153,6 +155,7 @@ export default function SeasonInvitationManager() {
 
   useRealtimeEvent(handleRealtimeEvent);
 
+  // Xử lý invite.
   const handleInvite = async () => {
     const nextErrors: Record<string, string> = {};
     if (!selectedSeasonId)
@@ -175,7 +178,7 @@ export default function SeasonInvitationManager() {
       toast.success("Đã gửi lời mời tham gia mùa giải.");
     } catch (error) {
       console.error("Cannot invite team to season", error);
-      toast.error(extractApiErrorMessage(error));
+      toast.error(getErrorMessage(error, "Không thể xử lý lời mời mùa giải."));
     } finally {
       setSubmitting(false);
     }

@@ -19,6 +19,7 @@ import {
 import type { TeamModel } from "../../../model/TeamModel";
 import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
+import { getErrorMessage } from "../../../utils/errorUtils";
 
 interface StaffMember {
   id: number;
@@ -107,7 +108,7 @@ const ClubStaffPage: React.FC = () => {
       setTotalElements(Number(data.totalElements ?? data.content?.length ?? 0));
     } catch (err) {
       console.error("Cannot load staff", err);
-      setError("Không thể tải danh sách ban huấn luyện từ API.");
+      setError("Không thể tải danh sách ban huấn luyện.");
     } finally {
       setLoading(false);
     }
@@ -145,16 +146,19 @@ const ClubStaffPage: React.FC = () => {
     };
   }, [staff]);
 
+  // Mở modal hoac khung thao tác.
   const openCreate = () => {
     setEditingCoach(null);
     setFormOpen(true);
   };
 
+  // Mở modal hoac khung thao tác.
   const openEdit = (member: StaffMember) => {
     setEditingCoach(member.source);
     setFormOpen(true);
   };
 
+  // Xử lý xóa dữ liệu.
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
@@ -183,7 +187,10 @@ const ClubStaffPage: React.FC = () => {
       } catch (softError) {
         console.error("Cannot disable coach after delete failed", softError);
         toast.error(
-          "Không thể xóa hoặc tạm ngưng HLV vì đang bị ràng buộc dữ liệu.",
+          getErrorMessage(
+            softError,
+            "Kh?ng th? x?a ho?c t?m ng?ng HLV v? ?ang b? r?ng bu?c d? li?u.",
+          ),
         );
       }
     } finally {
@@ -191,6 +198,7 @@ const ClubStaffPage: React.FC = () => {
     }
   };
 
+  // Xử lý export staff.
   const exportStaff = () => {
     if (staff.length === 0) {
       toast.warning("Không có thành viên ban huấn luyện để xuất.");
@@ -299,6 +307,7 @@ const ClubStaffPage: React.FC = () => {
 
 export default ClubStaffPage;
 
+// Chuẩn hóa staff.
 function normalizeStaff(coach: Coach | any): StaffMember | null {
   const id = Number(coach?.id ?? coach?.coachId);
   if (!id) return null;
@@ -332,6 +341,7 @@ function normalizeStaff(coach: Coach | any): StaffMember | null {
   };
 }
 
+// Xử lý is head coach.
 function isHeadCoach(role: string) {
   const normalized = removeVietnameseMark(role).toUpperCase();
   return (
@@ -341,6 +351,7 @@ function isHeadCoach(role: string) {
   );
 }
 
+// Lấy birth year.
 function getBirthYear(date?: string) {
   if (!date) return "Chưa cập nhật";
   const parsed = new Date(date);
@@ -348,6 +359,7 @@ function getBirthYear(date?: string) {
   return String(parsed.getFullYear());
 }
 
+// Lấy age label.
 function getAgeLabel(date?: string) {
   const age = calculateAge(date);
   return age === "N/A" || age === "Chưa cập nhật"
@@ -355,6 +367,7 @@ function getAgeLabel(date?: string) {
     : `${age} tuổi`;
 }
 
+// Xử lý has another head coach.
 function hasAnotherHeadCoach(staff: StaffMember[], currentCoachId?: number) {
   return staff.some(
     (member) =>
@@ -364,6 +377,7 @@ function hasAnotherHeadCoach(staff: StaffMember[], currentCoachId?: number) {
   );
 }
 
+// Hiển thị StaffHeader.
 function StaffHeader({
   total,
   team,
@@ -408,6 +422,7 @@ function StaffHeader({
   );
 }
 
+// Hiển thị CoachingStaffGrid.
 function CoachingStaffGrid({
   staff,
   loading,
@@ -451,6 +466,7 @@ function CoachingStaffGrid({
   );
 }
 
+// Hiển thị StaffCard.
 function StaffCard({
   staff,
   onView,
@@ -495,6 +511,7 @@ function StaffCard({
   );
 }
 
+// Hiển thị ActionButton.
 function ActionButton({
   icon,
   label,
@@ -518,6 +535,7 @@ function ActionButton({
   );
 }
 
+// Hiển thị CoachFormModal.
 function CoachFormModal({
   open,
   currentClubId,
@@ -574,6 +592,7 @@ function CoachFormModal({
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Kiểm tra dữ liệu hợp lệ.
   const validate = () => {
     const nextErrors: Record<string, string> = {};
     if (!currentClubId) nextErrors.teamId = "Không xác định được CLB hiện tại.";
@@ -591,6 +610,7 @@ function CoachFormModal({
     return Object.keys(nextErrors).length === 0;
   };
 
+  // Xử lý gui biểu mẫu.
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!validate()) return;
@@ -607,7 +627,9 @@ function CoachFormModal({
       await onSuccess();
     } catch (err) {
       console.error("Cannot save coach", err);
-      toast.error("Không thể lưu thông tin huấn luyện viên.");
+      toast.error(
+        getErrorMessage(err, "Không thể lưu thông tin huấn luyện viên."),
+      );
     } finally {
       setSaving(false);
     }
@@ -718,6 +740,7 @@ function CoachFormModal({
   );
 }
 
+// Hiển thị CoachDetailModal.
 function CoachDetailModal({
   staff,
   onClose,
@@ -754,6 +777,7 @@ function CoachDetailModal({
   );
 }
 
+// Hiển thị StaffAvatar.
 function StaffAvatar({
   staff,
   size = "md",
@@ -790,6 +814,7 @@ function StaffAvatar({
   );
 }
 
+// Hiển thị InfoRow.
 function InfoRow({
   label,
   value,
@@ -814,6 +839,7 @@ function InfoRow({
   );
 }
 
+// Hiển thị MedicalPerformanceSection.
 function MedicalPerformanceSection({
   staff,
   loading,
@@ -863,6 +889,7 @@ function MedicalPerformanceSection({
   );
 }
 
+// Hiển thị MedicalStaffRow.
 function MedicalStaffRow({
   staff,
   onView,
@@ -899,6 +926,7 @@ function MedicalStaffRow({
   );
 }
 
+// Hiển thị RoleBadge.
 function RoleBadge({ role }: { role: string }) {
   return (
     <span className="inline-block rounded-sm bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700">
@@ -907,6 +935,7 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
+// Hiển thị PaginationSummary.
 function PaginationSummary({
   shown,
   total,
@@ -927,6 +956,7 @@ function PaginationSummary({
   );
 }
 
+// Hiển thị InputField.
 function InputField({
   label,
   name,
@@ -962,6 +992,7 @@ function InputField({
   );
 }
 
+// Hiển thị SelectField.
 function SelectField({
   label,
   name,
@@ -999,11 +1030,13 @@ function SelectField({
   );
 }
 
+// Xử lý download csv.
 function downloadCsv(
   filename: string,
   headers: Array<string | number>,
   rows: Array<Array<string | number>>,
 ) {
+  // Xử lý escape cell.
   const escapeCell = (value: string | number) =>
     `"${String(value ?? "").replace(/"/g, '""')}"`;
   const csv = [headers, ...rows]

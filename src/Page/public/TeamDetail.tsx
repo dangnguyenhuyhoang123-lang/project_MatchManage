@@ -8,6 +8,7 @@ import {
 import ButtonLink from "../../components/Button/ButtonLink";
 import LoadingSpinner from "../../components/Spinner/LoadingSpinner";
 
+// Hiển thị TeamDetail.
 const TeamDetail = () => {
   const { teamName } = useParams();
   const [searchParams] = useSearchParams();
@@ -25,6 +26,7 @@ const TeamDetail = () => {
   useEffect(() => {
     let isMounted = true;
 
+    // Lấy team summary.
     const fetchTeamSummary = async () => {
       if (!teamName) {
         setError("Khong xac dinh duoc doi bong.");

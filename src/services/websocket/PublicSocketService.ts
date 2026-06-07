@@ -72,6 +72,7 @@ class PublicSocketService {
     this.client.activate();
   }
 
+  // Ngắt kết nối dịch vụ realtime.
   disconnect() {
     this.subscriptions.forEach((subscription) => subscription.unsubscribe());
     this.subscriptions = [];

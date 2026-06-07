@@ -94,6 +94,7 @@ function readArray<T>(data: unknown): T[] {
   return [];
 }
 
+// Chuẩn hóa text.
 function normalizeText(value: unknown) {
   return String(value ?? "")
     .normalize("NFD")
@@ -102,31 +103,37 @@ function normalizeText(value: unknown) {
     .trim();
 }
 
+// Xử lý includes keyword.
 function includesKeyword(keyword: string, values: unknown[]) {
   if (!keyword) return true;
   return values.some((value) => normalizeText(value).includes(keyword));
 }
 
+// Lấy numeric id.
 function getNumericId(value: unknown) {
   const numeric = Number(value);
   return Number.isFinite(numeric) && numeric > 0 ? numeric : undefined;
 }
 
+// Lấy number field.
 function getNumberField(item: unknown, field: string) {
   if (!item || typeof item !== "object") return undefined;
   return getNumericId((item as Record<string, unknown>)[field]);
 }
 
+// Lấy string field.
 function getStringField(item: unknown, field: string) {
   if (!item || typeof item !== "object") return "";
   const value = (item as Record<string, unknown>)[field];
   return typeof value === "string" ? value : "";
 }
 
+// Lấy season title.
 function getSeasonTitle(season: ExploreSeason) {
   return season.name || season.year || `Mùa giải #${season.id ?? "--"}`;
 }
 
+// Định dạng date.
 function formatDate(value?: string | null) {
   if (!value) return "";
   const date = new Date(value);
@@ -134,6 +141,7 @@ function formatDate(value?: string | null) {
   return date.toLocaleDateString("vi-VN");
 }
 
+// Lấy season period.
 function getSeasonPeriod(season: ExploreSeason) {
   const start = formatDate(season.startDate);
   const end = formatDate(season.endDate);
@@ -141,6 +149,7 @@ function getSeasonPeriod(season: ExploreSeason) {
   return start || end || "Đang cập nhật thời gian";
 }
 
+// Chuẩn hóa position group.
 function normalizePositionGroup(position?: string | null) {
   const value = normalizeText(position);
   if (!value) return "";
@@ -173,6 +182,7 @@ function normalizePositionGroup(position?: string | null) {
   return position?.toUpperCase() || "";
 }
 
+// Xử lý status label.
 function statusLabel(value?: string | null) {
   if (!value) return "Đang cập nhật";
   if (value === "ACTIVE") return "Đang hoạt động";
@@ -187,10 +197,12 @@ function paginate<T>(items: T[], page: number, pageSize: number) {
   return items.slice(start, start + pageSize);
 }
 
+// Xử lý total pages.
 function totalPages(totalItems: number, pageSize: number) {
   return Math.max(1, Math.ceil(totalItems / pageSize));
 }
 
+// Hiển thị SelectField.
 function SelectField({
   label,
   value,
@@ -222,6 +234,7 @@ function SelectField({
   );
 }
 
+// Hiển thị EmptyState.
 function EmptyState({ message }: { message: string }) {
   return (
     <div className="rounded-3xl border border-dashed border-gray-200 bg-white p-10 text-center text-sm font-bold text-gray-500">
@@ -230,6 +243,7 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
+// Tải loading state.
 function LoadingState() {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -243,6 +257,7 @@ function LoadingState() {
   );
 }
 
+// Hiển thị Section.
 function Section({
   title,
   count,
@@ -274,6 +289,7 @@ function Section({
   );
 }
 
+// Hiển thị CardButton.
 function CardButton({
   children,
   onClick,
@@ -293,6 +309,7 @@ function CardButton({
   );
 }
 
+// Hiển thị SectionPagination.
 function SectionPagination({
   totalItems,
   pageSize,
@@ -319,6 +336,7 @@ function SectionPagination({
   );
 }
 
+// Hiển thị PublicExplorePage.
 export default function PublicExplorePage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<ExploreTab>("all");
@@ -343,6 +361,7 @@ export default function PublicExplorePage() {
   useEffect(() => {
     let mounted = true;
 
+    // Tải explore data.
     const loadExploreData = async () => {
       setLoading(true);
       const warnings: string[] = [];
@@ -630,6 +649,7 @@ export default function PublicExplorePage() {
       filteredReferees.length >
     0;
 
+  // Xử lý show section.
   const showSection = (key: ExploreTab, count: number) =>
     activeTab === key || (activeTab === "all" && count > 0);
 

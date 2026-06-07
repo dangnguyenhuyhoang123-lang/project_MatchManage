@@ -3,6 +3,7 @@ import { RoundModel } from "../model/RoundModel";
 
 const API_BASE_URL = "/rounds";
 
+// Xử lý dữ liệu round.
 const normalizeRound = (raw: any) =>
   new RoundModel({
     id: raw?.id,
@@ -17,6 +18,7 @@ const normalizeRound = (raw: any) =>
     seasonName: raw?.seasonName ?? null,
   });
 
+// Xử lý dữ liệu payload.
 const toPayload = (round: RoundModel) => ({
   roundNumber: Number(round.roundNumber) || 1,
   name: round.name.trim(),
@@ -29,6 +31,7 @@ const toPayload = (round: RoundModel) => ({
 });
 
 class RoundService {
+  // Gọi API lấy rounds.
   getAllRounds(page = 0, size = 10, seasonId?: number) {
     return axiosClient.get(`${API_BASE_URL}/getAllRoundBySeason`, {
       params: {
@@ -39,6 +42,7 @@ class RoundService {
     });
   }
 
+  // Gọi API lấy rounds normalized.
   async getAllRoundsNormalized(page = 0, size = 10, seasonId?: number) {
     const response = await this.getAllRounds(page, size, seasonId);
     const data = response.data;
@@ -51,19 +55,23 @@ class RoundService {
     };
   }
 
+  // Gọi API lấy round by id.
   async getRoundById(id: number) {
     const response = await axiosClient.get(`${API_BASE_URL}/getRound/${id}`);
     return normalizeRound(response.data);
   }
 
+  // Gọi API tạo round.
   async addRound(round: RoundModel) {
     return axiosClient.post(`${API_BASE_URL}/addRound`, toPayload(round));
   }
 
+  // Gọi API cập nhật round.
   async updateRound(id: number, round: RoundModel) {
     return axiosClient.put(`${API_BASE_URL}/updateRound/${id}`, toPayload(round));
   }
 
+  // Gọi API xóa round.
   deleteRound(id: number) {
     return axiosClient.delete(`${API_BASE_URL}/deleteRound/${id}`);
   }

@@ -7,7 +7,7 @@ import MatchRefereeService, {
   type MatchRefereeResponse,
 } from "../../services/MatchRefereeService";
 import RefereeService, { type Referee } from "../../services/RefereeService";
-import { extractApiErrorMessage } from "../../utils/apiError";
+import { getErrorMessage } from "../../utils/errorUtils";
 
 type RefereeRole =
   | "MAIN_REFEREE"
@@ -36,6 +36,7 @@ const legacyRoleLabels: Record<string, string> = {
   VAR: "VAR",
 };
 
+// Xử lý role label.
 function roleLabel(value?: string | null) {
   return (
     roleOptions.find((option) => option.value === value)?.label ||
@@ -45,6 +46,7 @@ function roleLabel(value?: string | null) {
   );
 }
 
+// Xử lý referee option label.
 function refereeOptionLabel(referee: Referee) {
   return [
     referee.name,
@@ -55,6 +57,7 @@ function refereeOptionLabel(referee: Referee) {
     .join(" - ");
 }
 
+// Hiển thị MatchRefereeAssignmentModal.
 export default function MatchRefereeAssignmentModal({
   open,
   matchId,
@@ -97,6 +100,7 @@ export default function MatchRefereeAssignmentModal({
     [assignments],
   );
 
+  // Tải data.
   const loadData = async () => {
     if (!matchId) return;
 
@@ -123,7 +127,7 @@ export default function MatchRefereeAssignmentModal({
       }
     } catch (error) {
       console.error("Cannot load referee assignment data", error);
-      setErrorMessage(extractApiErrorMessage(error));
+      setErrorMessage(getErrorMessage(error, "Không thể tải phân công trọng tài."));
       setReferees([]);
       setAssignments([]);
     } finally {
@@ -146,6 +150,7 @@ export default function MatchRefereeAssignmentModal({
     }
   }, [mainRefereeCount, role]);
 
+  // Xử lý assign.
   const handleAssign = async () => {
     if (!matchId) return;
 
@@ -183,12 +188,13 @@ export default function MatchRefereeAssignmentModal({
       onChanged?.();
     } catch (error) {
       console.error("Cannot assign referee", error);
-      setErrorMessage(extractApiErrorMessage(error));
+      setErrorMessage(getErrorMessage(error, "Không thể phân công trọng tài."));
     } finally {
       setSubmitting(false);
     }
   };
 
+  // Xử lý xác nhận thao tác.
   const handleConfirmRemove = async () => {
     if (!removingAssignmentId) return;
 
@@ -203,7 +209,7 @@ export default function MatchRefereeAssignmentModal({
       onChanged?.();
     } catch (error) {
       console.error("Cannot remove referee assignment", error);
-      setErrorMessage(extractApiErrorMessage(error));
+      setErrorMessage(getErrorMessage(error, "Không thể xóa phân công trọng tài."));
     } finally {
       setSubmitting(false);
     }

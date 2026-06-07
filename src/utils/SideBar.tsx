@@ -85,7 +85,7 @@ const adminMenu: MenuItem[] = [
     aliases: ["/systemrule"],
   },
   {
-    label: "Cài đặt hệ thống",
+    label: "Phân quyền ",
     path: "/admin/settings",
     icon: "settings",
     aliases: ["/settings"],
@@ -146,6 +146,7 @@ const legacyClubPaths = [
   "/registrations",
 ];
 
+// Hiển thị Sidebar.
 export const Sidebar = ({ workspace }: SidebarProps) => {
   const location = useLocation();
   const isClubArea =

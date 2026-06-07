@@ -14,12 +14,14 @@ export type PlayerSuspensionResponse = {
 };
 
 class PlayerSuspensionService {
+  // Gọi API lấy by season.
   getBySeason(seasonId: number) {
     return axiosClient.get<PlayerSuspensionResponse[]>(API_BASE_URL, {
       params: { seasonId },
     });
   }
 
+  // Gọi API lấy active by match.
   getActiveByMatch(matchId: number) {
     return axiosClient.get<PlayerSuspensionResponse[]>(
       `${API_BASE_URL}/match/${matchId}/active`,

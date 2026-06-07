@@ -10,12 +10,14 @@ import { getTeamDetailPath } from "../../utils/teamRoute";
 
 import { AppLayout } from "../../layouts/AppLayout";
 
+// Hiển thị DashBoardPage.
 export default function DashBoardPage() {
   const [trangHienTai, setTrangHienTai] = useState(1);
   const [dsSanPham, setDsSanPham] = useState<MatchModel[]>([]);
   const [tongSoTrang, setTongSoTrang] = useState(0);
   const navigate = useNavigate();
 
+  // Xử lý nagivation.
   const handleNagivation = (trang: number) => {
     setTrangHienTai(trang);
   };

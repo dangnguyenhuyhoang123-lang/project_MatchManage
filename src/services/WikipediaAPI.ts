@@ -82,6 +82,7 @@ const WIKIDATA_FACT_CONFIG = [
   { property: "P856", label: "Website" },
 ] as const;
 
+// Xử lý dữ liệu team title candidates.
 const teamTitleCandidates = (teamName: string) => {
   const normalized = teamName.trim();
 
@@ -93,6 +94,7 @@ const teamTitleCandidates = (teamName: string) => {
   ];
 };
 
+// Gọi API lấy first page.
 const getFirstPage = (data: WikipediaQueryPagesResponse) => {
   const pages = data.query?.pages;
 
@@ -103,6 +105,7 @@ const getFirstPage = (data: WikipediaQueryPagesResponse) => {
   return Object.values(pages)[0] ?? null;
 };
 
+// Xử lý dữ liệu wiki date.
 const formatWikiDate = (time?: string) => {
   if (!time) {
     return "";
@@ -126,6 +129,7 @@ const formatWikiDate = (time?: string) => {
   return `${day}/${month}/${year}`;
 };
 
+// Gọi API lấy page summary.
 const fetchPageSummary = async (locale: string, title: string) => {
   const response = await fetch(
     `https://${locale}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`,
@@ -152,6 +156,7 @@ const fetchPageSummary = async (locale: string, title: string) => {
   };
 };
 
+// Gọi API lấy page metadata.
 const fetchPageMetadata = async (locale: string, title: string) => {
   const response = await fetch(
     `https://${locale}.wikipedia.org/w/api.php?origin=*&action=query&prop=pageprops|extracts&explaintext=1&titles=${encodeURIComponent(
@@ -169,6 +174,7 @@ const fetchPageMetadata = async (locale: string, title: string) => {
   return getFirstPage(data);
 };
 
+// Gọi API lấy full extract paragraphs.
 const fetchFullExtractParagraphs = async (locale: string, title: string) => {
   const response = await fetch(
     `https://${locale}.wikipedia.org/w/api.php?origin=*&action=query&prop=extracts&explaintext=1&titles=${encodeURIComponent(
@@ -190,6 +196,7 @@ const fetchFullExtractParagraphs = async (locale: string, title: string) => {
     .slice(0, 4);
 };
 
+// Gọi API lấy entity labels.
 const fetchEntityLabels = async (ids: string[], locale: string) => {
   if (ids.length === 0) {
     return {};
@@ -243,6 +250,7 @@ const resolveClaimValue = (
   return "";
 };
 
+// Gọi API lấy wikidata facts.
 const fetchWikidataFacts = async (wikibaseItem: string, locale: string) => {
   const response = await fetch(
     `https://www.wikidata.org/w/api.php?origin=*&action=wbgetentities&ids=${wikibaseItem}&languages=${locale}|en&format=json`,
@@ -312,6 +320,7 @@ const fetchWikidataFacts = async (wikibaseItem: string, locale: string) => {
   }).filter((fact) => fact !== null);
 };
 
+// Xử lý dữ liệu team summary.
 const buildTeamSummary = async (locale: string, title: string) => {
   const summary = await fetchPageSummary(locale, title);
 
@@ -334,6 +343,7 @@ const buildTeamSummary = async (locale: string, title: string) => {
   } satisfies WikipediaTeamSummary;
 };
 
+// Gọi API lấy search team page.
 const searchTeamPage = async (locale: string, teamName: string) => {
   const response = await fetch(
     `https://${locale}.wikipedia.org/w/api.php?origin=*&action=query&list=search&srsearch=${encodeURIComponent(

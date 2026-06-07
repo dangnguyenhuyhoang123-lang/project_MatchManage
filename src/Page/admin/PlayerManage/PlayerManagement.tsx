@@ -11,6 +11,7 @@ import PlayerService from "../../../services/PlayerService";
 import TeamService from "../../../services/TeamService";
 import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
+import { getErrorMessage } from "../../../utils/errorUtils";
 
 type FilterState = {
   position: string;
@@ -45,8 +46,11 @@ const STATUS_COLORS: Record<string, string> = {
   SUSPENDED: "bg-gray-100 text-gray-500",
 };
 
+// Lấy player team name.
 const getPlayerTeamName = (player: Player) => player.teamName || "Chưa gán đội";
+// Lấy status label.
 const getStatusLabel = (status: string) => STATUS_LABELS[status] ?? status;
+// Chuẩn hóa search text.
 const normalizeSearchText = (value?: string | number | null) =>
   String(value ?? "")
     .normalize("NFD")
@@ -56,6 +60,7 @@ const normalizeSearchText = (value?: string | number | null) =>
     .trim()
     .toLowerCase();
 
+// Chuẩn hóa text.
 const normalizeText = (value?: string | null) =>
   (value ?? "")
     .normalize("NFD")
@@ -65,6 +70,7 @@ const normalizeText = (value?: string | null) =>
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "");
 
+// Chuẩn hóa position group.
 const normalizePositionGroup = (position?: string | null) => {
   const value = normalizeText(position);
 
@@ -133,6 +139,7 @@ const PlayerManagement: React.FC = () => {
   );
 
   useEffect(() => {
+    // Lấy teams.
     const fetchTeams = async () => {
       try {
         const response = await TeamService.getAllTeams(0, 1000);
@@ -157,6 +164,7 @@ const PlayerManagement: React.FC = () => {
     fetchTeams();
   }, []);
 
+  // Xử lý players on client.
   const filterPlayersOnClient = (players: Player[], filters: FilterState) => {
     const keyword = normalizeSearchText(filters.search);
     const selectedTeamName = teamOptions.find(
@@ -192,63 +200,71 @@ const PlayerManagement: React.FC = () => {
     });
   };
 
-  const fetchPlayers = useCallback(async (page = 1, filters = appliedFilters) => {
-    setIsLoading(true);
+  const fetchPlayers = useCallback(
+    async (page = 1, filters = appliedFilters) => {
+      setIsLoading(true);
 
-    try {
-      if (
-        filters.search.trim() ||
-        filters.club !== "Tất cả CLB" ||
-        filters.position !== "Tất cả vị trí" ||
-        filters.status !== "Tất cả trạng thái"
-      ) {
-        const baseResponse = await PlayerService.getAllPlayersNormalized(0, 1);
-        const totalElements = baseResponse.totalElements ?? 0;
-        const fetchSize = Math.max(totalElements, 1);
-        const fullResponse = await PlayerService.getAllPlayersNormalized(
-          0,
-          fetchSize,
-        );
+      try {
+        if (
+          filters.search.trim() ||
+          filters.club !== "Tất cả CLB" ||
+          filters.position !== "Tất cả vị trí" ||
+          filters.status !== "Tất cả trạng thái"
+        ) {
+          const baseResponse = await PlayerService.getAllPlayersNormalized(
+            0,
+            1,
+          );
+          const totalElements = baseResponse.totalElements ?? 0;
+          const fetchSize = Math.max(totalElements, 1);
+          const fullResponse = await PlayerService.getAllPlayersNormalized(
+            0,
+            fetchSize,
+          );
 
-        const clientFilteredPlayers = filterPlayersOnClient(
-          fullResponse.content ?? [],
+          const clientFilteredPlayers = filterPlayersOnClient(
+            fullResponse.content ?? [],
+            filters,
+          );
+          const totalPages = Math.ceil(
+            clientFilteredPlayers.length / PAGE_SIZE,
+          );
+          const safePage =
+            totalPages === 0 ? 1 : Math.min(page, Math.max(totalPages, 1));
+          const startIndex = (safePage - 1) * PAGE_SIZE;
+          const pagedPlayers = clientFilteredPlayers.slice(
+            startIndex,
+            startIndex + PAGE_SIZE,
+          );
+
+          setDisplayedPlayers(pagedPlayers);
+          setTongSoPhanTu(clientFilteredPlayers.length);
+          setTongSoTrang(totalPages);
+          setTrangHienTai(safePage);
+          return;
+        }
+
+        const data = await PlayerService.getAllPlayersNormalized(
+          page - 1,
+          PAGE_SIZE,
           filters,
         );
-        const totalPages = Math.ceil(clientFilteredPlayers.length / PAGE_SIZE);
-        const safePage =
-          totalPages === 0 ? 1 : Math.min(page, Math.max(totalPages, 1));
-        const startIndex = (safePage - 1) * PAGE_SIZE;
-        const pagedPlayers = clientFilteredPlayers.slice(
-          startIndex,
-          startIndex + PAGE_SIZE,
-        );
 
-        setDisplayedPlayers(pagedPlayers);
-        setTongSoPhanTu(clientFilteredPlayers.length);
-        setTongSoTrang(totalPages);
-        setTrangHienTai(safePage);
-        return;
+        setDisplayedPlayers(data.content ?? []);
+        setTongSoTrang(data.totalPages ?? 0);
+        setTongSoPhanTu(data.totalElements ?? 0);
+        setTrangHienTai((data.number ?? page - 1) + 1);
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu cầu thủ:", error);
+        setDisplayedPlayers([]);
+        setTongSoTrang(0);
+        setTongSoPhanTu(0);
+      } finally {
+        setIsLoading(false);
       }
-
-      const data = await PlayerService.getAllPlayersNormalized(
-        page - 1,
-        PAGE_SIZE,
-        filters,
-      );
-
-      setDisplayedPlayers(data.content ?? []);
-      setTongSoTrang(data.totalPages ?? 0);
-      setTongSoPhanTu(data.totalElements ?? 0);
-      setTrangHienTai((data.number ?? page - 1) + 1);
-    } catch (error) {
-      console.error("Lỗi khi tải dữ liệu cầu thủ:", error);
-      setDisplayedPlayers([]);
-      setTongSoTrang(0);
-      setTongSoPhanTu(0);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [appliedFilters, teamOptions]);
+    },
+    [appliedFilters, teamOptions],
+  );
 
   useEffect(() => {
     fetchPlayers(trangHienTai, appliedFilters);
@@ -268,16 +284,19 @@ const PlayerManagement: React.FC = () => {
 
   useRealtimeEvent(handleRealtimeEvent);
 
+  // Xử lý cập nhật dữ liệu.
   const handleUpdate = (player: Player) => {
     setSelectedPlayer(player);
     setOpen(true);
   };
 
+  // Xử lý xóa dữ liệu.
   const handleDelete = async (player: Player) => {
     if (!player.id) return;
     setDeletingPlayer(player);
   };
 
+  // Xử lý xóa dữ liệu.
   const handleConfirmDelete = async () => {
     if (!deletingPlayer?.id) return;
 
@@ -289,7 +308,7 @@ const PlayerManagement: React.FC = () => {
       fetchPlayers(trangHienTai, appliedFilters);
     } catch (error) {
       console.error("Lỗi khi xóa cầu thủ:", error);
-      toast.error("Không thể xóa cầu thủ này.");
+      toast.error(getErrorMessage(error, "Không thể xóa cầu thủ này."));
     } finally {
       setDeleteLoading(false);
     }
@@ -302,11 +321,13 @@ const PlayerManagement: React.FC = () => {
     setDraftFilters((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Xử lý apply filters.
   const applyFilters = () => {
     setTrangHienTai(1);
     setAppliedFilters({ ...draftFilters, search: draftFilters.search.trim() });
   };
 
+  // Xử lý filters.
   const resetFilters = () => {
     setDraftFilters(DEFAULT_FILTERS);
     setTrangHienTai(1);
@@ -322,8 +343,8 @@ const PlayerManagement: React.FC = () => {
               Quản lý Cầu thủ
             </h1>
             <p className="font-medium text-[#40493d]">
-              Hệ thống quản lý dữ liệu cầu thủ đồng bộ với API và hỗ trợ đầy đủ
-              tìm kiếm, bộ lọc, phân trang.
+              Hệ thống quản lý dữ liệu cầu thủ đồng bộ và hỗ trợ đầy đủ tìm
+              kiếm, bộ lọc, phân trang.
             </p>
           </div>
           <button
@@ -503,6 +524,7 @@ const PlayerManagement: React.FC = () => {
   );
 };
 
+// Hiển thị EmptyState.
 const EmptyState = () => (
   <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-12 text-center text-gray-500">
     Không có cầu thủ phù hợp với bộ lọc hiện tại.

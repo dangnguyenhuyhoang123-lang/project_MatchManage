@@ -33,6 +33,7 @@ export type UpdateUserStatusPayload = {
   status: boolean;
 };
 
+// Xử lý dữ liệu message.
 function extractMessage(errorData: unknown, fallback: string) {
   if (typeof errorData === "string" && errorData.trim()) {
     return errorData;
@@ -51,6 +52,7 @@ function extractMessage(errorData: unknown, fallback: string) {
 }
 
 class UserService {
+  // Gọi API lấy users.
   getAllUsers(page = 0, size = 10) {
     return axiosClient.get(API_BASE_URL, {
       params: {
@@ -60,11 +62,13 @@ class UserService {
     });
   }
 
+  // Gọi API lấy current user.
   async getCurrentUser() {
     const response = await axiosClient.get<AuthUser>(`${API_BASE_URL}/me`);
     return response.data;
   }
 
+  // Gọi API cập nhật current user profile.
   async updateCurrentUserProfile(payload: UpdateProfilePayload) {
     const endpoints = [
       { url: `${API_BASE_URL}/me`, method: "put" },
@@ -129,10 +133,12 @@ class UserService {
     return axiosClient.post(`${API_BASE_URL}/register`, user);
   }
 
+  // Gọi API tạo user.
   createUser(payload: CreateUserPayload) {
     return axiosClient.post(`${API_BASE_URL}/createUser`, payload);
   }
 
+  // Gọi API cập nhật user roles.
   updateUserRoles(userId: number, payload: UpdateUserRolesPayload) {
     return axiosClient.put(`${API_BASE_URL}/${userId}/roles`, payload);
   }
@@ -153,10 +159,12 @@ class UserService {
     return response;
   }
 
+  // Gọi API cập nhật user status.
   updateUserStatus(userId: number, payload: UpdateUserStatusPayload) {
     return axiosClient.put(`${API_BASE_URL}/${userId}/status`, payload);
   }
 
+  // Gọi API xóa user.
   deleteUser(userId: number) {
     return axiosClient.delete(`${API_BASE_URL}/${userId}`);
   }

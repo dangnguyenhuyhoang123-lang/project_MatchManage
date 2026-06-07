@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import ConfirmModal from "../../components/ConfirmModal";
+import StatusBadge from "../../components/common/StatusBadge";
 import { AppLayout } from "../../layouts/AppLayout";
 import {
   Search,
@@ -19,7 +20,10 @@ import { UserModal } from "./UserModal";
 import { useRealtimeEvent } from "../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../model/RealtimeEvent";
 import LoadingSpinner from "../../components/Spinner/LoadingSpinner";
+import { getErrorMessage } from "../../utils/errorUtils";
+import { getStatusTone, getUserStatusLabel } from "../../utils/statusUtils";
 
+// Hiển thị SystemSettingsPage.
 export default function SystemSettingsPage() {
   const [users, setUsers] = useState<AuthUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +85,7 @@ export default function SystemSettingsPage() {
 
   useRealtimeEvent(handleRealtimeEvent);
 
+  // Xử lý role change.
   const handleRoleChange = async (user: AuthUser, role: string) => {
     try {
       let roles: string[] = [];
@@ -103,10 +108,11 @@ export default function SystemSettingsPage() {
       fetchUsers();
     } catch (error) {
       console.error("Lỗi khi cập nhật quyền:", error);
-      toast.error("Không thể cập nhật quyền người dùng.");
+      toast.error(getErrorMessage(error, "Không thể cập nhật quyền người dùng."));
     }
   };
 
+  // Xử lý xác nhận thao tác.
   const handleConfirmRoleChange = async () => {
     if (!pendingRoleChange) return;
 
@@ -119,6 +125,7 @@ export default function SystemSettingsPage() {
     }
   };
 
+  // Xử lý team change.
   const handleTeamChange = async (user: AuthUser, teamIdStr: string) => {
     try {
       const teamId = teamIdStr ? Number(teamIdStr) : null;
@@ -127,14 +134,16 @@ export default function SystemSettingsPage() {
       fetchUsers();
     } catch (error) {
       console.error("Lỗi khi cập nhật CLB:", error);
-      toast.error("Không thể cập nhật CLB liên kết.");
+      toast.error(getErrorMessage(error, "Không thể cập nhật CLB liên kết."));
     }
   };
 
+  // Xử lý status toggle.
   const handleStatusToggle = async (userId: number, currentStatus: boolean) => {
     setPendingStatusToggle({ userId, currentStatus });
   };
 
+  // Xử lý xác nhận thao tác.
   const handleConfirmStatusToggle = async () => {
     if (!pendingStatusToggle) return;
 
@@ -148,12 +157,13 @@ export default function SystemSettingsPage() {
       fetchUsers();
     } catch (error) {
       console.error("Lỗi khi cập nhật trạng thái:", error);
-      toast.error("Không thể cập nhật trạng thái người dùng.");
+      toast.error(getErrorMessage(error, "Không thể cập nhật trạng thái người dùng."));
     } finally {
       setConfirmLoading(false);
     }
   };
 
+  // Xử lý lưu dữ liệu.
   const handleSaveUser = async (payload: any, isEdit: boolean) => {
     try {
       console.log(payload);
@@ -191,20 +201,18 @@ export default function SystemSettingsPage() {
       console.error("Status:", error?.response?.status);
       console.error("Response data:", error?.response?.data);
 
-      toast.error(
-        error?.response?.data?.message ||
-          error?.response?.data ||
-          "Lưu người dùng thất bại.",
-      );
+      toast.error(getErrorMessage(error, "Lưu người dùng thất bại."));
 
       throw error;
     }
   };
 
+  // Xử lý xóa dữ liệu.
   const handleDeleteUser = async (userId: number) => {
     setPendingDeleteUserId(userId);
   };
 
+  // Xử lý xóa dữ liệu.
   const handleConfirmDeleteUser = async () => {
     if (!pendingDeleteUserId) return;
 
@@ -216,7 +224,7 @@ export default function SystemSettingsPage() {
       fetchUsers();
     } catch (error) {
       console.error("Lỗi khi xóa người dùng:", error);
-      toast.error("Không thể xóa người dùng.");
+      toast.error(getErrorMessage(error, "Không thể xóa người dùng."));
     } finally {
       setConfirmLoading(false);
     }
@@ -473,14 +481,10 @@ export default function SystemSettingsPage() {
                     </div>
 
                     <div className="col-span-1">
-                      <span
-                        className={`flex items-center gap-2 text-sm font-semibold ${user.status ? "text-[#0D631B]" : "text-[#707A6C]"}`}
-                      >
-                        <span
-                          className={`w-2 h-2 rounded-full ${user.status ? "bg-[#0D631B]" : "bg-[#BFCABA]"}`}
-                        ></span>
-                        {user.status ? "Active" : "Inactive"}
-                      </span>
+                      <StatusBadge
+                        label={getUserStatusLabel(user.status)}
+                        tone={getStatusTone(user.status)}
+                      />
                     </div>
 
                     <div className="col-span-2 flex justify-end gap-3 text-[#40493D]">

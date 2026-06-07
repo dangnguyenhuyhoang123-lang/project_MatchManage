@@ -25,8 +25,10 @@ type SeasonOption = {
 const PAGE_SIZE = 10;
 const CLIENT_FETCH_SIZE = 1000;
 
+// Lấy match time.
 const getMatchTime = (match: any) => new Date(match?.matchDate || 0).getTime();
 
+// Xử lý matches by upcoming priority.
 const sortMatchesByUpcomingPriority = (items: any[]) => {
   const now = Date.now();
 
@@ -48,6 +50,7 @@ const sortMatchesByUpcomingPriority = (items: any[]) => {
   });
 };
 
+// Xử lý unique matches by id.
 const uniqueMatchesById = (items: any[]) => {
   const map = new Map<number | string, any>();
   items.forEach((item, index) => {
@@ -81,6 +84,7 @@ const MatchResults: React.FC = () => {
   );
 
   useEffect(() => {
+    // Lấy leagues.
     const fetchLeagues = async () => {
       try {
         const response = await LeagueService.getAllLeaguesNormalized(0, 100);
@@ -93,6 +97,7 @@ const MatchResults: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    // Lấy seasons.
     const fetchSeasons = async () => {
       if (!selectedLeague) {
         setSeasons([]);
@@ -209,22 +214,26 @@ const MatchResults: React.FC = () => {
 
   useRealtimeEvent(handleRealtimeEvent);
 
+  // Xử lý edit match.
   const handleEditMatch = (match: any) => {
     setSelectedMatch(match);
     setOpen(true);
   };
 
+  // Xử lý cập nhật dữ liệu.
   const handleUpdateSuccess = () => {
     setOpen(false);
     setSelectedMatch(null);
     loadMatches(currentPage);
   };
 
+  // Đóng modal hoac khung thao tác.
   const handleCloseModal = () => {
     setOpen(false);
     setSelectedMatch(null);
   };
 
+  // Định dạng date.
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "--/--/----";
     const d = new Date(dateStr);

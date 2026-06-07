@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../utils/useAuth";
 import pic1 from "../../assets/user_icon.svg";
 
+// Hiển thị Header.
 const Header = () => {
   const { user, setUser } = useAuth();
   return (

@@ -18,6 +18,7 @@ type SeasonOption = {
 
 type RecentFormResult = "W" | "D" | "L" | "-";
 
+// Chuẩn hóa recent form.
 function normalizeRecentForm(value: unknown): RecentFormResult[] {
   let results: RecentFormResult[] = [];
 
@@ -66,6 +67,7 @@ interface TeamStanding {
   rankColor: string;
 }
 
+// Hiển thị StandingsPage.
 export default function StandingsPage() {
   const [standingsData, setStandingsData] = useState<TeamStanding[]>([]);
   const [loading, setLoading] = useState(false);
@@ -81,6 +83,7 @@ export default function StandingsPage() {
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    // Lấy leagues.
     const fetchLeagues = async () => {
       try {
         const response = await LeagueService.getAllLeaguesNormalized(0, 100);
@@ -93,6 +96,7 @@ export default function StandingsPage() {
   }, []);
 
   useEffect(() => {
+    // Lấy seasons.
     const fetchSeasons = async () => {
       if (!selectedLeague) {
         setSeasons([]);
@@ -129,6 +133,7 @@ export default function StandingsPage() {
   }, [selectedLeague]);
 
   useEffect(() => {
+    // Lấy standings.
     const fetchStandings = async () => {
       if (!selectedSeason) {
         setStandingsData([]);

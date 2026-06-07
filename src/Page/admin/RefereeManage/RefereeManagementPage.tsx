@@ -7,8 +7,8 @@ import RefereeService, {
   type Referee,
   type RefereeRequest,
 } from "../../../services/RefereeService";
-import { extractApiErrorMessage } from "../../../utils/apiError";
 import LoadingSpinner from "../../../components/Spinner/LoadingSpinner";
+import { getErrorMessage } from "../../../utils/errorUtils";
 
 const emptyForm: RefereeRequest = {
   name: "",
@@ -26,6 +26,7 @@ const emptyForm: RefereeRequest = {
 
 const levelOptions = ["FIFA", "NATIONAL", "REGIONAL", "TRAINEE"];
 
+// Hiển thị RefereeManagementPage.
 export default function RefereeManagementPage() {
   const [items, setItems] = useState<Referee[]>([]);
   const [loading, setLoading] = useState(false);
@@ -40,13 +41,14 @@ export default function RefereeManagementPage() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Tải data.
   const loadData = async () => {
     try {
       setLoading(true);
       const res = await RefereeService.getAll();
       setItems(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
-      toast.error(extractApiErrorMessage(error));
+      toast.error(getErrorMessage(error, "Không thể xử lý trọng tài."));
       setItems([]);
     } finally {
       setLoading(false);
@@ -73,12 +75,14 @@ export default function RefereeManagementPage() {
     });
   }, [items, search, status, level]);
 
+  // Mở modal hoac khung thao tác.
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm);
     setModalOpen(true);
   };
 
+  // Mở modal hoac khung thao tác.
   const openEdit = (item: Referee) => {
     setEditing(item);
     setForm({
@@ -97,10 +101,12 @@ export default function RefereeManagementPage() {
     setModalOpen(true);
   };
 
+  // Cập nhật field.
   const updateField = (field: keyof RefereeRequest, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
+  // Xử lý lưu dữ liệu.
   const handleSave = async () => {
     if (!form.name?.trim()) {
       toast.warning("Vui lòng nhập tên trọng tài.");
@@ -124,12 +130,13 @@ export default function RefereeManagementPage() {
       setModalOpen(false);
       await loadData();
     } catch (error) {
-      toast.error(extractApiErrorMessage(error));
+      toast.error(getErrorMessage(error, "Không thể xử lý trọng tài."));
     } finally {
       setSaving(false);
     }
   };
 
+  // Xử lý xóa dữ liệu.
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
@@ -139,7 +146,7 @@ export default function RefereeManagementPage() {
       setDeleteId(null);
       await loadData();
     } catch (error) {
-      toast.error(extractApiErrorMessage(error));
+      toast.error(getErrorMessage(error, "Không thể xử lý trọng tài."));
     } finally {
       setDeleting(false);
     }
@@ -309,6 +316,7 @@ export default function RefereeManagementPage() {
   );
 }
 
+// Hiển thị RefereeFormModal.
 function RefereeFormModal({
   open,
   editing,
@@ -430,6 +438,7 @@ function RefereeFormModal({
   );
 }
 
+// Hiển thị DetailModal.
 function DetailModal({
   item,
   onClose,
@@ -464,6 +473,7 @@ function DetailModal({
   );
 }
 
+// Hiển thị Field.
 function Field({
   label,
   value,

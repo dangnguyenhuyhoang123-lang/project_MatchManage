@@ -18,7 +18,7 @@ import SeasonDetailPage from "./Page/public/explorePage/SeasonDetailPage";
 import TeamPublicDetailPage from "./Page/public/explorePage/TeamPublicDetailPage";
 import PlayerPublicDetailPage from "./Page/public/explorePage/PlayerPublicDetailPage";
 import CoachPublicDetailPage from "./Page/public/explorePage/CoachPublicDetailPage";
-import MatchDetail from "./Page/public/MatchDetail";
+import MatchDetail from "./Page/public/MatchDetailPage/MatchDetail";
 import UserProfilePage from "./Page/public/UserProfilePage";
 
 import DashBoardPage from "./Page/testPage/DashBoardPage";
@@ -49,6 +49,7 @@ import ClubInvitationPage from "./Page/club/ClubInvitationPage";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 import SystemRulesPage from "./Page/admin/SystemRulesPage";
+// Lấy route workspace.
 function getRouteWorkspace(pathname: string) {
   if (pathname.startsWith("/admin")) {
     return "admin";
@@ -71,6 +72,7 @@ function getRouteWorkspace(pathname: string) {
   return "public";
 }
 
+// Hiển thị AppRoutes.
 const AppRoutes = () => {
   const location = useLocation();
   const reduceMotion = useReducedMotion();

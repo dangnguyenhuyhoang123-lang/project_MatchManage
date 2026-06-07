@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../utils/useAuth";
 import UserService from "../../services/UserService";
 
+// Hiển thị LoginPage.
 const LoginPage = () => {
   const [userName, setUserName] = useState("");
   const [passWord, setPassWord] = useState("");
@@ -13,6 +14,7 @@ const LoginPage = () => {
   const { setUser } = useAuth();
 
   const navigate = useNavigate();
+  // Xử lý gui biểu mẫu.
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 

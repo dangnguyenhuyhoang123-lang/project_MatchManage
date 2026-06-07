@@ -8,6 +8,7 @@ import type {
 } from "../../model/Registration";
 import type { SystemRule } from "../../services/SystemRuleService";
 import ConfirmModal from "../../components/ConfirmModal";
+import CommonStatusBadge from "../../components/common/StatusBadge";
 import LoadingSpinner from "../../components/Spinner/LoadingSpinner";
 import RegistrationService from "../../services/RegistrationService";
 import SeasonService from "../../services/SeasonService";
@@ -15,6 +16,12 @@ import SystemRuleService from "../../services/SystemRuleService";
 import { AppLayout } from "../../layouts/AppLayout";
 import { useRealtimeEvent } from "../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../services/websocket/NotificationSocketService";
+import { getErrorMessage } from "../../utils/errorUtils";
+import {
+  getRegistrationStatusLabel,
+  getStatusTone,
+} from "../../utils/statusUtils";
+import { calculateAge as calculateRegistrationAge } from "../../utils/registrationValidationUtils";
 
 type FilterStatus = "ALL" | RegistrationStatus;
 
@@ -26,9 +33,9 @@ type Filters = {
 
 const filterTabs: Array<{ value: FilterStatus; label: string }> = [
   { value: "ALL", label: "Tất cả" },
-  { value: "PENDING", label: "Chờ duyệt" },
-  { value: "APPROVED", label: "Đã duyệt" },
-  { value: "REJECTED", label: "Từ chối" },
+  { value: "PENDING", label: getRegistrationStatusLabel("PENDING") },
+  { value: "APPROVED", label: getRegistrationStatusLabel("APPROVED") },
+  { value: "REJECTED", label: getRegistrationStatusLabel("REJECTED") },
 ];
 
 const statusMeta: Record<
@@ -40,17 +47,17 @@ const statusMeta: Record<
   }
 > = {
   PENDING: {
-    label: "Chờ duyệt",
+    label: getRegistrationStatusLabel("PENDING"),
     badgeClass: "bg-indigo-50 text-indigo-700",
     dotClass: "bg-indigo-500",
   },
   APPROVED: {
-    label: "Đã duyệt",
+    label: getRegistrationStatusLabel("APPROVED"),
     badgeClass: "bg-green-100 text-green-700",
     dotClass: "bg-green-600",
   },
   REJECTED: {
-    label: "Từ chối",
+    label: getRegistrationStatusLabel("REJECTED"),
     badgeClass: "bg-red-50 text-red-600",
     dotClass: "bg-red-500",
   },
@@ -62,6 +69,7 @@ const grassLabels: Record<GrassType, string> = {
   Premium: "Hybrid",
 };
 
+// Xử lý search text.
 const toSearchText = (value?: string | null) =>
   (value ?? "")
     .normalize("NFD")
@@ -71,6 +79,7 @@ const toSearchText = (value?: string | null) =>
     .toLowerCase()
     .trim();
 
+// Xử lý date input value.
 const toDateInputValue = (value?: string) => {
   if (!value) {
     return "";
@@ -89,6 +98,7 @@ const toDateInputValue = (value?: string) => {
   return `${year}-${month}-${day}`;
 };
 
+// Định dạng submitted at.
 const formatSubmittedAt = (value?: string) => {
   if (!value) {
     return {
@@ -115,6 +125,7 @@ const formatSubmittedAt = (value?: string) => {
   };
 };
 
+// Định dạng money.
 const formatMoney = (value?: number | null) => {
   if (value == null) return "--";
 
@@ -125,6 +136,7 @@ const formatMoney = (value?: number | null) => {
   }).format(value);
 };
 
+// Định dạng optional date time.
 const formatOptionalDateTime = (value?: string | null) => {
   if (!value) return "--";
   const parsed = new Date(value);
@@ -139,6 +151,7 @@ const formatOptionalDateTime = (value?: string | null) => {
   });
 };
 
+// Tính toán age.
 const calculateAge = (dateValue?: string) => {
   if (!dateValue) {
     return "--";
@@ -163,6 +176,7 @@ const calculateAge = (dateValue?: string) => {
   return age;
 };
 
+// Lấy club initials.
 const getClubInitials = (name: string) => {
   const words = name.trim().split(/\s+/).filter(Boolean);
 
@@ -208,10 +222,9 @@ const getRegistrationValidationErrors = (
 
   // 2. Player Age
   const invalidAgePlayers = detail.players.filter((p) => {
-    const age = calculateAge(p.dateOfBirth);
-    if (age === "--") return true;
-    const numericAge = Number(age);
-    return numericAge < minAgeReq || numericAge > maxAgeReq;
+    const age = calculateRegistrationAge(p.dateOfBirth);
+    if (age == null) return true;
+    return age < minAgeReq || age > maxAgeReq;
   });
   if (invalidAgePlayers.length > 0) {
     errors.push(
@@ -277,6 +290,7 @@ const getRegistrationValidationErrors = (
   if (totalCoaches === 0) {
     errors.push(`Danh sách ban huấn luyện trống.`);
   } else {
+    // Chuẩn hóa role text.
     const normalizeRoleText = (role?: string) =>
       (role ?? "")
         .normalize("NFD")
@@ -286,6 +300,7 @@ const getRegistrationValidationErrors = (
         .toLowerCase()
         .trim();
 
+    // Lấy role key.
     const getRoleKey = (role?: string) => {
       const normalizedRole = normalizeRoleText(role);
       if (
@@ -468,6 +483,7 @@ const AdminRegistrationManager: React.FC = () => {
 
   const visibleRegistrations = filteredRegistrations.slice(0, visibleCount);
 
+  // Xử lý filter change.
   const handleFilterChange = (field: keyof Filters, value: string) => {
     setFilters((prev) => ({
       ...prev,
@@ -475,6 +491,7 @@ const AdminRegistrationManager: React.FC = () => {
     }));
   };
 
+  // Xử lý filters.
   const resetFilters = () => {
     setActiveFilter("ALL");
     setFilters({
@@ -484,10 +501,12 @@ const AdminRegistrationManager: React.FC = () => {
     });
   };
 
+  // Xử lý approve.
   const handleApprove = async (id: number) => {
     setPendingApproveId(id);
   };
 
+  // Xử lý xác nhận thao tác.
   const handleConfirmApprove = async () => {
     if (!pendingApproveId) return;
 
@@ -527,17 +546,19 @@ const AdminRegistrationManager: React.FC = () => {
       toast.success("Đã duyệt hồ sơ đăng ký.");
       setPendingApproveId(null);
     } catch (error) {
-      toast.error("Không thể duyệt hồ sơ đăng ký.");
+      toast.error(getErrorMessage(error, "Không thể duyệt hồ sơ đăng ký."));
     } finally {
       setProcessingId(null);
     }
   };
 
+  // Xử lý reject.
   const handleReject = async (id: number) => {
     setPendingRejectId(id);
     setRejectNote("");
   };
 
+  // Xử lý xác nhận thao tác.
   const handleConfirmReject = async () => {
     if (!pendingRejectId) return;
 
@@ -556,12 +577,13 @@ const AdminRegistrationManager: React.FC = () => {
       setRejectNote("");
     } catch (error) {
       console.error("Lá»—i khi Từ chối há»“ sÆ¡:", error);
-      toast.error("Không thể từ chối hồ sơ đăng ký.");
+      toast.error(getErrorMessage(error, "Không thể từ chối hồ sơ đăng ký."));
     } finally {
       setProcessingId(null);
     }
   };
 
+  // Xử lý view detail.
   const handleViewDetail = async (registration: RegistrationSummaryDTO) => {
     setIsDetailOpen(true);
     setIsDetailLoading(true);
@@ -592,6 +614,7 @@ const AdminRegistrationManager: React.FC = () => {
     }
   };
 
+  // Đóng modal hoac khung thao tác.
   const closeDetailModal = () => {
     setIsDetailOpen(false);
     setSelectedRegistrationDetail(null);
@@ -606,6 +629,7 @@ const AdminRegistrationManager: React.FC = () => {
     setPendingPayment({ id, proofUrl: paymentProofUrl ?? "" });
   };
 
+  // Xử lý gui biểu mẫu.
   const handleSubmitPayment = async () => {
     if (!pendingPayment) return;
 
@@ -625,12 +649,18 @@ const AdminRegistrationManager: React.FC = () => {
       setPendingPayment(null);
     } catch (error) {
       console.error("Cannot confirm registration payment", error);
-      toast.error("Không thể xác nhận lệ phí hồ sơ. Vui lòng thử lại.");
+      toast.error(
+        getErrorMessage(
+          error,
+          "Không thể xác nhận lệ phí hồ sơ. Vui lòng thử lại.",
+        ),
+      );
     } finally {
       setProcessingId(null);
     }
   };
 
+  // Xử lý export.
   const handleExport = () => {
     setIsExporting(true);
 
@@ -1692,16 +1722,14 @@ const RegistrationDetailModal = ({
   );
 };
 
+// Hiển thị StatusBadge.
 const StatusBadge = ({ status }: { status: RegistrationStatus }) => {
-  const meta = statusMeta[status];
-
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-black ${meta.badgeClass}`}
-    >
-      <span className={`h-1.5 w-1.5 rounded-full ${meta.dotClass}`} />
-      {meta.label}
-    </span>
+    <CommonStatusBadge
+      label={getRegistrationStatusLabel(status)}
+      tone={getStatusTone(status)}
+      className="px-3 py-1 font-black"
+    />
   );
 };
 
@@ -1753,6 +1781,7 @@ const KitPreview = ({
   </div>
 );
 
+// Hiển thị EmptyDetail.
 const EmptyDetail = ({ text }: { text: string }) => (
   <div className="rounded-2xl border border-dashed border-gray-200 bg-[#f5f3ef] p-5 text-center text-sm font-bold text-gray-400">
     {text}

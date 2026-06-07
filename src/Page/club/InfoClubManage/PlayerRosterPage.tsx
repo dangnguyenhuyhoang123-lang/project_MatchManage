@@ -18,6 +18,7 @@ import {
 } from "./clubInfoHelpers";
 import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
+import { getErrorMessage } from "../../../utils/errorUtils";
 
 interface RosterPlayer {
   id: number;
@@ -37,6 +38,7 @@ type PlayerFormErrors = Record<string, string>;
 
 const PAGE_SIZE = 10;
 
+// Tạo empty player.
 const createEmptyPlayer = (teamId: number | null) =>
   new Player({
     name: "",
@@ -145,16 +147,19 @@ const PlayerRosterPage: React.FC = () => {
     });
   }, [players, positionFilter, search]);
 
+  // Mở modal hoac khung thao tác.
   const openCreateModal = () => {
     setEditingPlayer(null);
     setModalOpen(true);
   };
 
+  // Mở modal hoac khung thao tác.
   const openEditModal = (player: RosterPlayer) => {
     setEditingPlayer(new Player(player.source));
     setModalOpen(true);
   };
 
+  // Xử lý xóa dữ liệu.
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
@@ -170,13 +175,17 @@ const PlayerRosterPage: React.FC = () => {
     } catch (err) {
       console.error("Cannot delete player", err);
       toast.error(
-        "Không thể xóa cầu thủ. Vui lòng kiểm tra ràng buộc dữ liệu.",
+        getErrorMessage(
+          err,
+          "Kh?ng th? x?a c?u th?. Vui l?ng ki?m tra r?ng bu?c d? li?u.",
+        ),
       );
     } finally {
       setDeleting(false);
     }
   };
 
+  // Xử lý export players.
   const exportPlayers = () => {
     if (filteredPlayers.length === 0) {
       toast.warning("Không có cầu thủ để xuất danh sách.");
@@ -270,6 +279,7 @@ const PlayerRosterPage: React.FC = () => {
 
 export default PlayerRosterPage;
 
+// Chuẩn hóa roster player.
 function normalizeRosterPlayer(player: Player): RosterPlayer | null {
   if (!player.id) return null;
 
@@ -292,6 +302,7 @@ function normalizeRosterPlayer(player: Player): RosterPlayer | null {
   };
 }
 
+// Hiển thị RosterHeader.
 function RosterHeader({
   total,
   teamName,
@@ -336,6 +347,7 @@ function RosterHeader({
   );
 }
 
+// Hiển thị FilterBar.
 function FilterBar({
   search,
   positionFilter,
@@ -377,6 +389,7 @@ function FilterBar({
   );
 }
 
+// Hiển thị PlayerTable.
 function PlayerTable({
   players,
   loading,
@@ -428,6 +441,7 @@ function PlayerTable({
   );
 }
 
+// Hiển thị PlayerRow.
 function PlayerRow({
   player,
   onEdit,
@@ -487,6 +501,7 @@ function PlayerRow({
   );
 }
 
+// Hiển thị ClubPlayerModal.
 function ClubPlayerModal({
   open,
   currentClubId,
@@ -566,6 +581,7 @@ function ClubPlayerModal({
     reader.readAsDataURL(file);
   };
 
+  // Kiểm tra dữ liệu hợp lệ.
   const validate = () => {
     const nextErrors: PlayerFormErrors = {};
     if (!currentClubId) nextErrors.teamId = "Không xác định được CLB hiện tại.";
@@ -578,6 +594,7 @@ function ClubPlayerModal({
     return Object.keys(nextErrors).length === 0;
   };
 
+  // Xử lý gui biểu mẫu.
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!validate()) return;
@@ -595,7 +612,7 @@ function ClubPlayerModal({
       await onSuccess();
     } catch (error) {
       console.error("Cannot save player", error);
-      toast.error("Không thể lưu thông tin cầu thủ.");
+      toast.error(getErrorMessage(error, "Không thể lưu thông tin cầu thủ."));
     } finally {
       setIsSubmitting(false);
     }
@@ -775,6 +792,7 @@ function ClubPlayerModal({
   );
 }
 
+// Hiển thị PlayerAvatar.
 function PlayerAvatar({ player }: { player: RosterPlayer }) {
   if (player.image) {
     return (
@@ -798,6 +816,7 @@ function PlayerAvatar({ player }: { player: RosterPlayer }) {
   );
 }
 
+// Hiển thị PositionBadge.
 function PositionBadge({ position }: { position: string }) {
   const positionClass: Record<string, string> = {
     "Tiền đạo": "bg-indigo-100 text-indigo-700",
@@ -814,6 +833,7 @@ function PositionBadge({ position }: { position: string }) {
   );
 }
 
+// Hiển thị PaginationSummary.
 function PaginationSummary({
   shown,
   total,
@@ -844,6 +864,7 @@ type InputFieldProps = {
   error?: string;
 };
 
+// Hiển thị InputField.
 function InputField({
   label,
   name,
@@ -871,6 +892,7 @@ function InputField({
   );
 }
 
+// Hiển thị SelectField.
 function SelectField({
   label,
   name,
@@ -908,11 +930,13 @@ function SelectField({
   );
 }
 
+// Xử lý download csv.
 function downloadCsv(
   filename: string,
   headers: Array<string | number>,
   rows: Array<Array<string | number>>,
 ) {
+  // Xử lý escape cell.
   const escapeCell = (value: string | number) =>
     `"${String(value ?? "").replace(/"/g, '""')}"`;
   const csv = [headers, ...rows]

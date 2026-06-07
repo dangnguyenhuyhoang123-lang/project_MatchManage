@@ -24,6 +24,7 @@ const buildFormData = (source: any): UpdateProfilePayload => ({
   avatar: source?.avatar || "",
 });
 
+// Hiển thị UserProfilePage.
 const UserProfilePage = () => {
   const { user, setUser, loading } = useAuth();
   const navigate = useNavigate();
@@ -60,6 +61,7 @@ const UserProfilePage = () => {
 
     setFormData(buildFormData(user));
 
+    // Tải profile.
     const loadProfile = async () => {
       try {
         // Đã xóa setIsFetching(true) ở đây để UX mượt hơn, không bị chớp màn hình loading
@@ -201,6 +203,7 @@ const UserProfilePage = () => {
     setMessage("");
   };
 
+  // Xử lý gui biểu mẫu.
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");

@@ -3,6 +3,7 @@ type Props = {
   size?: "sm" | "md" | "lg" | "xl";
 };
 
+// Hiển thị Container.
 export const Container = ({ children, size = "lg" }: Props) => {
   const sizeMap = {
     sm: "max-w-2xl",

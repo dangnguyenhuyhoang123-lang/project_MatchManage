@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { Modal } from "../../components/Modal";
 import type { AuthUser } from "../../types/AuthUser";
 import { TeamModel } from "../../model/TeamModel";
+import { getErrorMessage } from "../../utils/errorUtils";
 
 interface UserModalProps {
   isOpen: boolean;
@@ -88,6 +89,7 @@ export function UserModal({
     }
   };
 
+  // Xử lý gui biểu mẫu.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -115,7 +117,9 @@ export function UserModal({
       onClose();
     } catch (error) {
       console.error("Lỗi lưu user", error);
-      toast.error("Đã xảy ra lỗi khi lưu thông tin người dùng.");
+      toast.error(
+        getErrorMessage(error, "Đã xảy ra lỗi khi lưu thông tin người dùng."),
+      );
     } finally {
       setLoading(false);
     }
@@ -184,7 +188,7 @@ export function UserModal({
               value={formData.displayName}
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
-              placeholder="0912345678"
+              placeholder="Nhập tên hiển thị"
             />
           </div>
 

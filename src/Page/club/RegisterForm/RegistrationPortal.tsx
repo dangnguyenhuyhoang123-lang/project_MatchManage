@@ -71,15 +71,23 @@ const RegistrationPortal: React.FC<Props> = ({
   selectedSeason,
   onSeasonSelected,
 }) => {
+  // Lấy id của mùa giải đang được chọn
   const [selectedSeasonId, setSelectedSeasonId] = useState<number | null>(
     selectedSeason?.id ?? null,
   );
+
+  // Phục vụ chức năng tìm kiếm mùa giải theo từ khóa
   const [search, setSearch] = useState("");
+
   const [trangHienTai, setTrangHienTai] = useState(1);
+
+  // Lưu trữ danh sách mùa giải có trong hệ thống
   const [seasons, setSeasons] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Show toàn bộ mùa giả (chặn ở be)
   useEffect(() => {
+    // Show toàn bộ mùa giải .
     const fetchSeasons = async () => {
       try {
         const response = await SeasonService.getAllSeasons(0, 100);
@@ -93,6 +101,35 @@ const RegistrationPortal: React.FC<Props> = ({
     fetchSeasons();
   }, []);
 
+  //  Chỉ show các mùa giải đã được mời và chấp nhân
+  // const fetchSeasons = async () => {
+  //   try {
+  //     const [seasonResponse, invitationResponse] = await Promise.all([
+  //       SeasonService.getAllSeasons(0, 100),
+  //       SeasonInvitationService.getMyInvitations(),
+  //     ]);
+
+  //     const allSeasons = seasonResponse.data?.content || [];
+
+  //     const acceptedSeasonIds = new Set(
+  //       (invitationResponse.data || [])
+  //         .filter((invitation) => invitation.status === "ACCEPTED")
+  //         .map((invitation) => Number(invitation.seasonId)),
+  //     );
+
+  //     setSeasons(
+  //       allSeasons.filter((season: any) =>
+  //         acceptedSeasonIds.has(Number(season.id)),
+  //       ),
+  //     );
+  //   } catch (error) {
+  //     console.error("Lỗi lấy danh sách mùa giải:", error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  // Lọc season theo tên hoặc năm tìm kiếm
   const filteredSeasons = useMemo(() => {
     return seasons.filter((season) =>
       (season.name || season.year || "")
@@ -103,6 +140,7 @@ const RegistrationPortal: React.FC<Props> = ({
 
   const tongSoTrang = Math.max(1, Math.ceil(filteredSeasons.length / 6));
 
+  // Phân trang sau khi lọc
   const dsSeasonTheoTrang = useMemo(() => {
     const startIndex = (trangHienTai - 1) * 6;
     return filteredSeasons.slice(startIndex, startIndex + 6);
@@ -118,6 +156,7 @@ const RegistrationPortal: React.FC<Props> = ({
     }
   }, [trangHienTai, tongSoTrang]);
 
+  // Xử lý page change.
   const handlePageChange = (page: number) => {
     setTrangHienTai(page);
   };
@@ -216,9 +255,10 @@ const RegistrationPortal: React.FC<Props> = ({
             </button>
 
             <button
+              type="button"
               className="rounded-full bg-green-700 px-10 py-3 text-sm font-bold text-white shadow-lg shadow-green-700/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
-              disabled={!selectedSeasonId}
               onClick={() => {
+                // Tiếp tục bước 2 sau khi hoàn thành chọn
                 setStep(2);
               }}
             >

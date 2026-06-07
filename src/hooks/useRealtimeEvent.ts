@@ -5,6 +5,7 @@ type RealtimeEventHandler = (event: RealtimeEventDTO) => void;
 
 export function useRealtimeEvent(handler: RealtimeEventHandler) {
   useEffect(() => {
+    // Xử lý listener.
     const listener = (event: Event) => {
       const customEvent = event as CustomEvent<RealtimeEventDTO>;
       if (customEvent.detail) {

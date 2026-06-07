@@ -8,6 +8,7 @@ type ProtectedRouteProps = {
   allowedRoles?: string[];
 };
 
+// Hiển thị ProtectedRoute.
 export default function ProtectedRoute({
   children,
   allowedRoles = [],

@@ -4,6 +4,7 @@ type Props = {
   xuLyTrang: (page: number) => void;
 };
 
+// Hiển thị PhanTrang.
 export const PhanTrang = ({ tongSoTrang, trangHienTai, xuLyTrang }: Props) => {
   if (tongSoTrang <= 1) return null;
 
@@ -94,6 +95,7 @@ export const PhanTrang = ({ tongSoTrang, trangHienTai, xuLyTrang }: Props) => {
   );
 };
 
+// Hiển thị PageButton.
 function PageButton({
   children,
   disabled,

@@ -8,6 +8,7 @@ interface Props {
   onSuccess: () => void;
 }
 
+// Tạo empty league.
 const createEmptyLeague = () =>
   new League({
     name: "",
@@ -17,6 +18,7 @@ const createEmptyLeague = () =>
     logo: null,
   });
 
+// Tạo tournament.
 export default function CreateTournament({
   onClose,
   currentLeague,
@@ -44,6 +46,7 @@ export default function CreateTournament({
     });
   };
 
+  // Xử lý gui biểu mẫu.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
@@ -71,7 +74,7 @@ export default function CreateTournament({
       onClose();
     } catch (error) {
       console.error("Lỗi khi lưu giải đấu:", error);
-      setErrorMsg("Có lỗi xảy ra khi lưu giải đấu. Vui lòng kiểm tra API.");
+      setErrorMsg("Có lỗi xảy ra khi lưu giải đấu. Vui lòng kiểm tra.");
     } finally {
       setIsSubmitting(false);
     }
@@ -266,6 +269,7 @@ type InputFieldProps = {
   required?: boolean;
 };
 
+// Hiển thị InputField.
 function InputField({
   label,
   name,
@@ -299,6 +303,7 @@ type SelectFieldProps = {
   options: string[];
 };
 
+// Hiển thị SelectField.
 function SelectField({
   label,
   name,

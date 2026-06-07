@@ -72,21 +72,25 @@ function readArray<T>(data: unknown): T[] {
   return [];
 }
 
+// Lấy string field.
 function getStringField(item: unknown, field: string) {
   if (!item || typeof item !== "object") return "";
   const value = (item as Record<string, unknown>)[field];
   return typeof value === "string" ? value : "";
 }
 
+// Lấy season title.
 function getSeasonTitle(season: PublicSeason) {
   return season.name || season.year || `Mùa giải #${season.id ?? "--"}`;
 }
 
+// Lấy numeric id.
 function getNumericId(value: unknown) {
   const numeric = Number(value);
   return Number.isFinite(numeric) && numeric > 0 ? numeric : undefined;
 }
 
+// Định dạng date.
 function formatDate(value?: string | Date | null) {
   if (!value) return "";
   const date = value instanceof Date ? value : new Date(value);
@@ -94,6 +98,7 @@ function formatDate(value?: string | Date | null) {
   return date.toLocaleDateString("vi-VN");
 }
 
+// Xử lý season period.
 function seasonPeriod(season: PublicSeason) {
   const start = formatDate(season.startDate);
   const end = formatDate(season.endDate);
@@ -101,6 +106,7 @@ function seasonPeriod(season: PublicSeason) {
   return start || end || "Đang cập nhật thời gian";
 }
 
+// Xử lý status label.
 function statusLabel(value?: string | null) {
   if (!value) return "Đang cập nhật";
   if (value === "ACTIVE") return "Đang hoạt động";
@@ -112,18 +118,22 @@ function statusLabel(value?: string | null) {
   return value;
 }
 
+// Lấy team id.
 function getTeamId(team: PublicTeam) {
   return team.team?.id ?? team.teamId ?? team.id;
 }
 
+// Lấy team name.
 function getTeamName(team: PublicTeam) {
   return team.team?.name || team.teamName || team.name || "Đội bóng";
 }
 
+// Lấy team logo.
 function getTeamLogo(team: PublicTeam) {
   return team.team?.logo || team.logo || defaultTeamLogo;
 }
 
+// Lấy match team names.
 function getMatchTeamNames(match: PublicMatch) {
   return {
     home: match.homeTeam?.name || match.homeTeamName || "Đội nhà",
@@ -131,6 +141,7 @@ function getMatchTeamNames(match: PublicMatch) {
   };
 }
 
+// Hiển thị EmptyState.
 function EmptyState({ message }: { message: string }) {
   return (
     <div className="rounded-2xl border border-dashed border-gray-200 bg-white/80 p-8 text-center text-sm font-bold text-gray-500">
@@ -139,6 +150,7 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
+// Hiển thị LeagueDetailPage.
 export default function LeagueDetailPage() {
   const navigate = useNavigate();
   const { leagueId } = useParams();
@@ -161,6 +173,7 @@ export default function LeagueDetailPage() {
   useEffect(() => {
     let mounted = true;
 
+    // Tải league.
     const loadLeague = async () => {
       if (!numericLeagueId) {
         setLoading(false);

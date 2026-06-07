@@ -14,6 +14,7 @@ type SeasonResponse = {
   systemRuleId?: number;
 };
 
+// Xử lý dữ liệu league.
 const normalizeLeague = (raw: any) =>
   new League({
     id: raw?.id,
@@ -24,6 +25,7 @@ const normalizeLeague = (raw: any) =>
     logo: raw?.logo ?? null,
   });
 
+// Xử lý dữ liệu payload.
 const toPayload = (league: League) => ({
   name: league.name.trim(),
   country: league.country.trim(),
@@ -33,6 +35,7 @@ const toPayload = (league: League) => ({
 });
 
 class LeagueService {
+  // Gọi API lấy leagues.
   getAllLeagues(page = 0, size = 10, search?: string) {
     return axiosClient.get(`${API_BASE_URL}/getAllLeagues`, {
       params: {
@@ -43,6 +46,7 @@ class LeagueService {
     });
   }
 
+  // Gọi API lấy leagues normalized.
   async getAllLeaguesNormalized(page = 0, size = 10, search?: string) {
     const response = await this.getAllLeagues(page, size, search);
     const data = response.data;
@@ -55,11 +59,13 @@ class LeagueService {
     };
   }
 
+  // Gọi API lấy league by id.
   async getLeagueById(id: number) {
     const response = await axiosClient.get(`${API_BASE_URL}/getLeague/${id}`);
     return normalizeLeague(response.data);
   }
 
+  // Gọi API lấy seasons by league.
   async getSeasonsByLeague(id: number): Promise<SeasonResponse[]> {
     const response = await axiosClient.get(
       `${API_BASE_URL}/getLeagueSeasons/${id}/seasons`,
@@ -67,14 +73,17 @@ class LeagueService {
     return Array.isArray(response.data) ? response.data : [];
   }
 
+  // Gọi API tạo league.
   async addLeague(league: League) {
     return axiosClient.post(`${API_BASE_URL}/addLeague`, toPayload(league));
   }
 
+  // Gọi API cập nhật league.
   async updateLeague(id: number, league: League) {
     return axiosClient.put(`${API_BASE_URL}/updateLeague/${id}`, toPayload(league));
   }
 
+  // Gọi API xóa league.
   deleteLeague(id: number) {
     return axiosClient.delete(`${API_BASE_URL}/deleteLeague/${id}`);
   }

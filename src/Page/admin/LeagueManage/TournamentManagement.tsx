@@ -14,6 +14,7 @@ import { PhanTrang } from "../../../utils/PhanTrang";
 import { League } from "../../../model/LeagueModel";
 import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
+import { getErrorMessage } from "../../../utils/errorUtils";
 
 type FilterState = {
   search: string;
@@ -39,12 +40,15 @@ const STATUS_LABELS: Record<string, string> = {
   INACTIVE: "Ngừng hoạt động",
 };
 
+// Chuẩn hóa keyword.
 const normalizeKeyword = (value?: string | null) =>
   (value ?? "").trim().toLowerCase();
 
+// Lấy status label.
 const getStatusLabel = (status?: string | null) =>
   status ? (STATUS_LABELS[status] ?? status) : "Chưa cập nhật";
 
+// Lấy season status.
 const getSeasonStatus = (season: any) => {
   const now = new Date();
   const start = season.startDate ? new Date(season.startDate) : null;
@@ -56,6 +60,7 @@ const getSeasonStatus = (season: any) => {
   return "Chưa rõ";
 };
 
+// Định dạng date.
 const formatDate = (value?: string | null) => {
   if (!value) return "Chưa cập nhật";
   const date = new Date(value);
@@ -92,28 +97,28 @@ const TournamentManagement: React.FC = () => {
     [appliedFilters],
   );
 
-  const filterClientItems = useCallback((
-    leagues: LeagueWithSeasons[],
-    filters: FilterState,
-  ) => {
-    const keyword = normalizeKeyword(filters.search);
+  const filterClientItems = useCallback(
+    (leagues: LeagueWithSeasons[], filters: FilterState) => {
+      const keyword = normalizeKeyword(filters.search);
 
-    return leagues.filter(({ league }) => {
-      const matchesSearch =
-        !keyword ||
-        normalizeKeyword(league.name).includes(keyword) ||
-        normalizeKeyword(league.country).includes(keyword);
+      return leagues.filter(({ league }) => {
+        const matchesSearch =
+          !keyword ||
+          normalizeKeyword(league.name).includes(keyword) ||
+          normalizeKeyword(league.country).includes(keyword);
 
-      const matchesScale =
-        filters.scale === "Tất cả quy mô" || league.scale === filters.scale;
+        const matchesScale =
+          filters.scale === "Tất cả quy mô" || league.scale === filters.scale;
 
-      const matchesStatus =
-        filters.status === "Tất cả trạng thái" ||
-        league.status === filters.status;
+        const matchesStatus =
+          filters.status === "Tất cả trạng thái" ||
+          league.status === filters.status;
 
-      return matchesSearch && matchesScale && matchesStatus;
-    });
-  }, []);
+        return matchesSearch && matchesScale && matchesStatus;
+      });
+    },
+    [],
+  );
 
   const fetchLeagueSeasons = useCallback(async (leagueId?: number) => {
     if (!leagueId) return [];
@@ -126,71 +131,77 @@ const TournamentManagement: React.FC = () => {
     }
   }, []);
 
-  const enrichLeagues = useCallback(async (leagues: League[]) => {
-    const seasonsList = await Promise.all(
-      leagues.map((league) => fetchLeagueSeasons(league.id)),
-    );
-
-    return leagues.map((league, index) => ({
-      league,
-      seasons: seasonsList[index] ?? [],
-    }));
-  }, [fetchLeagueSeasons]);
-
-  const fetchLeagues = useCallback(async (page = 1, filters = appliedFilters) => {
-    setIsLoading(true);
-
-    try {
-      if (
-        filters.scale !== "Tất cả quy mô" ||
-        filters.status !== "Tất cả trạng thái"
-      ) {
-        const baseResponse = await LeagueService.getAllLeaguesNormalized(
-          0,
-          1,
-          filters.search,
-        );
-        const totalElements = baseResponse.totalElements ?? 0;
-        const fetchSize = Math.max(totalElements, 1);
-        const fullResponse = await LeagueService.getAllLeaguesNormalized(
-          0,
-          fetchSize,
-          filters.search,
-        );
-        const fullItems = await enrichLeagues(fullResponse.content ?? []);
-        const clientFiltered = filterClientItems(fullItems, filters);
-        const totalPages = Math.ceil(clientFiltered.length / PAGE_SIZE);
-        const safePage =
-          totalPages === 0 ? 1 : Math.min(page, Math.max(totalPages, 1));
-        const startIndex = (safePage - 1) * PAGE_SIZE;
-
-        setItems(clientFiltered.slice(startIndex, startIndex + PAGE_SIZE));
-        setTongSoPhanTu(clientFiltered.length);
-        setTongSoTrang(totalPages);
-        setTrangHienTai(safePage);
-        return;
-      }
-
-      const data = await LeagueService.getAllLeaguesNormalized(
-        page - 1,
-        PAGE_SIZE,
-        filters.search,
+  const enrichLeagues = useCallback(
+    async (leagues: League[]) => {
+      const seasonsList = await Promise.all(
+        leagues.map((league) => fetchLeagueSeasons(league.id)),
       );
-      const enriched = await enrichLeagues(data.content ?? []);
 
-      setItems(enriched);
-      setTongSoTrang(data.totalPages ?? 0);
-      setTongSoPhanTu(data.totalElements ?? 0);
-      setTrangHienTai((data.number ?? page - 1) + 1);
-    } catch (error) {
-      console.error("Lỗi khi tải giải đấu:", error);
-      setItems([]);
-      setTongSoTrang(0);
-      setTongSoPhanTu(0);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [appliedFilters, enrichLeagues, filterClientItems]);
+      return leagues.map((league, index) => ({
+        league,
+        seasons: seasonsList[index] ?? [],
+      }));
+    },
+    [fetchLeagueSeasons],
+  );
+
+  const fetchLeagues = useCallback(
+    async (page = 1, filters = appliedFilters) => {
+      setIsLoading(true);
+
+      try {
+        if (
+          filters.scale !== "Tất cả quy mô" ||
+          filters.status !== "Tất cả trạng thái"
+        ) {
+          const baseResponse = await LeagueService.getAllLeaguesNormalized(
+            0,
+            1,
+            filters.search,
+          );
+          const totalElements = baseResponse.totalElements ?? 0;
+          const fetchSize = Math.max(totalElements, 1);
+          const fullResponse = await LeagueService.getAllLeaguesNormalized(
+            0,
+            fetchSize,
+            filters.search,
+          );
+          const fullItems = await enrichLeagues(fullResponse.content ?? []);
+          const clientFiltered = filterClientItems(fullItems, filters);
+          const totalPages = Math.ceil(clientFiltered.length / PAGE_SIZE);
+          const safePage =
+            totalPages === 0 ? 1 : Math.min(page, Math.max(totalPages, 1));
+          const startIndex = (safePage - 1) * PAGE_SIZE;
+
+          setItems(clientFiltered.slice(startIndex, startIndex + PAGE_SIZE));
+          setTongSoPhanTu(clientFiltered.length);
+          setTongSoTrang(totalPages);
+          setTrangHienTai(safePage);
+          return;
+        }
+
+        const data = await LeagueService.getAllLeaguesNormalized(
+          page - 1,
+          PAGE_SIZE,
+          filters.search,
+        );
+        const enriched = await enrichLeagues(data.content ?? []);
+
+        setItems(enriched);
+        setTongSoTrang(data.totalPages ?? 0);
+        setTongSoPhanTu(data.totalElements ?? 0);
+        setTrangHienTai((data.number ?? page - 1) + 1);
+      } catch (error) {
+        console.error("Lỗi khi tải giải đấu:", error);
+        setItems([]);
+        setTongSoTrang(0);
+        setTongSoPhanTu(0);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [appliedFilters, enrichLeagues, filterClientItems],
+  );
 
   useEffect(() => {
     fetchLeagues(trangHienTai, appliedFilters);
@@ -219,22 +230,26 @@ const TournamentManagement: React.FC = () => {
     setDraftFilters((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Xử lý apply filters.
   const applyFilters = () => {
     setTrangHienTai(1);
     setAppliedFilters({ ...draftFilters, search: draftFilters.search.trim() });
   };
 
+  // Xử lý filters.
   const resetFilters = () => {
     setDraftFilters(DEFAULT_FILTERS);
     setTrangHienTai(1);
     setAppliedFilters(DEFAULT_FILTERS);
   };
 
+  // Xử lý xóa dữ liệu.
   const handleDelete = async (league: League) => {
     if (!league.id) return;
     setDeletingLeague(league);
   };
 
+  // Xử lý xóa dữ liệu.
   const handleConfirmDeleteLeague = async () => {
     if (!deletingLeague?.id) return;
 
@@ -246,16 +261,18 @@ const TournamentManagement: React.FC = () => {
       fetchLeagues(trangHienTai, appliedFilters);
     } catch (error) {
       console.error("Lỗi khi xóa giải đấu:", error);
-      toast.error("Không thể xóa giải đấu này.");
+      toast.error(getErrorMessage(error, "Không thể xóa giải đấu này."));
     } finally {
       setDeleteLoading(false);
     }
   };
 
+  // Xử lý xóa dữ liệu.
   const handleDeleteSeason = async (seasonId: number) => {
     setDeletingSeasonId(seasonId);
   };
 
+  // Xử lý xóa dữ liệu.
   const handleConfirmDeleteSeason = async () => {
     if (!deletingSeasonId) return;
 
@@ -268,7 +285,10 @@ const TournamentManagement: React.FC = () => {
     } catch (error) {
       console.error("Lỗi khi xóa mùa giải:", error);
       toast.error(
-        "Không thể xóa mùa giải này. Vui lòng kiểm tra xem có hồ sơ đăng ký hoặc trận đấu liên quan không.",
+        getErrorMessage(
+          error,
+          "Không thể xóa mùa giải này. Vui lòng kiểm tra xem có hồ sơ đăng ký hoặc trận đấu liên quan không.",
+        ),
       );
     } finally {
       setDeleteLoading(false);
@@ -416,7 +436,7 @@ const TournamentManagement: React.FC = () => {
 
           {hasClientFilters && (
             <div className="mt-4 rounded-[1rem] bg-[#B2F746]/20 px-4 py-3 text-xs font-bold text-[#496F00]">
-              Đang dùng bộ lọc phía client cho quy mô hoặc trạng thái.
+              {/* Đang dùng bộ lọc phía client cho quy mô hoặc trạng thái. */}
             </div>
           )}
         </section>
@@ -570,6 +590,7 @@ const TournamentRow: React.FC<{
       return [];
     };
 
+    // Tải rules.
     const loadRules = async () => {
       try {
         const response = await SystemRuleService.getAllNoPaging();
@@ -829,6 +850,7 @@ const StatCard: React.FC<{
 
 type FilterOption = string | { label: string; value: string };
 
+// Hiển thị FilterSelect.
 function FilterSelect({
   label,
   name,
@@ -869,6 +891,7 @@ function FilterSelect({
   );
 }
 
+// Hiển thị StatusPill.
 function StatusPill({ status }: { status?: string | null }) {
   const active = status === "ACTIVE";
   return (
@@ -889,6 +912,7 @@ function StatusPill({ status }: { status?: string | null }) {
   );
 }
 
+// Hiển thị SeasonStatusPill.
 function SeasonStatusPill({ status }: { status: string }) {
   const className =
     status === "Đang diễn ra"
@@ -906,6 +930,7 @@ function SeasonStatusPill({ status }: { status: string }) {
   );
 }
 
+// Hiển thị IconButton.
 function IconButton({
   icon,
   title,
@@ -937,6 +962,7 @@ function IconButton({
   );
 }
 
+// Hiển thị InfoLine.
 function InfoLine({
   icon,
   label,
@@ -957,6 +983,7 @@ function InfoLine({
   );
 }
 
+// Hiển thị EmptyState.
 const EmptyState = ({ onCreate }: { onCreate: () => void }) => (
   <div className="rounded-[2rem] border border-dashed border-[#BFCABA] bg-white px-6 py-14 text-center shadow-sm">
     <span className="material-symbols-outlined text-6xl text-[#0D631B]">

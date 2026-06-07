@@ -71,6 +71,7 @@ export class MatchModel {
     this.manOfTheMatchPlayerName = manOfTheMatchPlayerName;
   }
 
+  // Lấy winner.
   getWinner(): TeamModel | null {
     if (this.homeScore == null || this.awayScore == null) return null;
     if (this.homeScore > this.awayScore) return this.homeTeam;

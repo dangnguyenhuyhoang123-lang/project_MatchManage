@@ -29,24 +29,28 @@ class SeasonInvitationService {
     );
   }
 
+  // Gọi API lấy by season.
   getBySeason(seasonId: number) {
     return axiosClient.get<SeasonInvitationResponse[]>(
       `/seasons/${seasonId}/invitations`,
     );
   }
 
+  // Xử lý dữ liệu accept.
   accept(id: number) {
     return axiosClient.post<SeasonInvitationResponse>(
       `/invitations/${id}/accept`,
     );
   }
 
+  // Xử lý dữ liệu decline.
   decline(id: number, note?: string) {
     return axiosClient.post<SeasonInvitationResponse>(
       `/invitations/${id}/decline`,
       { note },
     );
   }
+  // Gọi API lấy my invitations.
   getMyInvitations() {
     return axiosClient.get<SeasonInvitationResponse[]>("/invitations/my");
   }

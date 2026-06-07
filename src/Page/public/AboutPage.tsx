@@ -2,6 +2,7 @@ import { Award, Compass, Zap, Target } from "lucide-react";
 
 import { Footer } from "../../components/Footer/Footer_HomePage";
 
+// Hiển thị AboutPage.
 const AboutPage = () => {
   return (
     <>

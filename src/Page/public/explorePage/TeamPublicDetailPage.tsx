@@ -108,22 +108,26 @@ function readArray<T>(data: unknown): T[] {
   return [];
 }
 
+// Lấy numeric id.
 function getNumericId(value: unknown) {
   const numeric = Number(value);
   return Number.isFinite(numeric) && numeric > 0 ? numeric : undefined;
 }
 
+// Lấy string field.
 function getStringField(item: unknown, field: string) {
   if (!item || typeof item !== "object") return "";
   const value = (item as Record<string, unknown>)[field];
   return typeof value === "string" ? value : "";
 }
 
+// Lấy number field.
 function getNumberField(item: unknown, field: string) {
   if (!item || typeof item !== "object") return undefined;
   return getNumericId((item as Record<string, unknown>)[field]);
 }
 
+// Định dạng date.
 function formatDate(value?: string | Date | null) {
   if (!value) return "Đang cập nhật";
   const date = value instanceof Date ? value : new Date(value);
@@ -131,6 +135,7 @@ function formatDate(value?: string | Date | null) {
   return date.toLocaleDateString("vi-VN");
 }
 
+// Tính toán age.
 function calculateAge(value?: string | null) {
   if (!value) return "";
   const birthDate = new Date(value);
@@ -147,6 +152,7 @@ function calculateAge(value?: string | null) {
   return Number.isFinite(age) && age > 0 ? `${age} tuổi` : "";
 }
 
+// Xử lý status label.
 function statusLabel(value?: string | null) {
   if (!value) return "Đang cập nhật";
   if (value === "ACTIVE") return "Đang hoạt động";
@@ -159,6 +165,7 @@ function statusLabel(value?: string | null) {
   return value;
 }
 
+// Xử lý player type label.
 function playerTypeLabel(player: Player) {
   const rawType =
     getStringField(player, "playerType") || getStringField(player, "type");
@@ -172,16 +179,19 @@ function playerTypeLabel(player: Player) {
   );
 }
 
+// Xử lý stadium name.
 function stadiumName(stadium: PublicStadium | null, fallback?: string | null) {
   return (
     stadium?.name || stadium?.stadiumName || fallback || "Chưa cập nhật sân"
   );
 }
 
+// Xử lý stadium address.
 function stadiumAddress(stadium: PublicStadium | null) {
   return stadium?.address || stadium?.location || "Chưa cập nhật địa chỉ";
 }
 
+// Xử lý stadium image.
 function stadiumImage(stadium: PublicStadium | null) {
   return (
     stadium?.imageUrl ||
@@ -192,6 +202,7 @@ function stadiumImage(stadium: PublicStadium | null) {
   );
 }
 
+// Xử lý match team names.
 function matchTeamNames(match: PublicMatch) {
   return {
     home: match.homeTeam?.name || match.homeTeamName || "Đội nhà",
@@ -199,10 +210,12 @@ function matchTeamNames(match: PublicMatch) {
   };
 }
 
+// Xử lý match has team.
 function matchHasTeam(match: PublicMatch, teamId: number) {
   return match.homeTeam?.id === teamId || match.awayTeam?.id === teamId;
 }
 
+// Xử lý match stadium.
 function matchStadium(match: PublicMatch) {
   return (
     match.stadium?.name ||
@@ -226,6 +239,7 @@ async function loadTeamStadium(team: TeamModel): Promise<PublicStadium | null> {
   return null;
 }
 
+// Hiển thị EmptyState.
 function EmptyState({ message }: { message: string }) {
   return (
     <div className="rounded-2xl border border-dashed border-gray-200 bg-white/80 p-8 text-center text-sm font-bold text-gray-500">
@@ -234,6 +248,7 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
+// Hiển thị MetricCard.
 function MetricCard({
   label,
   value,
@@ -256,6 +271,7 @@ function MetricCard({
   );
 }
 
+// Hiển thị InfoItem.
 function InfoItem({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-2xl bg-[#f5f3ef] p-4">
@@ -269,6 +285,7 @@ function InfoItem({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
+// Hiển thị TeamPublicDetailPage.
 export default function TeamPublicDetailPage() {
   const navigate = useNavigate();
   const { teamId } = useParams();
@@ -286,6 +303,7 @@ export default function TeamPublicDetailPage() {
   useEffect(() => {
     let mounted = true;
 
+    // Tải team.
     const loadTeam = async () => {
       if (!numericTeamId) {
         setWarnings(["Đường dẫn đội bóng không hợp lệ."]);

@@ -17,6 +17,7 @@ export type PlayerStatsResponse = {
 };
 
 class PlayerStatsService {
+  // Gọi API lấy top scorers.
   getTopScorers(seasonId: number) {
     return axiosClient.get<PlayerStatsResponse[]>(
       `${API_BASE_URL}/top-scorers`,
@@ -26,12 +27,14 @@ class PlayerStatsService {
     );
   }
 
+  // Gọi API lấy by season.
   getBySeason(seasonId: number) {
     return axiosClient.get<PlayerStatsResponse[]>(API_BASE_URL, {
       params: { seasonId },
     });
   }
 
+  // Gọi API lấy cards.
   getCards(seasonId: number) {
     return axiosClient.get<PlayerStatsResponse[]>(`${API_BASE_URL}/cards`, {
       params: { seasonId },

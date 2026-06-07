@@ -20,6 +20,7 @@ export type PlayerSearchResponse = {
   totalGoals: number;
 };
 
+// Xử lý dữ liệu player.
 const normalizePlayer = (raw: any) =>
   new Player({
     id: raw?.id,
@@ -38,6 +39,7 @@ const normalizePlayer = (raw: any) =>
     teamName: raw?.teamName ?? null,
   });
 
+// Xử lý dữ liệu payload.
 const toPayload = (player: Player) => ({
   id: player.id,
   name: player.name.trim(),
@@ -55,6 +57,7 @@ const toPayload = (player: Player) => ({
 });
 
 class PlayerService {
+  // Gọi API lấy players.
   getAllPlayers(page: number, size: number, filters?: PlayerFilters) {
     return axiosClient.get(`${API_BASE_URL}/getAllPlayers`, {
       params: {
@@ -89,17 +92,20 @@ class PlayerService {
     };
   }
 
+  // Gọi API lấy player by id.
   async getPlayerById(id: number) {
     const response = await axiosClient.get(`${API_BASE_URL}/getPlayer/${id}`);
     return normalizePlayer(response.data);
   }
 
+  // Gọi API lấy players by team.
   getPlayersByTeam(teamId: number, page = 0, size = 10) {
     return axiosClient.get(`${API_BASE_URL}/getPlayersByTeam/${teamId}`, {
       params: { page, size },
     });
   }
 
+  // Gọi API lấy players by team normalized.
   async getPlayersByTeamNormalized(teamId: number, page = 0, size = 10) {
     const response = await this.getPlayersByTeam(teamId, page, size);
     const data = response.data;
@@ -112,10 +118,12 @@ class PlayerService {
     };
   }
 
+  // Gọi API tạo player.
   async addPlayer(player: Player) {
     return axiosClient.post(`${API_BASE_URL}/addPlayer`, toPayload(player));
   }
 
+  // Gọi API cập nhật player.
   async updatePlayer(id: number, player: Player) {
     return axiosClient.put(
       `${API_BASE_URL}/updatePlayer/${id}`,
@@ -123,6 +131,7 @@ class PlayerService {
     );
   }
 
+  // Gọi API xóa player.
   deletePlayer(id: number) {
     return axiosClient.delete(`${API_BASE_URL}/deletePlayer/${id}`);
   }

@@ -31,6 +31,7 @@ const roleLabels: Record<string, string> = {
   ROLE_USER: "Người dùng",
 };
 
+// Hiển thị Header_HomePage.
 export const Header_HomePage = () => {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -48,6 +49,7 @@ export const Header_HomePage = () => {
   const roleLabel =
     userRoles.map((role) => roleLabels[role]).find(Boolean) || "Người dùng";
 
+  // Lấy nav link class.
   const getNavLinkClass = (path: string) => {
     const isActive =
       path === "/"
@@ -61,6 +63,7 @@ export const Header_HomePage = () => {
   };
 
   useEffect(() => {
+    // Xử lý click outside.
     const handleClickOutside = (e: MouseEvent) => {
       if (!dropdownRef.current?.contains(e.target as Node)) {
         setOpen(false);
@@ -71,6 +74,7 @@ export const Header_HomePage = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Xử lý logout.
   const handleLogout = () => {
     localStorage.removeItem("token");
     setUser(null);
@@ -243,6 +247,7 @@ export const Header_HomePage = () => {
   );
 };
 
+// Hiển thị DropdownLink.
 function DropdownLink({
   to,
   onClick,

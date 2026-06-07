@@ -62,32 +62,39 @@ export type SystemRulePayload = {
 };
 
 class SystemRuleService {
+  // Gọi API lấy all.
   getAll(page = 0, size = 10) {
     return axiosClient.get(API_BASE_URL, {
       params: { page, size },
     });
   }
 
+  // Gọi API lấy no paging.
   getAllNoPaging() {
     return axiosClient.get<SystemRule[]>(`${API_BASE_URL}/all`);
   }
 
+  // Gọi API lấy by id.
   getById(id: number) {
     return axiosClient.get<SystemRule>(`${API_BASE_URL}/${id}`);
   }
 
+  // Gọi API lấy team by id.
   getTeamById(id: number) {
     return axiosClient.get<SystemRule>(`${API_BASE_URL}/${id}`);
   }
 
+  // Gọi API tạo create.
   create(payload: SystemRulePayload) {
     return axiosClient.post<SystemRule>(API_BASE_URL, payload);
   }
 
+  // Gọi API cập nhật update.
   update(id: number, payload: SystemRulePayload) {
     return axiosClient.put<SystemRule>(`${API_BASE_URL}/${id}`, payload);
   }
 
+  // Gọi API xóa delete.
   delete(id: number) {
     return axiosClient.delete(`${API_BASE_URL}/${id}`);
   }

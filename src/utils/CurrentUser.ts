@@ -14,10 +14,12 @@ type RawAuthUser = AuthUser & {
   } | null;
 };
 
+// Xử lý can use storage.
 function canUseStorage() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
 
+// Xử lý stored user.
 function readStoredUser(): AuthUser | null {
   if (!canUseStorage()) return memoryUser;
 
@@ -32,12 +34,14 @@ function readStoredUser(): AuthUser | null {
   }
 }
 
+// Xử lý positive id.
 function toPositiveId(value: unknown) {
   const id = Number(value);
 
   return Number.isFinite(id) && id > 0 ? id : undefined;
 }
 
+// Chuẩn hóa auth user.
 function normalizeAuthUser(user: AuthUser): AuthUser {
   const rawUser = user as RawAuthUser;
   const teamId =
@@ -54,6 +58,7 @@ function normalizeAuthUser(user: AuthUser): AuthUser {
 }
 
 const CurrentUser = {
+  // Lấy user.
   getUser(): AuthUser | null {
     if (memoryUser) return memoryUser;
 
@@ -81,34 +86,42 @@ const CurrentUser = {
     this.setUser(null);
   },
 
+  // Lấy id.
   getId() {
     return this.getUser()?.id;
   },
 
+  // Lấy username.
   getUsername() {
     return this.getUser()?.username ?? "";
   },
 
+  // Lấy roles.
   getRoles() {
     return this.getUser()?.roles ?? [];
   },
 
+  // Lấy full name.
   getFullName() {
     return this.getUser()?.fullName ?? this.getUser()?.displayName ?? "";
   },
 
+  // Lấy email.
   getEmail() {
     return this.getUser()?.email ?? "";
   },
 
+  // Lấy phone.
   getPhone() {
     return this.getUser()?.phone ?? "";
   },
 
+  // Lấy avatar.
   getAvatar() {
     return this.getUser()?.avatar ?? "";
   },
 
+  // Lấy team id.
   getTeamId() {
     return this.getUser()?.teamId;
   },

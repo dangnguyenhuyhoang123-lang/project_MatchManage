@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import ConfirmModal from "../ConfirmModal";
 import { Modal } from "../Modal";
 import SeasonService from "../../services/SeasonService";
-import { extractApiErrorMessage } from "../../utils/apiError";
+import { getErrorMessage } from "../../utils/errorUtils";
 
 type GenerateScheduleModalProps = {
   open: boolean;
@@ -12,6 +12,7 @@ type GenerateScheduleModalProps = {
   onGenerated?: () => void;
 };
 
+// Hiển thị GenerateScheduleModal.
 export default function GenerateScheduleModal({
   open,
   seasonId,
@@ -24,6 +25,7 @@ export default function GenerateScheduleModal({
   const [errorMessage, setErrorMessage] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  // Kiểm tra dữ liệu hợp lệ.
   const validate = () => {
     if (!seasonId) {
       setErrorMessage("Vui lòng chọn mùa giải trước khi sinh lịch.");
@@ -45,11 +47,13 @@ export default function GenerateScheduleModal({
     return true;
   };
 
+  // Xử lý gui biểu mẫu.
   const handleSubmit = async () => {
     if (!validate()) return;
     setConfirmOpen(true);
   };
 
+  // Xử lý xác nhận thao tác.
   const handleConfirmGenerate = async () => {
     if (!seasonId) return;
 
@@ -68,8 +72,8 @@ export default function GenerateScheduleModal({
       onClose();
     } catch (error) {
       console.error("Cannot generate schedule", error);
-      setErrorMessage(extractApiErrorMessage(error));
-      toast.error(extractApiErrorMessage(error));
+      setErrorMessage(getErrorMessage(error, "Không thể sinh lịch thi đấu."));
+      toast.error(getErrorMessage(error, "Không thể sinh lịch thi đấu."));
     } finally {
       setSubmitting(false);
     }

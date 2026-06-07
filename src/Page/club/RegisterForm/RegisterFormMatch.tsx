@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
+import { toast } from "sonner";
 import type { GrassType } from "../../../model/Registration";
 import { AppLayout } from "../../../layouts/AppLayout";
 import CoachRegistration from "./CoachRegistration";
@@ -11,7 +12,9 @@ import SystemRuleService, {
 } from "../../../services/SystemRuleService";
 import TeamService from "../../../services/TeamService";
 import { useCurrentClubId } from "../InfoClubManage/clubInfoHelpers";
+import { calculateAge } from "../../../utils/registrationValidationUtils";
 
+// Type mùa giải được chọn đăng ký
 export type SelectedSeason = {
   id: number;
   name?: string;
@@ -22,6 +25,7 @@ export type SelectedSeason = {
   systemRuleId?: number;
 };
 
+// Type huấn luyện viên được chọn
 export type SelectedCoach = {
   assignmentId?: number;
   coachId?: number;
@@ -37,8 +41,10 @@ export type SelectedCoach = {
   assignedDate?: string;
 };
 
+// Type cầu thủ được chọn
 export type SelectedPlayer = {
   id: number;
+  playerId?: number;
   name: string;
   position?: string;
   detailPosition?: string | null;
@@ -57,6 +63,7 @@ export type SelectedPlayer = {
   type?: string;
 };
 
+// Type thông tin sân đăng ký
 export type StadiumDraft = {
   name: string;
   clubName: string;
@@ -70,6 +77,7 @@ export type StadiumDraft = {
   certificateUrl?: string;
 };
 
+// Thông tin dùng để lưu nháp
 export type RegistrationDraft = {
   season: SelectedSeason | null;
   team: {
@@ -111,18 +119,22 @@ const defaultDraft: RegistrationDraft = {
 
 export const DRAFT_STORAGE_KEY = "club_registration_draft";
 
+// Xử lý players(gộp danh sách cầu thủ).
 function mergePlayers(...groups: Array<SelectedPlayer[] | undefined>) {
   const map = new Map<number, SelectedPlayer>();
 
-  groups.flatMap((group) => group ?? []).forEach((player) => {
-    if (player?.id != null && !map.has(player.id)) {
-      map.set(player.id, player);
-    }
-  });
+  groups
+    .flatMap((group) => group ?? [])
+    .forEach((player) => {
+      if (player?.id != null && !map.has(player.id)) {
+        map.set(player.id, player);
+      }
+    });
 
   return Array.from(map.values());
 }
 
+// Biến lưu trữ các bước đăng ký
 const steps = [
   { step: 1, label: "Chọn giải đấu" },
   { step: 2, label: "Danh sách ban huấn luyện" },
@@ -131,6 +143,7 @@ const steps = [
   { step: 5, label: "Kiểm tra & xác nhận" },
 ];
 
+// Xử lý saved draft(nếu lưu thì lấy trong localstorage , k lưu trả default ).
 function readSavedDraft(): RegistrationDraft {
   if (typeof window === "undefined") return defaultDraft;
 
@@ -167,6 +180,7 @@ function readSavedDraft(): RegistrationDraft {
   }
 }
 
+// Chuẩn hóa role text.
 function normalizeRoleText(role?: string) {
   return (role ?? "")
     .normalize("NFD")
@@ -177,6 +191,7 @@ function normalizeRoleText(role?: string) {
     .trim();
 }
 
+// Lấy coach role key(kiểm tra role , trả về giá trị thực hiện validate 1 HLV trưởng).
 function getCoachRoleKey(role?: string) {
   const normalizedRole = normalizeRoleText(role);
 
@@ -208,43 +223,26 @@ function getCoachRoleKey(role?: string) {
   return "other";
 }
 
+// Lấy coach id code (thực hiện validate kiểm tra có thiếu idcode hay không).
 function getCoachIdCode(coach: SelectedCoach) {
   return String(
-    coach.idCode ??
-      coach.id_code ??
-      coach.identityCode ??
-      coach.cccd ??
-      "",
+    coach.idCode ?? coach.id_code ?? coach.identityCode ?? coach.cccd ?? "",
   ).trim();
 }
 
+// Lấy player id code.(thực hiện validate kiểm tra có thiếu idcode hay không)
 function getPlayerIdCode(player: SelectedPlayer) {
   return String(
-    player.idCode ??
-      player.id_code ??
-      player.identityCode ??
-      player.cccd ??
-      "",
+    player.idCode ?? player.id_code ?? player.identityCode ?? player.cccd ?? "",
   ).trim();
 }
 
+// Lấy player birth date(lấy ngày sinh nhật để kiểm tra độ tuổi phù hợp).
 function getPlayerBirthDate(player: SelectedPlayer) {
   return player.birthDay ?? player.birthDate ?? player.dateOfBirth ?? "";
 }
 
-function calculateAge(birthDate?: string | null) {
-  if (!birthDate) return null;
-  const date = new Date(birthDate);
-  if (Number.isNaN(date.getTime())) return null;
-  const today = new Date();
-  let age = today.getFullYear() - date.getFullYear();
-  const monthDiff = today.getMonth() - date.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
-    age -= 1;
-  }
-  return age;
-}
-
+// Chuẩn hóa country(Bỏ dấu và lower-case ).
 function normalizeCountry(value?: string) {
   return (value ?? "")
     .normalize("NFD")
@@ -253,19 +251,24 @@ function normalizeCountry(value?: string) {
     .trim();
 }
 
+// Xử lý is foreign player(Lấy quốc tích để thực hiện validate số ccầuthu nước ngoài).
 function isForeignPlayer(player: SelectedPlayer) {
   const type = String(player.playerType ?? player.type ?? "").toUpperCase();
   if (type === "FOREIGN") return true;
   if (type === "DOMESTIC") return false;
 
   const nationality = normalizeCountry(player.nationality);
-  return Boolean(nationality) && !["viet nam", "vietnam", "vn"].includes(nationality);
+  return (
+    Boolean(nationality) && !["viet nam", "vietnam", "vn"].includes(nationality)
+  );
 }
 
-function getCompletedSteps(
+// Lấy completed steps.
+function getStepValidationMessage(
+  stepIndex: number,
   draft: RegistrationDraft,
   rule?: SystemRule | null,
-): Record<number, boolean> {
+): string | null {
   const coachRoleCounts = draft.coaches.reduce<Record<string, number>>(
     (counts, coach) => {
       const roleKey = getCoachRoleKey(coach.role);
@@ -277,7 +280,7 @@ function getCompletedSteps(
   const totalPlayers = draft.players.length;
   const minCoaches = rule?.minCoaches ?? 1;
   const maxCoaches = rule?.maxCoaches ?? 8;
-  const minPlayers = rule?.minPlayers ?? 14;
+  const minPlayers = rule?.minRegistrationPlayers ?? rule?.minPlayers ?? 14;
   const maxPlayers = rule?.maxPlayers ?? 30;
   const minAge = rule?.minAge ?? 16;
   const maxAge = rule?.maxAge ?? 40;
@@ -287,39 +290,91 @@ function getCompletedSteps(
   const playerAges = draft.players.map((player) =>
     calculateAge(getPlayerBirthDate(player)),
   );
-  const hasValidCoachIdCodes =
-    coachIdCodes.length === draft.coaches.length;
-  const hasValidPlayerIdCodes =
-    playerIdCodes.length === draft.players.length;
+  const hasValidCoachIdCodes = coachIdCodes.length === draft.coaches.length;
+  const hasValidPlayerIdCodes = playerIdCodes.length === draft.players.length;
+  const missingPlayerAgeCount = playerAges.filter((age) => age === null).length;
   const hasValidPlayerAges =
     playerAges.length === draft.players.length &&
-    playerAges.every(
-      (age) => age !== null && age >= minAge && age <= maxAge,
-    );
+    playerAges.every((age) => age !== null && age >= minAge && age <= maxAge);
   const foreignCount = draft.players.filter(isForeignPlayer).length;
 
+  switch (stepIndex) {
+    case 1:
+      if (!draft.season?.id) {
+        return "Vui lòng chọn mùa giải trước khi tiếp tục.";
+      }
+      return null;
+    case 2:
+      if (draft.coaches.length < minCoaches) {
+        return `Ban huấn luyện cần tối thiểu ${minCoaches} thành viên.`;
+      }
+      if (draft.coaches.length > maxCoaches) {
+        return `Ban huấn luyện vượt quá tối đa ${maxCoaches} thành viên.`;
+      }
+      if ((coachRoleCounts.headCoach ?? 0) !== 1) {
+        return "Hồ sơ cần đúng 01 huấn luyện viên trưởng.";
+      }
+      if (!hasValidCoachIdCodes) {
+        return "Có huấn luyện viên thiếu mã định danh idCode.";
+      }
+      return null;
+    case 3:
+      if (totalPlayers < minPlayers) {
+        return `Danh sách cầu thủ cần tối thiểu ${minPlayers} người.`;
+      }
+      if (totalPlayers > maxPlayers) {
+        return `Danh sách cầu thủ vượt quá tối đa ${maxPlayers} người.`;
+      }
+      if (!hasValidPlayerIdCodes) {
+        return "Có cầu thủ thiếu mã định danh idCode.";
+      }
+      if (missingPlayerAgeCount > 0) {
+        return "Có cầu thủ chưa có ngày sinh hợp lệ.";
+      }
+      if (!hasValidPlayerAges) {
+        return `Có cầu thủ không nằm trong độ tuổi quy định từ ${minAge} đến ${maxAge}.`;
+      }
+      if (foreignCount > maxForeignPlayers) {
+        return `Số ngoại binh vượt quá tối đa ${maxForeignPlayers} cầu thủ.`;
+      }
+      return null;
+    case 4:
+      if (!draft.stadium.name.trim()) {
+        return "Vui lòng nhập tên sân vận động.";
+      }
+      if (!draft.stadium.address.trim()) {
+        return "Vui lòng nhập địa chỉ sân vận động.";
+      }
+      if (!draft.stadium.country.trim()) {
+        return "Vui lòng nhập quốc gia của sân vận động.";
+      }
+      if (Number(draft.stadium.capacity) < 10000) {
+        return "Sân vận động cần có sức chứa tối thiểu 10.000 người.";
+      }
+      if (Number(draft.stadium.fifaStarRating) < 2) {
+        return "Chuẩn sao sân vận động tối thiểu là 2.";
+      }
+      return null;
+    default:
+      return null;
+  }
+}
+
+// Lấy completed steps(tính trạng thái hoàn thành của từng bước dựa trên draft và SystemRule).
+function getCompletedSteps(
+  draft: RegistrationDraft,
+  rule?: SystemRule | null,
+): Record<number, boolean> {
   return {
-    1: Boolean(draft.season?.id),
-    2:
-      draft.coaches.length >= minCoaches &&
-      draft.coaches.length <= maxCoaches &&
-      (coachRoleCounts.headCoach ?? 0) === 1 &&
-      hasValidCoachIdCodes,
-    3:
-      totalPlayers >= minPlayers &&
-      totalPlayers <= maxPlayers &&
-      hasValidPlayerIdCodes &&
-      hasValidPlayerAges &&
-      foreignCount <= maxForeignPlayers,
-    4:
-      Boolean(draft.stadium.name.trim()) &&
-      Boolean(draft.stadium.address.trim()) &&
-      Number(draft.stadium.capacity) >= 10000 &&
-      Number(draft.stadium.fifaStarRating) >= 2,
+    1: getStepValidationMessage(1, draft, rule) === null,
+    2: getStepValidationMessage(2, draft, rule) === null,
+    3: getStepValidationMessage(3, draft, rule) === null,
+    4: getStepValidationMessage(4, draft, rule) === null,
     5: false,
   };
 }
 
+// Lấy bước cao nhất được truy cập.
 function getHighestAllowedStep(completedSteps: Record<number, boolean>) {
   for (let currentStep = 1; currentStep <= 4; currentStep += 1) {
     if (!completedSteps[currentStep]) {
@@ -331,10 +386,19 @@ function getHighestAllowedStep(completedSteps: Record<number, boolean>) {
 }
 
 const RegisterFormMatch: React.FC = () => {
+  // Lấy id câu lạc bộ đang quản lý
   const { currentClubId, authLoading } = useCurrentClubId();
+
+  // Lưu trữ các bước
   const [step, setStep] = useState(1);
+
+  // Mỗi bước đăng ký cập nhật draf(bản nháp)
   const [draft, setDraft] = useState<RegistrationDraft>(() => readSavedDraft());
+
+  // Thông báo lưu nháp / reset form và lỗi điều hướng
   const [draftMessage, setDraftMessage] = useState("");
+
+  // Lấy rule mùa giải đang chọn
   const [rule, setRule] = useState<SystemRule | null>(null);
 
   useEffect(() => {
@@ -383,35 +447,56 @@ const RegisterFormMatch: React.FC = () => {
 
   const selectedSeasonLabel =
     draft.season?.name || draft.season?.year || draft.season?.leagueName;
+
+  // hiển thị các bước đã hoàn chỉnh
   const completedSteps = useMemo(
     () => getCompletedSteps(draft, rule),
     [draft, rule],
   );
   const highestAllowedStep = useMemo(
-    () => getHighestAllowedStep(completedSteps),
-    [completedSteps],
+    () => Math.max(step, getHighestAllowedStep(completedSteps)),
+    [completedSteps, step],
   );
 
+  // Biến chặn thao tác khi câu lạc bộ còn hoạt động
+  const canNavigateTab = !authLoading;
+
+  // Xử lý go to step.
   const goToStep = (nextStep: number) => {
-    if (nextStep > highestAllowedStep) {
-      setDraftMessage(
-        `Vui lòng hoàn thành bước ${highestAllowedStep} trước khi chuyển tiếp.`,
-      );
+    if (!canNavigateTab) {
+      const message = "Vui lòng chờ hệ thống tải xong dữ liệu.";
+      setDraftMessage(message);
+      toast.warning(message);
       return;
+    }
+
+    if (nextStep > step) {
+      for (let currentStep = 1; currentStep < nextStep; currentStep += 1) {
+        const message = getStepValidationMessage(currentStep, draft, rule);
+
+        if (message) {
+          setDraftMessage(message);
+          toast.error(message);
+          setStep(currentStep);
+          return;
+        }
+      }
     }
 
     setDraftMessage("");
     setStep(nextStep);
   };
 
+  // Xử lý lưu dữ liệu(lưu trữ nháp).
   const handleSaveDraft = () => {
     const { mainPlayers, subPlayers, ...draftToSave } = draft;
     void mainPlayers;
     void subPlayers;
     window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftToSave));
-    setDraftMessage("Đã lưu nháp hồ sơ đăng ký trên trình duyệt.");
+    setDraftMessage("Đã lưu nháp hồ sơ đăng ký .");
   };
 
+  // Xử lý registration draft(sau khi nộp đơn thành công -> xóa bản nháp ->đưa về form mặc định).
   const resetRegistrationDraft = () => {
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
     setDraft((prev) => ({
@@ -431,6 +516,14 @@ const RegisterFormMatch: React.FC = () => {
       "Đã gửi hồ sơ thành công. Hệ thống đã xóa bản nháp và đặt lại form đăng ký về trạng thái ban đầu.",
     );
   };
+
+  // Cập nhật thông tin sân trong bản nháp.
+  const handleStadiumChange = useCallback((stadium: StadiumDraft) => {
+    setDraft((prev) => ({
+      ...prev,
+      stadium,
+    }));
+  }, []);
 
   return (
     <AppLayout>
@@ -469,7 +562,7 @@ const RegisterFormMatch: React.FC = () => {
         {steps.map((s) => {
           const isActive = step === s.step;
           const isDone = Boolean(completedSteps[s.step]);
-          const isAllowed = s.step <= highestAllowedStep;
+          const isAllowed = canNavigateTab && s.step <= highestAllowedStep;
 
           return (
             <button
@@ -516,7 +609,9 @@ const RegisterFormMatch: React.FC = () => {
                       ? "Hoàn thành"
                       : isAllowed
                         ? "Có thể thực hiện"
-                        : "Bị khóa"}
+                        : canNavigateTab
+                          ? "Bị khóa"
+                          : "Đang tải"}
                 </p>
               </div>
             </button>
@@ -568,12 +663,7 @@ const RegisterFormMatch: React.FC = () => {
         <StadiumRegistration
           setStep={goToStep}
           stadium={draft.stadium}
-          onStadiumChange={(stadium) =>
-            setDraft((prev) => ({
-              ...prev,
-              stadium,
-            }))
-          }
+          onStadiumChange={handleStadiumChange}
         />
       )}
       {step === 5 && (

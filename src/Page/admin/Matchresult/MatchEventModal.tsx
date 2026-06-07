@@ -12,6 +12,14 @@ import type {
   MatchLineup,
   MatchLineupsResponse,
 } from "../../../model/Match/MatchLineup";
+import {
+  isGoalEvent,
+  isSubstitutionEvent,
+  shouldShowAssistField,
+  shouldShowGoalTypeField,
+  shouldShowPlayerInField,
+} from "../../../utils/matchEventFormUtils";
+import { calculateCurrentLineupState } from "../../../utils/lineupStateUtils";
 
 type MatchEventModalProps = {
   open: boolean;
@@ -59,6 +67,7 @@ const initialForm: EventFormState = {
   note: "",
 };
 
+// Hiển thị MatchEventModal.
 export default function MatchEventModal({
   open,
   onClose,
@@ -83,104 +92,30 @@ export default function MatchEventModal({
     }
   }, [open]);
 
-  const selectedTeamLineups: MatchLineup[] = useMemo(() => {
-    if (!eventForm.teamId || !lineups) return [];
-
-    if (eventForm.teamId === lineups.home?.teamId) {
-      return lineups.home.lineups ?? [];
-    }
-
-    if (eventForm.teamId === lineups.away?.teamId) {
-      return lineups.away.lineups ?? [];
-    }
-
-    return [];
-  }, [eventForm.teamId, lineups]);
-
-  const currentPlayerState = useMemo(() => {
-    const playerById = new Map<number, MatchLineup>();
-    const playingIds = new Set<number>();
-    const benchIds = new Set<number>();
-
-    selectedTeamLineups.forEach((player) => {
-      const playerId = Number(player.playerId);
-      if (!Number.isFinite(playerId) || playerId <= 0) return;
-
-      playerById.set(playerId, player);
-
-      if (player.isStarting) {
-        playingIds.add(playerId);
-      } else {
-        benchIds.add(playerId);
-      }
-    });
-
-    const substitutionEvents = events
-      .filter((event) => {
-        const playerOutId = Number(event.playerId);
-        const playerInId = Number(event.playerInId);
-
-        return (
-          event.eventType === "SUBSTITUTION" &&
-          Number(event.teamId) === Number(eventForm.teamId) &&
-          Number.isFinite(playerOutId) &&
-          Number.isFinite(playerInId) &&
-          playerOutId > 0 &&
-          playerInId > 0
-        );
-      })
-      .sort((a, b) => {
-        const minuteDiff = Number(a.minute ?? 0) - Number(b.minute ?? 0);
-        if (minuteDiff !== 0) return minuteDiff;
-
-        const extraDiff =
-          Number(a.extraMinute ?? 0) - Number(b.extraMinute ?? 0);
-        if (extraDiff !== 0) return extraDiff;
-
-        return (
-          Number(a.eventOrder ?? a.id ?? 0) - Number(b.eventOrder ?? b.id ?? 0)
-        );
-      });
-
-    substitutionEvents.forEach((event) => {
-      const playerOutId = Number(event.playerId);
-      const playerInId = Number(event.playerInId);
-
-      if (playingIds.has(playerOutId) && benchIds.has(playerInId)) {
-        playingIds.delete(playerOutId);
-        benchIds.add(playerOutId);
-
-        benchIds.delete(playerInId);
-        playingIds.add(playerInId);
-      }
-    });
-
-    const byLineupOrder = (a: MatchLineup, b: MatchLineup) => {
-      const orderA = a.lineupOrder ?? Number.MAX_SAFE_INTEGER;
-      const orderB = b.lineupOrder ?? Number.MAX_SAFE_INTEGER;
-      if (orderA !== orderB) return orderA - orderB;
-      return (a.shirtNumber ?? 999) - (b.shirtNumber ?? 999);
-    };
-
-    return {
-      playingPlayers: Array.from(playingIds)
-        .map((playerId) => playerById.get(playerId))
-        .filter((player): player is MatchLineup => Boolean(player))
-        .sort(byLineupOrder),
-      benchPlayers: Array.from(benchIds)
-        .map((playerId) => playerById.get(playerId))
-        .filter((player): player is MatchLineup => Boolean(player))
-        .sort(byLineupOrder),
-    };
-  }, [eventForm.teamId, events, selectedTeamLineups]);
-
-  const { playingPlayers, benchPlayers } = currentPlayerState;
+  const { teamLineups, playingPlayers, benchPlayers } = useMemo(
+    () =>
+      calculateCurrentLineupState({
+        lineups,
+        events,
+        teamId: eventForm.teamId,
+        minute: eventForm.minute,
+        extraMinute: eventForm.extraMinute,
+      }),
+    [
+      lineups,
+      events,
+      eventForm.teamId,
+      eventForm.minute,
+      eventForm.extraMinute,
+    ],
+  );
 
   const hasSelectedTeam = Boolean(eventForm.teamId);
-  const hasLineupForSelectedTeam = selectedTeamLineups.length > 0;
+  const hasLineupForSelectedTeam = teamLineups.length > 0;
   const mainPlayerOptions = playingPlayers;
   const playerInOptions = benchPlayers;
 
+  // Xử lý change event type.
   const handleChangeEventType = (eventType: EventType) => {
     setErrors({});
     setEventForm((prev) => ({
@@ -194,6 +129,7 @@ export default function MatchEventModal({
     }));
   };
 
+  // Xử lý change team.
   const handleChangeTeam = (teamId: number) => {
     setErrors((current) => ({
       ...current,
@@ -211,6 +147,7 @@ export default function MatchEventModal({
     }));
   };
 
+  // Xử lý clear error.
   const clearError = (field: keyof EventFormState) => {
     setErrors((current) => {
       if (!current[field]) return current;
@@ -220,6 +157,7 @@ export default function MatchEventModal({
     });
   };
 
+  // Kiểm tra dữ liệu hợp lệ.
   const validateForm = () => {
     const nextErrors: EventFormErrors = {};
 
@@ -228,18 +166,17 @@ export default function MatchEventModal({
     }
 
     if (!eventForm.playerId) {
-      nextErrors.playerId =
-        eventForm.eventType === "SUBSTITUTION"
-          ? "Vui lòng chọn cầu thủ rời sân."
-          : "Vui lòng chọn cầu thủ.";
+      nextErrors.playerId = isSubstitutionEvent(eventForm.eventType)
+        ? "Vui lòng chọn cầu thủ rời sân."
+        : "Vui lòng chọn cầu thủ.";
     }
 
-    if (eventForm.eventType === "SUBSTITUTION" && !eventForm.playerInId) {
+    if (isSubstitutionEvent(eventForm.eventType) && !eventForm.playerInId) {
       nextErrors.playerInId = "Vui lòng chọn cầu thủ vào sân.";
     }
 
     if (
-      eventForm.eventType === "SUBSTITUTION" &&
+      isSubstitutionEvent(eventForm.eventType) &&
       eventForm.playerId === eventForm.playerInId
     ) {
       nextErrors.playerInId =
@@ -255,7 +192,7 @@ export default function MatchEventModal({
     }
 
     if (
-      eventForm.eventType === "GOAL" &&
+      isGoalEvent(eventForm.eventType) &&
       maxGoalMinute != null &&
       eventForm.minute > maxGoalMinute
     ) {
@@ -263,7 +200,7 @@ export default function MatchEventModal({
     }
 
     if (
-      eventForm.eventType === "GOAL" &&
+      isGoalEvent(eventForm.eventType) &&
       allowedGoalTypes &&
       allowedGoalTypes.length > 0 &&
       !allowedGoalTypes.includes(eventForm.goalType)
@@ -272,7 +209,7 @@ export default function MatchEventModal({
     }
 
     if (
-      eventForm.eventType === "GOAL" &&
+      isGoalEvent(eventForm.eventType) &&
       eventForm.assistPlayerId &&
       eventForm.assistPlayerId === eventForm.playerId
     ) {
@@ -288,14 +225,13 @@ export default function MatchEventModal({
       eventForm.playerId &&
       !playingPlayers.some((player) => player.playerId === eventForm.playerId)
     ) {
-      nextErrors.playerId =
-        eventForm.eventType === "SUBSTITUTION"
-          ? "Cau thu roi san phai dang thi dau."
-          : "Cau thu phai dang thi dau.";
+      nextErrors.playerId = isSubstitutionEvent(eventForm.eventType)
+        ? "Cau thu roi san phai dang thi dau."
+        : "Cau thu phai dang thi dau.";
     }
 
     if (
-      eventForm.eventType === "SUBSTITUTION" &&
+      isSubstitutionEvent(eventForm.eventType) &&
       eventForm.playerInId &&
       !benchPlayers.some((player) => player.playerId === eventForm.playerInId)
     ) {
@@ -303,7 +239,7 @@ export default function MatchEventModal({
     }
 
     if (
-      eventForm.eventType === "GOAL" &&
+      isGoalEvent(eventForm.eventType) &&
       eventForm.assistPlayerId &&
       !playingPlayers.some(
         (player) => player.playerId === eventForm.assistPlayerId,
@@ -316,6 +252,7 @@ export default function MatchEventModal({
     return Object.keys(nextErrors).length === 0;
   };
 
+  // Xử lý gui biểu mẫu.
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
@@ -325,15 +262,16 @@ export default function MatchEventModal({
       eventOrder: null,
 
       eventType: eventForm.eventType,
-      goalType: eventForm.eventType === "GOAL" ? eventForm.goalType : null,
+      goalType: isGoalEvent(eventForm.eventType) ? eventForm.goalType : null,
 
       teamId: eventForm.teamId,
 
       playerId: eventForm.playerId,
-      playerInId:
-        eventForm.eventType === "SUBSTITUTION" ? eventForm.playerInId : null,
+      playerInId: isSubstitutionEvent(eventForm.eventType)
+        ? eventForm.playerInId
+        : null,
       assistPlayerId:
-        eventForm.eventType === "GOAL" && eventForm.assistPlayerId
+        isGoalEvent(eventForm.eventType) && eventForm.assistPlayerId
           ? eventForm.assistPlayerId
           : null,
 
@@ -343,6 +281,7 @@ export default function MatchEventModal({
     await onSubmit(payload);
   };
 
+  // Hiển thị player label.
   const renderPlayerLabel = (player: MatchLineup) => {
     const shirtNumber = player.shirtNumber ? `${player.shirtNumber} - ` : "";
     const position = player.position ? ` (${player.position})` : "";
@@ -389,7 +328,7 @@ export default function MatchEventModal({
           </div>
 
           {/* Goal type */}
-          {eventForm.eventType === "GOAL" && (
+          {shouldShowGoalTypeField(eventForm.eventType) && (
             <div>
               <label className="block text-xs font-bold text-gray-500 mb-1">
                 Loại bàn thắng
@@ -441,9 +380,9 @@ export default function MatchEventModal({
           {/* Main player */}
           <div>
             <label className="block text-xs font-bold text-gray-500 mb-1">
-              {eventForm.eventType === "SUBSTITUTION"
+              {isSubstitutionEvent(eventForm.eventType)
                 ? "Cầu thủ rời sân"
-                : eventForm.eventType === "GOAL"
+                : isGoalEvent(eventForm.eventType)
                   ? "Cầu thủ ghi bàn"
                   : "Cầu thủ"}
             </label>
@@ -489,7 +428,7 @@ export default function MatchEventModal({
           </div>
 
           {/* Player in */}
-          {eventForm.eventType === "SUBSTITUTION" && (
+          {shouldShowPlayerInField(eventForm.eventType) && (
             <div>
               <label className="block text-xs font-bold text-gray-500 mb-1">
                 Cầu thủ vào sân
@@ -533,42 +472,41 @@ export default function MatchEventModal({
           )}
 
           {/* Assist player */}
-          {eventForm.eventType === "GOAL" &&
-            eventForm.goalType !== "OWN_GOAL" && (
-              <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1">
-                  Cầu thủ kiến tạo
-                </label>
+          {shouldShowAssistField(eventForm.eventType, eventForm.goalType) && (
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">
+                Cầu thủ kiến tạo
+              </label>
 
-                <select
-                  value={eventForm.assistPlayerId}
-                  onChange={(e) => {
-                    setEventForm((prev) => ({
-                      ...prev,
-                      assistPlayerId: Number(e.target.value),
-                    }));
-                    clearError("assistPlayerId");
-                  }}
-                  disabled={!hasSelectedTeam || mainPlayerOptions.length === 0}
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-700/20 disabled:bg-gray-100"
-                >
-                  <option value={0}>Không có / bỏ trống</option>
+              <select
+                value={eventForm.assistPlayerId}
+                onChange={(e) => {
+                  setEventForm((prev) => ({
+                    ...prev,
+                    assistPlayerId: Number(e.target.value),
+                  }));
+                  clearError("assistPlayerId");
+                }}
+                disabled={!hasSelectedTeam || mainPlayerOptions.length === 0}
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-700/20 disabled:bg-gray-100"
+              >
+                <option value={0}>Không có / bỏ trống</option>
 
-                  {mainPlayerOptions
-                    .filter((p) => p.playerId !== eventForm.playerId)
-                    .map((player) => (
-                      <option key={player.playerId} value={player.playerId}>
-                        {renderPlayerLabel(player)}
-                      </option>
-                    ))}
-                </select>
-                {errors.assistPlayerId && (
-                  <p className="mt-1 text-xs font-bold text-red-600">
-                    {errors.assistPlayerId}
-                  </p>
-                )}
-              </div>
-            )}
+                {mainPlayerOptions
+                  .filter((p) => p.playerId !== eventForm.playerId)
+                  .map((player) => (
+                    <option key={player.playerId} value={player.playerId}>
+                      {renderPlayerLabel(player)}
+                    </option>
+                  ))}
+              </select>
+              {errors.assistPlayerId && (
+                <p className="mt-1 text-xs font-bold text-red-600">
+                  {errors.assistPlayerId}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Minute */}
           <div>

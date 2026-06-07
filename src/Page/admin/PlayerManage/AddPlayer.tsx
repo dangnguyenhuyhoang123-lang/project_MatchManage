@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { Player } from "../../../model/Player";
 import PlayerService from "../../../services/PlayerService";
 import TeamService from "../../../services/TeamService";
+import { getErrorMessage } from "../../../utils/errorUtils";
 
 type TeamOption = {
   id: number;
@@ -15,6 +16,7 @@ interface Props {
   onSuccess: () => void;
 }
 
+// Tạo empty player.
 const createEmptyPlayer = () =>
   new Player({
     name: "",
@@ -50,6 +52,7 @@ export const AddPlayerModal: React.FC<Props> = ({
   }, [currentPlayer]);
 
   useEffect(() => {
+    // Lấy teams.
     const fetchTeams = async () => {
       try {
         const response = await TeamService.getAllTeams(0, 1000);
@@ -135,6 +138,7 @@ export const AddPlayerModal: React.FC<Props> = ({
     reader.readAsDataURL(file);
   };
 
+  // Xử lý gui biểu mẫu.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -159,7 +163,7 @@ export const AddPlayerModal: React.FC<Props> = ({
       onClose();
     } catch (error) {
       console.error("Lỗi khi lưu cầu thủ:", error);
-      toast.error("Có lỗi xảy ra khi lưu cầu thủ.");
+      toast.error(getErrorMessage(error, "Có lỗi xảy ra khi lưu cầu thủ."));
     } finally {
       setIsSubmitting(false);
     }

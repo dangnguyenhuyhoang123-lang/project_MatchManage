@@ -4,6 +4,7 @@ import { RoundModel } from "../../../model/RoundModel";
 import { SeasonModel } from "../../../model/SeasonModel";
 import RoundService from "../../../services/RoundService";
 import SeasonService from "../../../services/SeasonService";
+import { getErrorMessage } from "../../../utils/errorUtils";
 
 interface Props {
   onClose: () => void;
@@ -11,6 +12,7 @@ interface Props {
   onSuccess: () => void;
 }
 
+// Tạo empty round.
 const createEmptyRound = () =>
   new RoundModel({
     roundNumber: 1,
@@ -24,11 +26,13 @@ const createEmptyRound = () =>
     seasonName: null,
   });
 
+// Xử lý date time local.
 const toDateTimeLocal = (value: string) => {
   if (!value) return "";
   return value.slice(0, 16);
 };
 
+// Tạo round modal.
 export default function CreateRoundModal({
   onClose,
   currentRound,
@@ -47,6 +51,7 @@ export default function CreateRoundModal({
   }, [currentRound]);
 
   useEffect(() => {
+    // Lấy seasons.
     const fetchSeasons = async () => {
       try {
         const response = await SeasonService.getAllSeasons(0, 1000);
@@ -112,6 +117,7 @@ export default function CreateRoundModal({
     });
   };
 
+  // Xử lý gui biểu mẫu.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -138,7 +144,7 @@ export default function CreateRoundModal({
       onClose();
     } catch (error) {
       console.error("Lỗi khi lưu vòng đấu:", error);
-      toast.error("Có lỗi xảy ra khi lưu vòng đấu.");
+      toast.error(getErrorMessage(error, "Có lỗi xảy ra khi lưu vòng đấu."));
     } finally {
       setIsSubmitting(false);
     }
@@ -153,7 +159,7 @@ export default function CreateRoundModal({
               {isEditMode ? "Cập nhật vòng đấu" : "Thiết lập vòng đấu mới"}
             </h1>
             <p className="text-sm text-[#707a6c]">
-              Cấu hình thông số và lịch trình cho vòng đấu đồng bộ với API.
+              Cấu hình thông số và lịch trình cho vòng đấu .
             </p>
           </div>
 

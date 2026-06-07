@@ -6,6 +6,7 @@ import type { SelectedPlayer } from "./RegisterFormMatch";
 import { useCurrentClubId } from "../InfoClubManage/clubInfoHelpers";
 import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
+import { calculateAge } from "../../../utils/registrationValidationUtils";
 
 type Props = {
   setStep: (step: number) => void;
@@ -16,31 +17,17 @@ type Props = {
   onPlayersChange?: (players: SelectedPlayer[]) => void;
 };
 
+// Lấy player id code.
 const getPlayerIdCode = (player: any) =>
   String(
-    player.idCode ??
-      player.id_code ??
-      player.identityCode ??
-      player.cccd ??
-      "",
+    player.idCode ?? player.id_code ?? player.identityCode ?? player.cccd ?? "",
   ).trim();
 
+// Lấy player birth date.
 const getPlayerBirthDate = (player: any) =>
   player.birthDay ?? player.birthDate ?? player.dateOfBirth ?? "";
 
-const calculateAge = (birthDate?: string | null) => {
-  if (!birthDate) return null;
-  const date = new Date(birthDate);
-  if (Number.isNaN(date.getTime())) return null;
-  const today = new Date();
-  let age = today.getFullYear() - date.getFullYear();
-  const monthDiff = today.getMonth() - date.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
-    age -= 1;
-  }
-  return age;
-};
-
+// Chuẩn hóa text.
 const normalizeText = (value?: string | null) =>
   (value ?? "")
     .normalize("NFD")
@@ -50,27 +37,34 @@ const normalizeText = (value?: string | null) =>
     .toLowerCase()
     .trim();
 
+// Xử lý players.
 function mergePlayers(...groups: Array<SelectedPlayer[] | undefined>) {
   const map = new Map<number, SelectedPlayer>();
 
-  groups.flatMap((group) => group ?? []).forEach((player) => {
-    if (player?.id != null && !map.has(player.id)) {
-      map.set(player.id, player);
-    }
-  });
+  groups
+    .flatMap((group) => group ?? [])
+    .forEach((player) => {
+      if (player?.id != null && !map.has(player.id)) {
+        map.set(player.id, player);
+      }
+    });
 
   return Array.from(map.values());
 }
 
+// Xử lý is foreign player.
 function isForeignPlayer(player: any) {
   const type = String(player.playerType ?? player.type ?? "").toUpperCase();
   if (type === "FOREIGN") return true;
   if (type === "DOMESTIC") return false;
 
   const nationality = normalizeText(player.nationality);
-  return Boolean(nationality) && !["viet nam", "vietnam", "vn"].includes(nationality);
+  return (
+    Boolean(nationality) && !["viet nam", "vietnam", "vn"].includes(nationality)
+  );
 }
 
+// Xử lý player type label(Hiển thị nội , ngoài binh).
 function playerTypeLabel(player: any) {
   const type = String(player.playerType ?? player.type ?? "").toUpperCase();
   if (type === "FOREIGN") return "Ngoại binh";
@@ -78,10 +72,12 @@ function playerTypeLabel(player: any) {
   return isForeignPlayer(player) ? "Ngoại binh" : "Nội binh";
 }
 
+// Lấy vị trí hiển thị cầu thủ.
 function getPlayerPosition(player: any) {
   return player.detailPosition || player.position || "Cầu thủ";
 }
 
+// Xử lý matches player filters.
 function matchesPlayerFilters(
   player: SelectedPlayer,
   searchValue: string,
@@ -116,6 +112,7 @@ function matchesPlayerFilters(
   return true;
 }
 
+// (Tạo cảnh báo).
 function getPlayerWarnings(
   player: SelectedPlayer,
   minAge: number,
@@ -126,7 +123,7 @@ function getPlayerWarnings(
   const age = calculateAge(getPlayerBirthDate(player));
 
   if (!idCode) {
-    warnings.push("Thiếu idCode");
+    warnings.push("Thiếu mã dịnh danh");
   }
 
   if (age === null) {
@@ -138,6 +135,17 @@ function getPlayerWarnings(
   return warnings;
 }
 
+const getPlayerKey = (player: SelectedPlayer) =>
+  `${player.id ?? ""}-${player.playerId ?? ""}-${player.type ?? ""}-${player.position ?? ""}`;
+
+const areSamePlayers = (a: SelectedPlayer[], b: SelectedPlayer[]) => {
+  if (a.length !== b.length) return false;
+
+  return a.every((player, index) => {
+    return getPlayerKey(player) === getPlayerKey(b[index]);
+  });
+};
+
 const PlayerRegistration: React.FC<Props> = ({
   setStep,
   rule,
@@ -147,29 +155,51 @@ const PlayerRegistration: React.FC<Props> = ({
   onPlayersChange,
 }) => {
   const { currentClubId, authLoading } = useCurrentClubId();
-  const [selectedPlayers, setSelectedPlayers] = useState<SelectedPlayer[]>(() =>
-    players ? mergePlayers(players) : mergePlayers(mainPlayers, subPlayers),
+
+  // Lưu trữ danh sách cầu thủ được chọn
+  const [selectedPlayers, setSelectedPlayers] = useState<SelectedPlayer[]>(
+    () =>
+      players ? mergePlayers(players) : mergePlayers(mainPlayers, subPlayers),
   );
-  const [availablePlayers, setAvailablePlayers] = useState<SelectedPlayer[]>([]);
+
+  // Lưu trữ danh sách cầu thủ dddang thuộc CLB
+  const [availablePlayers, setAvailablePlayers] = useState<SelectedPlayer[]>(
+    [],
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Lưu trữ danh sách cầu thủ được chọn ở trong Modal
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Các biến lưu trữ bộ lọc danh sách cầu thủ
   const [selectedSearchTerm, setSelectedSearchTerm] = useState("");
   const [selectedPositionFilter, setSelectedPositionFilter] = useState("");
   const [selectedTypeFilter, setSelectedTypeFilter] = useState("");
+
+  // Cácb biến lưu trữ bộ lọc danh sách cầu thủ có thể chọn trong Modal
   const [availableSearchTerm, setAvailableSearchTerm] = useState("");
   const [availablePositionFilter, setAvailablePositionFilter] = useState("");
   const [availableTypeFilter, setAvailableTypeFilter] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    setSelectedPlayers(
-      players ? mergePlayers(players) : mergePlayers(mainPlayers, subPlayers),
-    );
+    const nextPlayers = players
+      ? mergePlayers(players)
+      : mergePlayers(mainPlayers, subPlayers);
+
+    setSelectedPlayers((prevPlayers) => {
+      if (areSamePlayers(prevPlayers, nextPlayers)) {
+        return prevPlayers;
+      }
+
+      return nextPlayers;
+    });
   }, [players, mainPlayers, subPlayers]);
 
   useEffect(() => {
+    // Lấy danh sách cầu thủ .
     const fetchTeamPlayers = async () => {
       if (authLoading) return;
 
@@ -218,15 +248,23 @@ const PlayerRegistration: React.FC<Props> = ({
 
   useRealtimeEvent(handleRealtimeEvent);
 
-  const minPlayersReq = rule?.minPlayers ?? 14;
+  // Số lượng cầu thủ tối thiểu theo luật
+  const minPlayersReq = rule?.minRegistrationPlayers ?? rule?.minPlayers ?? 14;
+
+  // Số lượng cầu thủ tối đa
   const maxPlayersReq = rule?.maxPlayers ?? 30;
+
+  // Số tuổi nhỏ nhất
   const minAgeReq = rule?.minAge ?? 16;
+
+  // Số tuổi lớn nhất
   const maxAgeReq = rule?.maxAge ?? 40;
   const maxForeignReq =
     rule?.maxForeignPlayers !== null && rule?.maxForeignPlayers !== undefined
       ? rule.maxForeignPlayers
       : 3;
 
+  //Set id các cầu thủ đã chọn, dùng loại khỏi availablePlayers.
   const selectedIds = useMemo(
     () => new Set(selectedPlayers.map((player) => player.id)),
     [selectedPlayers],
@@ -246,6 +284,7 @@ const PlayerRegistration: React.FC<Props> = ({
     return Array.from(new Set(values));
   }, [availablePlayers]);
 
+  // Danh sách chọn sau khi lọc
   const filteredSelectedPlayers = useMemo(
     () =>
       selectedPlayers.filter((player) =>
@@ -263,7 +302,7 @@ const PlayerRegistration: React.FC<Props> = ({
       selectedTypeFilter,
     ],
   );
-
+  // Danh sách còn lại sau khi lọc(nhữung cầu thủ còn lại trong Modal )
   const filteredAvailablePlayers = useMemo(() => {
     return availablePlayers.filter((player) => {
       if (selectedIds.has(player.id)) return false;
@@ -283,6 +322,7 @@ const PlayerRegistration: React.FC<Props> = ({
     selectedIds,
   ]);
 
+  // Danh sách cầu thủ không có ngày sinh
   const missingBirthDatePlayers = useMemo(
     () =>
       selectedPlayers.filter(
@@ -291,6 +331,7 @@ const PlayerRegistration: React.FC<Props> = ({
     [selectedPlayers],
   );
 
+  // Danh sách cầu thủ cầu thủ ngoài đội tổi quy định
   const invalidAgePlayers = useMemo(
     () =>
       selectedPlayers.filter((player) => {
@@ -300,6 +341,7 @@ const PlayerRegistration: React.FC<Props> = ({
     [maxAgeReq, minAgeReq, selectedPlayers],
   );
 
+  // Danh sách cầu thủ thiếu idCode
   const missingIdCodePlayers = useMemo(
     () => selectedPlayers.filter((player) => !getPlayerIdCode(player)),
     [selectedPlayers],
@@ -335,11 +377,13 @@ const PlayerRegistration: React.FC<Props> = ({
       .filter((shirtNumber) => counts[shirtNumber] > 1);
   }, [selectedPlayers]);
 
+  // Danh sách ngoại binh
   const foreignPlayers = useMemo(
     () => selectedPlayers.filter((player) => isForeignPlayer(player)),
     [selectedPlayers],
   );
 
+  // Tổng hợp validate
   const hasValidationErrors =
     selectedPlayers.length < minPlayersReq ||
     selectedPlayers.length > maxPlayersReq ||
@@ -350,6 +394,7 @@ const PlayerRegistration: React.FC<Props> = ({
     duplicateShirts.length > 0 ||
     foreignPlayers.length > maxForeignReq;
 
+  // Xử lý select player.
   const toggleSelectPlayer = (id: number) => {
     setSelectedPlayerIds((current) =>
       current.includes(id)
@@ -358,16 +403,20 @@ const PlayerRegistration: React.FC<Props> = ({
     );
   };
 
+  // Mở modal hoac khung thao tác.
   const openAddModal = () => {
     setSelectedPlayerIds([]);
     setIsModalOpen(true);
   };
 
+  // Xử lý emit players change.
   const emitPlayersChange = (nextPlayers: SelectedPlayer[]) => {
     setSelectedPlayers(nextPlayers);
     onPlayersChange?.(nextPlayers);
   };
 
+  // Xử lý xác nhận thao tác(lấy các cầu thủ được chọn(filteredAvailablePlayers) và đưa vào
+  // danh sách đăng ký).
   const handleConfirmSelection = () => {
     const playersToAdd = filteredAvailablePlayers.filter((player) =>
       selectedPlayerIds.includes(player.id),
@@ -378,6 +427,7 @@ const PlayerRegistration: React.FC<Props> = ({
     setSelectedPlayerIds([]);
   };
 
+  // Xóa player.
   const removePlayer = (id: number) => {
     emitPlayersChange(selectedPlayers.filter((player) => player.id !== id));
   };
@@ -404,7 +454,10 @@ const PlayerRegistration: React.FC<Props> = ({
               {missingBirthDatePlayers.length > 0 && (
                 <li>
                   Cầu thủ chưa có ngày sinh hợp lệ:{" "}
-                  {missingBirthDatePlayers.map((player) => player.name).join(", ")}.
+                  {missingBirthDatePlayers
+                    .map((player) => player.name)
+                    .join(", ")}
+                  .
                 </li>
               )}
               {invalidAgePlayers.length > 0 && (
@@ -422,7 +475,8 @@ const PlayerRegistration: React.FC<Props> = ({
               {missingIdCodePlayers.length > 0 && (
                 <li>
                   Thiếu mã định danh cầu thủ:{" "}
-                  {missingIdCodePlayers.map((player) => player.name).join(", ")}.
+                  {missingIdCodePlayers.map((player) => player.name).join(", ")}
+                  .
                 </li>
               )}
               {foreignPlayers.length > maxForeignReq && (
@@ -431,11 +485,11 @@ const PlayerRegistration: React.FC<Props> = ({
                   {maxForeignReq}.
                 </li>
               )}
-              {duplicateShirts.length > 0 && (
+              {/* {duplicateShirts.length > 0 && (
                 <li>
                   Trùng số áo: số áo {duplicateShirts.join(", ")} bị trùng lặp.
                 </li>
-              )}
+              )} */}
               {duplicatePlayers.length > 0 && (
                 <li>Trùng cầu thủ: {duplicatePlayers.join(", ")}.</li>
               )}
@@ -452,8 +506,8 @@ const PlayerRegistration: React.FC<Props> = ({
               Danh sách cầu thủ hợp lệ
             </h3>
             <p className="mt-1 text-xs text-green-700/80">
-              Đã chọn {selectedPlayers.length} cầu thủ, tất cả đều thỏa mãn
-              quy định của mùa giải.
+              Đã chọn {selectedPlayers.length} cầu thủ, tất cả đều thỏa mãn quy
+              định của mùa giải.
             </p>
           </div>
         </div>
@@ -503,7 +557,9 @@ const PlayerRegistration: React.FC<Props> = ({
               />
               <select
                 value={selectedPositionFilter}
-                onChange={(event) => setSelectedPositionFilter(event.target.value)}
+                onChange={(event) =>
+                  setSelectedPositionFilter(event.target.value)
+                }
                 className="h-11 rounded-xl border border-gray-100 bg-[#f5f3ef] px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-green-700/20"
               >
                 <option value="">Tất cả vị trí</option>
@@ -567,60 +623,64 @@ const PlayerRegistration: React.FC<Props> = ({
               ) : (
                 <div className="max-h-[724px] space-y-3 overflow-y-auto pr-2">
                   {filteredSelectedPlayers.map((player) => {
-                  const age = calculateAge(getPlayerBirthDate(player));
-                  const warnings = getPlayerWarnings(
-                    player,
-                    minAgeReq,
-                    maxAgeReq,
-                  );
+                    const age = calculateAge(getPlayerBirthDate(player));
+                    const warnings = getPlayerWarnings(
+                      player,
+                      minAgeReq,
+                      maxAgeReq,
+                    );
 
-                  return (
-                    <div
-                      key={player.id}
-                      className={`flex items-start justify-between gap-4 rounded-xl border bg-white p-4 transition-all hover:scale-[1.01] ${
-                        warnings.length > 0
-                          ? "border-red-100"
-                          : "border-gray-100"
-                      }`}
-                    >
-                      <div className="flex min-w-0 items-start gap-4">
-                        <img
-                          src={
-                            player.avatar ||
-                            `https://placehold.co/100x100?text=${getPlayerPosition(player)}`
-                          }
-                          alt={player.name}
-                          className="h-12 w-12 rounded-lg bg-gray-100 object-cover"
-                        />
-                        <div className="min-w-0">
-                          <h4 className="truncate font-bold text-gray-900">
-                            {player.name}
-                          </h4>
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            <Badge>{getPlayerPosition(player)}</Badge>
-                            <Badge>{playerTypeLabel(player)}</Badge>
-                            <Badge>{age === null ? "Tuổi N/A" : `${age} tuổi`}</Badge>
-                            <Badge>
-                              ID: {getPlayerIdCode(player) || "Thiếu idCode"}
-                            </Badge>
-                          </div>
-                          {warnings.length > 0 && (
-                            <p className="mt-2 text-xs font-bold text-red-600">
-                              {warnings.join(" • ")}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => removePlayer(player.id)}
-                        className="material-symbols-outlined text-gray-300 transition-colors hover:text-red-500"
+                    return (
+                      <div
+                        key={player.id}
+                        className={`flex items-start justify-between gap-4 rounded-xl border bg-white p-4 transition-all hover:scale-[1.01] ${
+                          warnings.length > 0
+                            ? "border-red-100"
+                            : "border-gray-100"
+                        }`}
                       >
-                        delete
-                      </button>
-                    </div>
-                  );
+                        <div className="flex min-w-0 items-start gap-4">
+                          <img
+                            src={
+                              player.avatar ||
+                              `https://placehold.co/100x100?text=${getPlayerPosition(player)}`
+                            }
+                            alt={player.name}
+                            className="h-12 w-12 rounded-lg bg-gray-100 object-cover"
+                          />
+                          <div className="min-w-0">
+                            <h4 className="truncate font-bold text-gray-900">
+                              {player.name}
+                            </h4>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <Badge>{getPlayerPosition(player)}</Badge>
+                              <Badge>{playerTypeLabel(player)}</Badge>
+                              <Badge>
+                                {age === null ? "Tuổi N/A" : `${age} tuổi`}
+                              </Badge>
+                              <Badge>
+                                ID:{" "}
+                                {getPlayerIdCode(player) ||
+                                  "Thiếu mã định danh"}
+                              </Badge>
+                            </div>
+                            {warnings.length > 0 && (
+                              <p className="mt-2 text-xs font-bold text-red-600">
+                                {warnings.join(" • ")}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => removePlayer(player.id)}
+                          className="material-symbols-outlined text-gray-300 transition-colors hover:text-red-500"
+                        >
+                          delete
+                        </button>
+                      </div>
+                    );
                   })}
                 </div>
               )}
@@ -692,7 +752,8 @@ const PlayerRegistration: React.FC<Props> = ({
                   0
                     ? "Tất cả hợp lệ"
                     : `${
-                        missingBirthDatePlayers.length + invalidAgePlayers.length
+                        missingBirthDatePlayers.length +
+                        invalidAgePlayers.length
                       } cầu thủ cần kiểm tra`}
                 </p>
               </CheckItem>
@@ -770,7 +831,7 @@ const PlayerRegistration: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => setStep(4)}
-              disabled={hasValidationErrors}
+              disabled={isLoading}
               className="rounded-full bg-green-700 px-10 py-3 text-sm font-bold text-white shadow-lg shadow-green-700/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
             >
               Tiếp tục
@@ -807,7 +868,9 @@ const PlayerRegistration: React.FC<Props> = ({
             />
             <select
               value={availablePositionFilter}
-              onChange={(event) => setAvailablePositionFilter(event.target.value)}
+              onChange={(event) =>
+                setAvailablePositionFilter(event.target.value)
+              }
               className="h-10 rounded-xl border border-gray-100 bg-[#f5f3ef] px-4 text-xs font-bold outline-none"
             >
               <option value="">Tất cả vị trí</option>
@@ -931,6 +994,7 @@ const PlayerRegistration: React.FC<Props> = ({
   );
 };
 
+// Hiển thị Badge.
 function Badge({ children }: { children: React.ReactNode }) {
   return (
     <span className="rounded bg-green-50 px-2 py-0.5 text-[10px] font-bold text-green-700">
@@ -939,6 +1003,7 @@ function Badge({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Hiển thị CheckItem.
 function CheckItem({
   passed,
   children,

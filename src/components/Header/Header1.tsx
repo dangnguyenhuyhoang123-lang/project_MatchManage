@@ -3,6 +3,7 @@ import pic1 from "../../assets/user_icon.svg";
 import { useAuth } from "../../utils/useAuth";
 import { Link, useNavigate } from "react-router-dom";
 
+// Hiển thị Header1.
 export const Header1 = () => {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -10,6 +11,7 @@ export const Header1 = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Xử lý click outside.
     const handleClickOutside = (e: MouseEvent) => {
       if (!dropdownRef.current?.contains(e.target as Node)) {
         setOpen(false);
@@ -20,6 +22,7 @@ export const Header1 = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Xử lý logout.
   const handleLogout = () => {
     localStorage.removeItem("token");
     setUser(null);

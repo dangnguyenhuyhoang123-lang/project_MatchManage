@@ -31,6 +31,7 @@ export const Modal: React.FC<ModalProps> = ({
   contentClassName = "",
 }) => {
   useEffect(() => {
+    // Xử lý esc.
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };

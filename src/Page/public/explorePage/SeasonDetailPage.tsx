@@ -129,11 +129,13 @@ function readArray<T>(data: unknown): T[] {
   return [];
 }
 
+// Lấy numeric id.
 function getNumericId(value: unknown) {
   const numeric = Number(value);
   return Number.isFinite(numeric) && numeric > 0 ? numeric : undefined;
 }
 
+// Định dạng date.
 function formatDate(value?: string | Date | null) {
   if (!value) return "";
   const date = value instanceof Date ? value : new Date(value);
@@ -141,10 +143,12 @@ function formatDate(value?: string | Date | null) {
   return date.toLocaleDateString("vi-VN");
 }
 
+// Xử lý season title.
 function seasonTitle(season: PublicSeason | null) {
   return season?.name || season?.year || `Mùa giải #${season?.id ?? "--"}`;
 }
 
+// Xử lý season period.
 function seasonPeriod(season: PublicSeason | null) {
   const start = formatDate(season?.startDate);
   const end = formatDate(season?.endDate);
@@ -152,6 +156,7 @@ function seasonPeriod(season: PublicSeason | null) {
   return start || end || "Đang cập nhật thời gian";
 }
 
+// Xử lý status label.
 function statusLabel(value?: string | null) {
   if (!value) return "Đang cập nhật";
   if (value === "ACTIVE") return "Đang hoạt động";
@@ -164,51 +169,63 @@ function statusLabel(value?: string | null) {
   return value;
 }
 
+// Lấy team id.
 function getTeamId(team: PublicTeam) {
   return team.team?.id ?? team.teamId ?? team.id;
 }
 
+// Lấy team name.
 function getTeamName(team: PublicTeam) {
   return team.team?.name || team.teamName || team.name || "Đội bóng";
 }
 
+// Lấy team logo.
 function getTeamLogo(team: PublicTeam) {
   return team.team?.logo || team.logo || defaultTeamLogo;
 }
 
+// Xử lý standing team name.
 function standingTeamName(row: StandingRow) {
   return row.teamName || row.name || row.clubName || "Đội bóng";
 }
 
+// Xử lý played.
 function played(row: StandingRow) {
   return row.played ?? row.matchesPlayed ?? 0;
 }
 
+// Xử lý wins.
 function wins(row: StandingRow) {
   return row.win ?? row.won ?? row.wins ?? 0;
 }
 
+// Xử lý draws.
 function draws(row: StandingRow) {
   return row.draw ?? row.drawn ?? row.draws ?? 0;
 }
 
+// Xử lý losses.
 function losses(row: StandingRow) {
   return row.lose ?? row.lost ?? row.losses ?? 0;
 }
 
+// Xử lý goals for.
 function goalsFor(row: StandingRow) {
   return row.goalsFor ?? row.goalFor ?? row.totalGoalsFor ?? 0;
 }
 
+// Xử lý goals against.
 function goalsAgainst(row: StandingRow) {
   return row.goalsAgainst ?? row.goalAgainst ?? row.totalGoalsAgainst ?? 0;
 }
 
+// Xử lý goal difference.
 function goalDifference(row: StandingRow) {
   const value = row.goalDifference ?? goalsFor(row) - goalsAgainst(row);
   return value > 0 ? `+${value}` : String(value);
 }
 
+// Lấy match team names.
 function getMatchTeamNames(match: PublicMatch) {
   return {
     home: match.homeTeam?.name || match.homeTeamName || "Đội nhà",
@@ -216,12 +233,14 @@ function getMatchTeamNames(match: PublicMatch) {
   };
 }
 
+// Xử lý suspension reason.
 function suspensionReason(reason?: string) {
   if (reason === "RED_CARD") return "Thẻ đỏ";
   if (reason === "TWO_YELLOWS") return "Hai thẻ vàng";
   return reason || "Kỷ luật";
 }
 
+// Hiển thị EmptyState.
 function EmptyState({ message }: { message: string }) {
   return (
     <div className="rounded-2xl border border-dashed border-gray-200 bg-white/80 p-8 text-center text-sm font-bold text-gray-500">
@@ -230,6 +249,7 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
+// Hiển thị MetricCard.
 function MetricCard({
   label,
   value,
@@ -252,6 +272,7 @@ function MetricCard({
   );
 }
 
+// Hiển thị SeasonDetailPage.
 export default function SeasonDetailPage() {
   const navigate = useNavigate();
   const { leagueId, seasonId } = useParams();

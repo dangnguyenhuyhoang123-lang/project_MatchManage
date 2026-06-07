@@ -49,6 +49,7 @@ export const ListMatchManage = ({
     });
   };
 
+  // Xử lý season filter change.
   const handleSeasonFilterChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     setSelectedSeason(value);

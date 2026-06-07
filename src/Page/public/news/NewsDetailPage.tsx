@@ -12,6 +12,7 @@ import NewsService, {
 const fallbackImage =
   "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80";
 
+// Định dạng date.
 function formatDate(value?: string | null) {
   if (!value) return "Chưa cập nhật";
 
@@ -25,6 +26,7 @@ function formatDate(value?: string | null) {
   }).format(date);
 }
 
+// Xử lý split paragraphs.
 function splitParagraphs(content?: string | null) {
   return (content ?? "")
     .split(/\n+/)
@@ -32,10 +34,12 @@ function splitParagraphs(content?: string | null) {
     .filter(Boolean);
 }
 
+// Lấy image url.
 function getImageUrl(article: Pick<NewsArticle, "imageUrl">) {
   return article.imageUrl?.trim() || fallbackImage;
 }
 
+// Hiển thị NewsDetailPage.
 const NewsDetailPage = () => {
   const { id } = useParams();
   const [article, setArticle] = useState<NewsArticleDetail | null>(null);
@@ -46,6 +50,7 @@ const NewsDetailPage = () => {
   useEffect(() => {
     let mounted = true;
 
+    // Tải article.
     const loadArticle = async () => {
       if (!id) {
         setError("Không xác định được bài viết.");
@@ -183,6 +188,7 @@ const NewsDetailPage = () => {
   );
 };
 
+// Hiển thị RelatedNewsSidebar.
 function RelatedNewsSidebar({ articles }: { articles: NewsArticle[] }) {
   if (articles.length === 0) {
     return null;

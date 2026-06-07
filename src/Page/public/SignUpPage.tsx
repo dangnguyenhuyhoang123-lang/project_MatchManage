@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
+// Hiển thị SignUpPage.
 const SignUpPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [userName, setUserName] = useState("");
@@ -14,6 +15,7 @@ const SignUpPage = () => {
     confirmPassword: "",
   });
 
+  // Xử lý gui biểu mẫu.
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 

@@ -10,6 +10,7 @@ import type {
 const API_BASE_URL = "/registrations";
 
 class RegistrationService {
+  // Gọi API lấy registrations.
   getAllRegistrations(status?: RegistrationStatus | "Tất cả") {
     return axiosClient.get<RegistrationSummaryDTO[]>(
       `${API_BASE_URL}/getRegistrations`,
@@ -22,6 +23,7 @@ class RegistrationService {
     );
   }
 
+  // Gọi API lấy registration by id.
   getRegistrationById(id: number) {
     return axiosClient.get<RegistrationDetailDTO>(`${API_BASE_URL}/${id}`, {
       withCredentials: true,
@@ -37,6 +39,7 @@ class RegistrationService {
     });
   }
 
+  // Gọi API tạo registration.
   submitRegistration(data: FullRegistrationDTO) {
     return axiosClient.post<RegistrationSummaryDTO>(
       `${API_BASE_URL}/submit`,

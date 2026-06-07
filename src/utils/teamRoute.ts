@@ -1,5 +1,6 @@
 import type { TeamModel } from "../model/TeamModel";
 
+// Lấy team detail path.
 export const getTeamDetailPath = (team?: TeamModel | null) => {
   if (!team?.name) {
     return "/teams/unknown";

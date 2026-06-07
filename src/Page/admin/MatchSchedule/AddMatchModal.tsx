@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import SeasonService from "../../../services/SeasonService";
 import RoundService from "../../../services/RoundService";
 
+// Tạo match modal.
 const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
   const [seasons, setSeasons] = useState<any[]>([]);
   const [rounds, setRounds] = useState<any[]>([]);
@@ -61,6 +62,7 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
   }, [initialData]);
 
   useEffect(() => {
+    // Lấy seasons.
     const fetchSeasons = async () => {
       try {
         const response = await SeasonService.getAllSeasons(0, 100);
@@ -74,6 +76,7 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
 
   useEffect(() => {
     if (selectedSeason) {
+      // Lấy rounds.
       const fetchRounds = async () => {
         try {
           const response = await RoundService.getAllRoundsNormalized(
@@ -88,6 +91,7 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
         }
       };
 
+      // Lấy teams.
       const fetchTeams = async () => {
         try {
           const response = await SeasonService.getTeamsBySeason(
@@ -145,6 +149,7 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
     stadiumOptions.push({ value: stadium, label: stadium });
   }
 
+  // Xử lý clear error.
   const clearError = (field: string) => {
     setErrors((current) => {
       if (!current[field]) return current;
@@ -154,6 +159,7 @@ const AddMatchModal = ({ onClose, initialData, onSave }: any) => {
     });
   };
 
+  // Kiểm tra dữ liệu hợp lệ.
   const validate = () => {
     const nextErrors: Record<string, string> = {};
 
@@ -425,6 +431,7 @@ function SelectGroup({
   );
 }
 
+// Hiển thị TeamSelect.
 function TeamSelect({
   label,
   side,
@@ -466,6 +473,7 @@ function TeamSelect({
   );
 }
 
+// Hiển thị InputGroup.
 function InputGroup({ label, icon, type, value, onChange, error }: any) {
   return (
     <div className="space-y-2">

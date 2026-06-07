@@ -16,6 +16,7 @@ import NewsService, { type NewsArticle } from "../../../services/NewsService";
 const fallbackImage =
   "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80";
 
+// Định dạng date.
 function formatDate(value?: string | null) {
   if (!value) return "Chưa cập nhật";
 
@@ -29,10 +30,12 @@ function formatDate(value?: string | null) {
   }).format(date);
 }
 
+// Lấy article image.
 function getArticleImage(article: NewsArticle) {
   return article.imageUrl?.trim() || fallbackImage;
 }
 
+// Hiển thị NewsPage.
 export const NewsPage = () => {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +44,7 @@ export const NewsPage = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [visibleCount, setVisibleCount] = useState(8);
 
+  // Tải news.
   const loadNews = async () => {
     try {
       setLoading(true);
@@ -292,6 +296,7 @@ export const NewsPage = () => {
   );
 };
 
+// Hiển thị FeaturedHero.
 function FeaturedHero({ article }: { article: NewsArticle }) {
   return (
     <Link
@@ -328,6 +333,7 @@ function FeaturedHero({ article }: { article: NewsArticle }) {
   );
 }
 
+// Hiển thị SmallFeaturedCard.
 function SmallFeaturedCard({ article }: { article: NewsArticle }) {
   return (
     <Link
@@ -358,6 +364,7 @@ function SmallFeaturedCard({ article }: { article: NewsArticle }) {
   );
 }
 
+// Hiển thị NewsCard.
 function NewsCard({
   article,
   compact,
@@ -410,6 +417,7 @@ function NewsCard({
   );
 }
 
+// Hiển thị ArticleMeta.
 function ArticleMeta({
   article,
   light = false,

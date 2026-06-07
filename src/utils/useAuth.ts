@@ -1,6 +1,7 @@
 import { useContext } from "react";
 import { AuthContext } from "./AuthContextCore";
 
+// Xử lý use auth.
 export const useAuth = () => {
   const context = useContext(AuthContext);
 

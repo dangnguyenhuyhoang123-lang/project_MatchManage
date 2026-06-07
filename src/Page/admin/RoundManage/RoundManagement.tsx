@@ -12,6 +12,7 @@ import SeasonService from "../../../services/SeasonService";
 import { PhanTrang } from "../../../utils/PhanTrang";
 import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
+import { getErrorMessage } from "../../../utils/errorUtils";
 
 const PAGE_SIZE = 10;
 
@@ -27,6 +28,7 @@ const STATUS_CLASSES: Record<string, string> = {
   COMPLETED: "bg-zinc-100 text-zinc-500",
 };
 
+// Định dạng date time.
 const formatDateTime = (value: string) => {
   if (!value) return { date: "Chưa có ngày", time: "" };
 
@@ -44,6 +46,7 @@ const formatDateTime = (value: string) => {
   };
 };
 
+// Lấy status label.
 const getStatusLabel = (status: string) => STATUS_LABELS[status] ?? status;
 
 const RoundManagement: React.FC = () => {
@@ -61,6 +64,7 @@ const RoundManagement: React.FC = () => {
   const [tongSoPhanTu, setTongSoPhanTu] = useState(0);
 
   useEffect(() => {
+    // Lấy seasons.
     const fetchSeasons = async () => {
       try {
         const response = await SeasonService.getAllSeasons(0, 1000);
@@ -136,11 +140,13 @@ const RoundManagement: React.FC = () => {
 
   useRealtimeEvent(handleRealtimeEvent);
 
+  // Xử lý xóa dữ liệu.
   const handleDelete = async (round: RoundModel) => {
     if (!round.id) return;
     setDeletingRound(round);
   };
 
+  // Xử lý xóa dữ liệu.
   const handleConfirmDelete = async () => {
     if (!deletingRound?.id) return;
 
@@ -155,7 +161,7 @@ const RoundManagement: React.FC = () => {
       );
     } catch (error) {
       console.error("Lỗi khi xóa vòng đấu:", error);
-      toast.error("Không thể xóa vòng đấu này.");
+      toast.error(getErrorMessage(error, "Không thể xóa vòng đấu này."));
     } finally {
       setDeleteLoading(false);
     }
@@ -321,8 +327,8 @@ const RoundManagement: React.FC = () => {
         <div className="rounded-xl bg-gray-100 p-6 lg:col-span-2">
           <h4 className="mb-2 font-bold">Tối ưu lịch</h4>
           <p className="text-sm text-gray-600">
-            API hiện đang đồng bộ số trận tối đa, thời gian bắt đầu/kết thúc và
-            mùa giải cho từng vòng đấu.
+            Đang đồng bộ số trận tối đa, thời gian bắt đầu/kết thúc và mùa giải
+            cho từng vòng đấu.
           </p>
         </div>
 
