@@ -63,7 +63,7 @@ const tabs: { key: ExploreTab; label: string }[] = [
   { key: "teams", label: "Đội bóng" },
   { key: "players", label: "Cầu thủ" },
   { key: "coaches", label: "Huấn luyện viên" },
-  { key: "referees", label: "Trọng tài" },
+  // { key: "referees", label: "Trọng tài" },
 ];
 
 const playerPositionOptions = [

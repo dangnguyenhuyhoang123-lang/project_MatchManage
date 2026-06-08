@@ -20,6 +20,10 @@ export type SeasonInvitationCreateRequest = {
   responseDeadline?: string | null;
 };
 
+export type UpdateInvitationSeasonRequest = {
+  seasonId: number;
+};
+
 class SeasonInvitationService {
   // TODO: add a club/current-user invitation listing method when the backend exposes it.
   invite(seasonId: number, payload: SeasonInvitationCreateRequest) {
@@ -51,6 +55,19 @@ class SeasonInvitationService {
     );
   }
   // Gọi API lấy my invitations.
+  updateInvitationSeason(id: number, seasonId: number) {
+    const payload: UpdateInvitationSeasonRequest = { seasonId };
+
+    return axiosClient.put<SeasonInvitationResponse>(
+      `/invitations/${id}/season`,
+      payload,
+    );
+  }
+
+  deleteInvitation(id: number) {
+    return axiosClient.delete<{ message: string }>(`/invitations/${id}`);
+  }
+
   getMyInvitations() {
     return axiosClient.get<SeasonInvitationResponse[]>("/invitations/my");
   }

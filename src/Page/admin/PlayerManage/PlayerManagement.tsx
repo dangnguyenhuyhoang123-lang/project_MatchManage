@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { AddPlayerModal } from "./AddPlayer";
 import ConfirmModal from "../../../components/ConfirmModal";
@@ -112,6 +113,7 @@ const normalizePositionGroup = (position?: string | null) => {
 };
 
 const PlayerManagement: React.FC = () => {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [teamOptions, setTeamOptions] = useState<TeamOption[]>([]);
@@ -296,6 +298,11 @@ const PlayerManagement: React.FC = () => {
     setDeletingPlayer(player);
   };
 
+  const handleViewPublicDetail = (player: Player) => {
+    if (!player.id) return;
+    navigate(`/players/${player.id}`);
+  };
+
   // Xử lý xóa dữ liệu.
   const handleConfirmDelete = async () => {
     if (!deletingPlayer?.id) return;
@@ -471,6 +478,7 @@ const PlayerManagement: React.FC = () => {
                 player={player}
                 handleUpdate={handleUpdate}
                 handleDelete={handleDelete}
+                handleViewPublicDetail={handleViewPublicDetail}
               />
             ))
           ) : (
@@ -535,10 +543,12 @@ const PlayerRow = ({
   player,
   handleUpdate,
   handleDelete,
+  handleViewPublicDetail,
 }: {
   player: Player;
   handleUpdate: (player: Player) => void;
   handleDelete: (player: Player) => void;
+  handleViewPublicDetail: (player: Player) => void;
 }) => {
   const roleBg =
     player.position === "FW"
@@ -550,7 +560,18 @@ const PlayerRow = ({
           : "bg-stone-600";
 
   return (
-    <div className="group grid h-[72px] grid-cols-12 items-center rounded-xl bg-white px-6 transition-all hover:shadow-xl hover:shadow-stone-200/40">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => handleViewPublicDetail(player)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          handleViewPublicDetail(player);
+        }
+      }}
+      className="group grid h-[72px] cursor-pointer grid-cols-12 items-center rounded-xl bg-white px-6 transition-all hover:shadow-xl hover:shadow-stone-200/40 focus:outline-none focus:ring-2 focus:ring-[#0d631b]/20"
+    >
       <div className="col-span-4 flex items-center gap-4">
         <div className="relative">
           <img
@@ -629,7 +650,11 @@ const ActionBtn = ({
   onClick?: () => void;
 }) => (
   <button
-    onClick={onClick}
+    type="button"
+    onClick={(event) => {
+      event.stopPropagation();
+      onClick?.();
+    }}
     className={`rounded-full p-2 transition-colors hover:bg-gray-100 ${color}`}
   >
     <span className="material-symbols-outlined text-xl">{icon}</span>

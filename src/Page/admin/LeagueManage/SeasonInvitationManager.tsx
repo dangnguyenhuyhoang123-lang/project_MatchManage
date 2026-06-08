@@ -10,6 +10,7 @@ import TeamService from "../../../services/TeamService";
 import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../model/RealtimeEvent";
 import LoadingSpinner from "../../../components/Spinner/LoadingSpinner";
+import ConfirmModal from "../../../components/ConfirmModal";
 import { getErrorMessage } from "../../../utils/errorUtils";
 
 type SeasonOption = {
@@ -33,11 +34,11 @@ const statusMeta: Record<
   { label: string; className: string }
 > = {
   INVITED: {
-    label: "Đã mời",
+    label: "Chờ phản hồi",
     className: "bg-blue-50 text-blue-700",
   },
   ACCEPTED: {
-    label: "Đã chấp nhận",
+    label: "Chấp nhận",
     className: "bg-emerald-50 text-emerald-700",
   },
   DECLINED: {
@@ -85,6 +86,15 @@ export default function SeasonInvitationManager() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [editingInvitation, setEditingInvitation] =
+    useState<SeasonInvitationResponse | null>(null);
+  const [editSeasonId, setEditSeasonId] = useState<number | "">("");
+  const [updatingInvitation, setUpdatingInvitation] = useState(false);
+  const [deletingInvitationId, setDeletingInvitationId] = useState<
+    number | null
+  >(null);
+  const [pendingDeleteInvitation, setPendingDeleteInvitation] =
+    useState<SeasonInvitationResponse | null>(null);
 
   const loadInitialData = useCallback(async () => {
     try {
@@ -100,7 +110,9 @@ export default function SeasonInvitationManager() {
       setSelectedSeasonId((current) => current || seasonList[0]?.id || "");
     } catch (error) {
       console.error("Cannot load seasons or teams", error);
-      setErrorMessage(getErrorMessage(error, "Không thể xử lý lời mời mùa giải."));
+      setErrorMessage(
+        getErrorMessage(error, "Không thể xử lý lời mời mùa giải."),
+      );
     }
   }, []);
 
@@ -122,7 +134,9 @@ export default function SeasonInvitationManager() {
     } catch (error) {
       console.error("Cannot load season invitations", error);
       setInvitations([]);
-      setErrorMessage(getErrorMessage(error, "Không thể xử lý lời mời mùa giải."));
+      setErrorMessage(
+        getErrorMessage(error, "Không thể xử lý lời mời mùa giải."),
+      );
     } finally {
       setLoading(false);
     }
@@ -181,6 +195,78 @@ export default function SeasonInvitationManager() {
       toast.error(getErrorMessage(error, "Không thể xử lý lời mời mùa giải."));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const openEditInvitation = (invitation: SeasonInvitationResponse) => {
+    setEditingInvitation(invitation);
+    setEditSeasonId(invitation.seasonId);
+  };
+
+  const closeEditInvitation = () => {
+    if (updatingInvitation) return;
+    setEditingInvitation(null);
+    setEditSeasonId("");
+  };
+
+  const handleUpdateInvitationSeason = async () => {
+    if (!editingInvitation) return;
+
+    if (!editSeasonId) {
+      toast.error("Vui lòng chọn mùa giải mới.");
+      return;
+    }
+
+    if (Number(editSeasonId) === editingInvitation.seasonId) {
+      toast.error("Vui lòng chọn mùa giải khác mùa giải hiện tại.");
+      return;
+    }
+
+    try {
+      setUpdatingInvitation(true);
+      await SeasonInvitationService.updateInvitationSeason(
+        editingInvitation.id,
+        Number(editSeasonId),
+      );
+
+      toast.success("Cập nhật lời mời thành công.");
+      setEditingInvitation(null);
+      setEditSeasonId("");
+
+      if (selectedSeasonId) {
+        await loadInvitations(Number(selectedSeasonId));
+      }
+    } catch (error) {
+      console.error("Cannot update season invitation", error);
+      toast.error(getErrorMessage(error, "Không thể cập nhật lời mời."));
+    } finally {
+      setUpdatingInvitation(false);
+    }
+  };
+
+  const handleDeleteInvitation = (invitation: SeasonInvitationResponse) => {
+    setPendingDeleteInvitation(invitation);
+  };
+
+  const handleConfirmDeleteInvitation = async () => {
+    if (!pendingDeleteInvitation) return;
+
+    try {
+      setDeletingInvitationId(pendingDeleteInvitation.id);
+      await SeasonInvitationService.deleteInvitation(
+        pendingDeleteInvitation.id,
+      );
+      toast.success("Xóa lời mời thành công.");
+      setPendingDeleteInvitation(null);
+
+      if (selectedSeasonId) {
+        await loadInvitations(Number(selectedSeasonId));
+      }
+    } catch (error) {
+      console.error("Cannot delete season invitation", error);
+      toast.error(getErrorMessage(error, "Không thể xóa lời mời."));
+    } finally {
+      setDeletingInvitationId(null);
     }
   };
 
@@ -316,6 +402,7 @@ export default function SeasonInvitationManager() {
                     <th className="px-4 py-3">Hạn phản hồi</th>
                     <th className="px-4 py-3">Ngày phản hồi</th>
                     <th className="px-4 py-3">Ghi chú phản hồi</th>
+                    <th className="px-4 py-3 text-right">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -352,6 +439,38 @@ export default function SeasonInvitationManager() {
                         <td className="px-4 py-4 font-bold text-gray-600">
                           {invitation.responseNote || "--"}
                         </td>
+                        <td className="px-4 py-4">
+                          <div className="flex justify-end gap-2">
+                            {invitation.status === "INVITED" && (
+                              <button
+                                type="button"
+                                onClick={() => openEditInvitation(invitation)}
+                                className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-black text-blue-700 transition hover:bg-blue-100"
+                              >
+                                <span className="material-symbols-outlined text-sm">
+                                  edit
+                                </span>
+                                Sửa
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              disabled={deletingInvitationId === invitation.id}
+                              onClick={() => handleDeleteInvitation(invitation)}
+                              className="inline-flex items-center gap-1 rounded-full bg-red-50 px-3 py-1.5 text-xs font-black text-red-600 transition hover:bg-red-100 disabled:opacity-50"
+                            >
+                              <span className="material-symbols-outlined text-sm">
+                                {deletingInvitationId === invitation.id
+                                  ? "hourglass_top"
+                                  : "delete"}
+                              </span>
+                              {deletingInvitationId === invitation.id
+                                ? "Đang xóa..."
+                                : "Xóa"}
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}
@@ -360,6 +479,106 @@ export default function SeasonInvitationManager() {
             </div>
           )}
         </section>
+
+        <ConfirmModal
+          open={pendingDeleteInvitation !== null}
+          title="Xóa lời mời"
+          message={
+            pendingDeleteInvitation?.status === "ACCEPTED"
+              ? `Lời mời của CLB "${pendingDeleteInvitation.teamName}" đã được chấp nhận.\n\nNếu CLB chưa có đơn đăng ký trong mùa giải này, hệ thống sẽ cho phép xóa. Nếu đã có đơn đăng ký, thao tác sẽ bị từ chối.\n\nBạn có chắc muốn xóa lời mời này không?`
+              : `Bạn có chắc muốn xóa lời mời của CLB "${pendingDeleteInvitation?.teamName ?? ""}" không?`
+          }
+          confirmText="Xóa lời mời"
+          cancelText="Hủy"
+          danger
+          loading={deletingInvitationId !== null}
+          onConfirm={handleConfirmDeleteInvitation}
+          onClose={() => {
+            if (deletingInvitationId === null) {
+              setPendingDeleteInvitation(null);
+            }
+          }}
+        />
+
+        {editingInvitation && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl">
+              <div className="mb-5">
+                <p className="text-xs font-black uppercase tracking-widest text-green-700">
+                  Cập nhật lời mời
+                </p>
+                <h3 className="mt-1 text-xl font-black text-gray-900">
+                  Sửa mùa giải được mời
+                </h3>
+                <p className="mt-1 text-sm font-semibold text-gray-500">
+                  Chỉ áp dụng với lời mời đang chờ phản hồi.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-2xl bg-[#f5f3ef] p-4">
+                  <p className="text-xs font-black uppercase tracking-widest text-gray-400">
+                    Câu lạc bộ
+                  </p>
+                  <p className="mt-1 font-black text-gray-900">
+                    {editingInvitation.teamName}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-[#f5f3ef] p-4">
+                  <p className="text-xs font-black uppercase tracking-widest text-gray-400">
+                    Mùa giải hiện tại
+                  </p>
+                  <p className="mt-1 font-black text-gray-900">
+                    {editingInvitation.seasonName ||
+                      `Mùa giải #${editingInvitation.seasonId}`}
+                  </p>
+                </div>
+
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-widest text-gray-400">
+                    Mùa giải mới
+                  </span>
+                  <select
+                    value={editSeasonId}
+                    onChange={(event) =>
+                      setEditSeasonId(
+                        event.target.value ? Number(event.target.value) : "",
+                      )
+                    }
+                    className="w-full rounded-2xl border border-transparent bg-[#f5f3ef] px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-green-700/20"
+                  >
+                    <option value="">-- Chọn mùa giải --</option>
+                    {seasons.map((season) => (
+                      <option key={season.id} value={season.id}>
+                        {season.name || season.year || `Mùa giải #${season.id}`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeEditInvitation}
+                  disabled={updatingInvitation}
+                  className="rounded-full bg-gray-100 px-5 py-2.5 text-sm font-black text-gray-700 transition hover:bg-gray-200 disabled:opacity-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUpdateInvitationSeason}
+                  disabled={updatingInvitation}
+                  className="rounded-full bg-[#008C2F] px-5 py-2.5 text-sm font-black text-white transition hover:bg-green-800 disabled:opacity-50"
+                >
+                  {updatingInvitation ? "Đang lưu..." : "Lưu thay đổi"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AppLayout>
   );

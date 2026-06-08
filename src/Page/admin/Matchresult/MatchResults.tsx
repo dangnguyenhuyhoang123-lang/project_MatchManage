@@ -462,7 +462,7 @@ const MatchResults: React.FC = () => {
       </main>
 
       <div className="mt-auto flex items-center justify-between px-8 py-8 text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/40">
-        <span>© 2024 VFF - Elite Pitch Manager</span>
+        <span>© 2026 VFF - Elite HD Manager</span>
         <span>Phiên bản 1.2.0-Tactical</span>
       </div>
 
