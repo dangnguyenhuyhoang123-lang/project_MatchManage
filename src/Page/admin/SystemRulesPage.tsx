@@ -391,6 +391,13 @@ const SystemRulesPage: React.FC = () => {
       }
 
       closeModal();
+    } catch (error) {
+      toast.error(
+        getErrorMessage(
+          error,
+          "Không thể xóa bộ luật này. Vui lòng kiểm tra xem nó có đang được liên kết với mùa giải nào không.",
+        ),
+      );
     } finally {
       setSubmitting(false);
     }

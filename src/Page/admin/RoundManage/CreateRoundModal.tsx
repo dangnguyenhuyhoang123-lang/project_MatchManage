@@ -286,7 +286,7 @@ export default function CreateRoundModal({
           </div>
 
           <div className="space-y-6 lg:col-span-4">
-            <div className="flex flex-col items-center rounded-3xl border border-[#bfcaba]/30 bg-white p-8 text-center shadow-[0_12px_48px_-12px_rgba(27,28,26,0.06)]">
+            {/* <div className="flex flex-col items-center rounded-3xl border border-[#bfcaba]/30 bg-white p-8 text-center shadow-[0_12px_48px_-12px_rgba(27,28,26,0.06)]">
               <div className="mb-4 flex h-16 w-16 -rotate-3 items-center justify-center rounded-2xl bg-[#a3f69c] shadow-sm">
                 <span className="material-symbols-outlined rotate-3 text-[32px] text-[#002204]">
                   sports
@@ -311,21 +311,18 @@ export default function CreateRoundModal({
                 onChange={handleChange}
                 className="w-full rounded-full border border-[#bfcaba]/20 bg-[#fbf9f5] px-6 py-4 text-center text-3xl font-black text-[#0d631b] outline-none"
               />
-            </div>
+            </div> */}
 
             <div className="group relative flex h-[180px] flex-col justify-end overflow-hidden rounded-3xl bg-gradient-to-br from-[#1d622b] to-[#0d631b] p-6 shadow-md">
               <div className="absolute inset-0 scale-150 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent opacity-20"></div>
 
               <div className="relative z-10 transition-transform duration-500 group-hover:-translate-y-1">
                 <h4 className="mb-2 text-xl font-black leading-tight text-white">
-                  Mật độ lịch thi đấu
+                  Quy tắc vòng đấu
                 </h4>
                 <p className="text-xs font-medium leading-relaxed text-[#cbffc2]/90">
-                  Vòng đấu này dự kiến tổ chức tối đa {round.maxMatches} trận từ{" "}
-                  {round.startDate
-                    ? "mốc bắt đầu đã chọn"
-                    : "thời điểm bạn cấu hình"}
-                  .
+                  Mỗi đội chỉ được xuất hiện một lần trong cùng vòng đấu. Các
+                  trận đấu sẽ được kiểm tra để tránh trùng lịch đội bóng.
                 </p>
               </div>
             </div>

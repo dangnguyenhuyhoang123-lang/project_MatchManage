@@ -450,9 +450,9 @@ const MatchDetail = () => {
             <div className="w-1/3 flex justify-center items-center">
               {isFinished ? (
                 <div className="text-4xl md:text-6xl font-black text-[#1B1C1A] tracking-tighter flex items-center gap-2 md:gap-4 font-headline">
-                  <span>{match.homeScore}</span>
+                  <span>{match.homeScore ?? 0}</span>
                   <span className="text-[#D8D4CE] font-light">-</span>
-                  <span>{match.awayScore}</span>
+                  <span>{match.awayScore ?? 0}</span>
                 </div>
               ) : (
                 <div className="text-4xl font-black text-[#D8D4CE] tracking-widest font-headline">

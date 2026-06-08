@@ -509,7 +509,12 @@ const MatchResultUpdate: FC<MatchResultUpdateProps> = ({
       toast.success("Đã lưu cầu thủ xuất sắc nhất trận.");
     } catch (error) {
       console.error("Cannot update man of the match", error);
-      toast.error(getErrorMessage(error, "Không thể lưu cầu thủ xuất sắc nhất trận. Vui lòng kiểm tra cầu thủ có thuộc hai đội thi đấu không."));
+      toast.error(
+        getErrorMessage(
+          error,
+          "Không thể lưu cầu thủ xuất sắc nhất trận. Vui lòng kiểm tra cầu thủ có thuộc hai đội thi đấu không.",
+        ),
+      );
     } finally {
       setLoading(false);
     }

@@ -50,11 +50,11 @@ export class MatchModel {
       throw new Error("Home team and away team cannot be the same");
     }
 
-    if (status === MatchStatus.FINISHED) {
-      if (homeScore == null || awayScore == null) {
-        throw new Error("Finished match must have scores");
-      }
-    }
+    // if (status === MatchStatus.FINISHED) {
+    //   if (homeScore == null || awayScore == null) {
+    //     throw new Error("kết thúc trận phải có sự kiện");
+    //   }
+    // }
 
     this.id = id;
     this.status = status;

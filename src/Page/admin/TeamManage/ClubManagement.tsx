@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import ConfirmModal from "../../../components/ConfirmModal";
 import { Modal } from "../../../components/Modal";
@@ -40,6 +41,7 @@ const normalizeKeyword = (value: string) => value.trim().toLowerCase();
 const getStatusLabel = (status: string) => STATUS_LABELS[status] ?? status;
 
 const ClubManagement: React.FC = () => {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<TeamModel | null>(null);
   const [teams, setTeams] = useState<TeamModel[]>([]);
@@ -223,6 +225,11 @@ const ClubManagement: React.FC = () => {
     setOpen(true);
   };
 
+  const handleViewPublicDetail = (team: TeamModel) => {
+    if (!team.id) return;
+    navigate(`/teams/${team.id}`);
+  };
+
   return (
     <AppLayout>
       <header className="mb-10 flex items-end justify-between">
@@ -335,6 +342,7 @@ const ClubManagement: React.FC = () => {
               team={team}
               onEdit={() => openEditModal(team)}
               onDelete={() => handleDelete(team)}
+              onViewPublicDetail={() => handleViewPublicDetail(team)}
             />
           ))
         ) : (
@@ -441,13 +449,24 @@ const ClubCard = ({
   team,
   onEdit,
   onDelete,
+  onViewPublicDetail,
 }: {
   team: TeamModel;
   onEdit: () => void;
   onDelete: () => void;
+  onViewPublicDetail: () => void;
 }) => (
   <div
-    className={`group rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 ${
+    role="button"
+    tabIndex={0}
+    onClick={onViewPublicDetail}
+    onKeyDown={(event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        onViewPublicDetail();
+      }
+    }}
+    className={`group cursor-pointer rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-[#0d631b]/20 ${
       team.status !== "ACTIVE" ? "grayscale opacity-60" : ""
     }`}
   >
@@ -509,19 +528,31 @@ const ClubCard = ({
 
     <div className="flex gap-2 border-t border-gray-50 pt-4">
       <button
-        onClick={onEdit}
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onEdit();
+        }}
         className="flex-1 rounded-full bg-gray-100 py-2.5 text-xs font-bold text-gray-600 transition-all hover:bg-[#4c56af] hover:text-white"
       >
         Chỉnh sửa
       </button>
       <button
-        onClick={onEdit}
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onEdit();
+        }}
         className="rounded-full bg-gray-100 p-2.5 text-gray-600 hover:bg-gray-200"
       >
         <span className="material-symbols-outlined text-sm">edit</span>
       </button>
       <button
-        onClick={onDelete}
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onDelete();
+        }}
         className="rounded-full bg-red-50 p-2.5 text-red-500 transition-all hover:bg-red-500 hover:text-white"
       >
         <span className="material-symbols-outlined text-sm">delete</span>
