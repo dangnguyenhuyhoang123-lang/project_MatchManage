@@ -58,12 +58,15 @@ class CoachService {
   async getCoachesByTeamNormalized(teamId: number, page = 0, size = 8) {
     const response = await this.getCoachesByTeamId(teamId, page, size);
     const data = response.data;
+    const content = Array.isArray(data?.content)
+      ? data.content
+      : Array.isArray(data)
+        ? data
+        : [];
 
     return {
       ...data,
-      content: Array.isArray(data?.content)
-        ? data.content.map(normalizeCoach)
-        : [],
+      content: content.map(normalizeCoach),
     };
   }
 

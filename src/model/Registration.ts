@@ -4,7 +4,7 @@ export type GrassType = "Standard" | "Synthetic" | "Premium";
 
 export interface TeamRegistrationDTO {
   id: number;
-  note?: string;
+  note?: string | null;
 
   homeKitColor?: string | null;
   awayKitColor?: string | null;
@@ -34,6 +34,12 @@ export interface CoachRegistrationDTO {
   role: string;
 }
 
+export interface AdminUpdateRegistrationPayload {
+  teamInfo: TeamRegistrationDTO;
+  listPlayerInfo: PlayerRegistrationDTO[];
+  listCoachInfo: CoachRegistrationDTO[];
+}
+
 export interface FullRegistrationDTO {
   seasonID: number;
   teamInfo: TeamRegistrationDTO;
@@ -45,7 +51,9 @@ export interface FullRegistrationDTO {
 export interface RegistrationSummaryDTO {
   id: number;
   seasonId: number;
+  clubId?: number;
   seasonName: string;
+  teamId?: number;
   teamName: string;
   city: string;
   status: RegistrationStatus;
@@ -61,8 +69,10 @@ export interface RegistrationSummaryDTO {
 }
 
 export interface RegistrationPlayerViewDTO {
+  playerId?: number;
   name: string;
   idCode: string;
+  IDCode?: string;
   dateOfBirth: string;
   position: string;
   shirtNumber: number;
@@ -73,17 +83,33 @@ export interface RegistrationPlayerViewDTO {
 }
 
 export interface RegistrationCoachViewDTO {
+  coachId?: number;
   name: string;
   nationality: string;
   idCode: string;
+  IDCode?: string;
   birthDay: string;
   role: string;
+  tournamentRole?: string;
   description?: string;
+  des?: string;
 }
 
 export interface RegistrationDetailDTO {
   id: number;
   seasonId: number;
+  teamId?: number | null;
+  clubId?: number;
+  team?: {
+    id?: number;
+    teamId?: number;
+    name?: string;
+  };
+  club?: {
+    id?: number;
+    clubId?: number;
+    name?: string;
+  };
   seasonName: string;
   teamName: string;
   logo?: string;

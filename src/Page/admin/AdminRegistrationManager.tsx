@@ -6,10 +6,15 @@ import type {
   RegistrationStatus,
   RegistrationSummaryDTO,
 } from "../../model/Registration";
+import type { Player } from "../../model/Player";
+import type { Coach } from "../../model/CoachModel";
 import type { SystemRule } from "../../services/SystemRuleService";
 import ConfirmModal from "../../components/ConfirmModal";
 import CommonStatusBadge from "../../components/common/StatusBadge";
 import LoadingSpinner from "../../components/Spinner/LoadingSpinner";
+import AdminRegistrationEditModal from "./AdminRegistrationEditModal";
+import CoachService from "../../services/CoachService";
+import PlayerService from "../../services/PlayerService";
 import RegistrationService from "../../services/RegistrationService";
 import SeasonService from "../../services/SeasonService";
 import SystemRuleService from "../../services/SystemRuleService";
@@ -188,6 +193,32 @@ const getClubInitials = (name: string) => {
     .slice(0, 2)
     .map((word) => word.charAt(0).toUpperCase())
     .join("");
+};
+
+const getRegistrationTeamId = (
+  detail?: RegistrationDetailDTO | null,
+  summary?: RegistrationSummaryDTO | null,
+) => {
+  const detailData = detail as any;
+  const summaryData = summary as any;
+
+  return (
+    detailData?.teamId ??
+    detailData?.clubId ??
+    detailData?.idTeam ??
+    detailData?.team?.id ??
+    detailData?.team?.teamId ??
+    detailData?.club?.id ??
+    detailData?.club?.clubId ??
+    summaryData?.teamId ??
+    summaryData?.clubId ??
+    summaryData?.idTeam ??
+    summaryData?.team?.id ??
+    summaryData?.team?.teamId ??
+    summaryData?.club?.id ??
+    summaryData?.club?.clubId ??
+    null
+  );
 };
 
 const getRegistrationValidationErrors = (
@@ -393,6 +424,20 @@ const AdminRegistrationManager: React.FC = () => {
     id: number;
     proofUrl: string;
   } | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [pendingDeleteRegistration, setPendingDeleteRegistration] =
+    useState<RegistrationSummaryDTO | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isEditLoading, setIsEditLoading] = useState(false);
+  const [editErrorMessage, setEditErrorMessage] = useState("");
+  const [editingRegistrationId, setEditingRegistrationId] = useState<
+    number | null
+  >(null);
+  const [editingTeamId, setEditingTeamId] = useState<number | null>(null);
+  const [editingRegistrationDetail, setEditingRegistrationDetail] =
+    useState<RegistrationDetailDTO | null>(null);
+  const [editingPlayers, setEditingPlayers] = useState<Player[]>([]);
+  const [editingCoaches, setEditingCoaches] = useState<Coach[]>([]);
 
   const loadRegistrations = useCallback(async () => {
     setIsLoading(true);
@@ -584,6 +629,33 @@ const AdminRegistrationManager: React.FC = () => {
   };
 
   // Xử lý view detail.
+  const handleDeleteRegistration = (registration: RegistrationSummaryDTO) => {
+    setPendingDeleteRegistration(registration);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDeleteRegistration) return;
+
+    const registrationId = pendingDeleteRegistration.id;
+    setDeletingId(registrationId);
+
+    try {
+      await RegistrationService.deleteRegistration(registrationId);
+      toast.success("Xóa đơn đăng ký thành công.");
+
+      if (selectedRegistrationDetail?.id === registrationId) {
+        closeDetailModal();
+      }
+
+      await loadRegistrations();
+      setPendingDeleteRegistration(null);
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Không thể xóa đơn đăng ký."));
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handleViewDetail = async (registration: RegistrationSummaryDTO) => {
     setIsDetailOpen(true);
     setIsDetailLoading(true);
@@ -620,6 +692,76 @@ const AdminRegistrationManager: React.FC = () => {
     setSelectedRegistrationDetail(null);
     setSelectedRule(null);
     setDetailErrorMessage("");
+  };
+
+  const closeEditModal = () => {
+    setIsEditOpen(false);
+    setEditErrorMessage("");
+    setEditingRegistrationId(null);
+    setEditingTeamId(null);
+    setEditingRegistrationDetail(null);
+    setEditingPlayers([]);
+    setEditingCoaches([]);
+  };
+
+  const handleEditRegistration = async (
+    registration: RegistrationSummaryDTO,
+  ) => {
+    setIsEditOpen(true);
+    setIsEditLoading(true);
+    setEditErrorMessage("");
+    setEditingRegistrationId(registration.id);
+    setEditingTeamId(null);
+    setEditingRegistrationDetail(null);
+    setEditingPlayers([]);
+    setEditingCoaches([]);
+
+    try {
+      const detailResponse = await RegistrationService.getRegistrationById(
+        registration.id,
+      );
+      const detail = detailResponse.data;
+      const teamId = getRegistrationTeamId(detail, registration);
+
+      if (!teamId) {
+        // TODO: Backend RegistrationDetailDTO can tra them teamId de FE load players/coaches theo CLB.
+        setEditErrorMessage("Khong xac dinh duoc CLB cua don dang ky.");
+        console.warn(
+          "Registration detail/summary does not include teamId for admin edit.",
+          { detail, registration },
+        );
+        return;
+      }
+
+      const [playersResponse, coachesResponse] = await Promise.all([
+        PlayerService.getPlayersByTeamNormalized(Number(teamId), 0, 1000),
+        CoachService.getCoachesByTeamNormalized(Number(teamId), 0, 1000),
+      ]);
+
+      setEditingTeamId(Number(teamId));
+      setEditingRegistrationDetail(detail);
+      setEditingPlayers(playersResponse.content ?? []);
+      setEditingCoaches(coachesResponse.content ?? []);
+    } catch (error) {
+      console.error("Cannot load registration edit data", error);
+      setEditErrorMessage(
+        getErrorMessage(error, "Khong the tai du lieu sua don dang ky."),
+      );
+    } finally {
+      setIsEditLoading(false);
+    }
+  };
+
+  const handleEditSaved = async () => {
+    const savedId = editingRegistrationId;
+    closeEditModal();
+    await loadRegistrations();
+
+    if (savedId && selectedRegistrationDetail?.id === savedId) {
+      const detailResponse =
+        await RegistrationService.getRegistrationById(savedId);
+      setSelectedRegistrationDetail(detailResponse.data);
+    }
   };
 
   const handleConfirmPayment = async (
@@ -884,10 +1026,13 @@ const AdminRegistrationManager: React.FC = () => {
                 key={registration.id}
                 registration={registration}
                 isProcessing={processingId === registration.id}
+                isDeleting={deletingId === registration.id}
                 onApprove={handleApprove}
                 onReject={handleReject}
                 onConfirmPayment={handleConfirmPayment}
                 onView={handleViewDetail}
+                onEdit={handleEditRegistration}
+                onDelete={handleDeleteRegistration}
               />
             ))
           )}
@@ -919,6 +1064,30 @@ const AdminRegistrationManager: React.FC = () => {
           isProcessing={processingId !== null}
         />
       )}
+      <AdminRegistrationEditModal
+        open={isEditOpen}
+        registrationId={editingRegistrationId}
+        teamId={editingTeamId}
+        registrationDetail={editingRegistrationDetail}
+        players={editingPlayers}
+        coaches={editingCoaches}
+        isLoading={isEditLoading}
+        errorMessage={editErrorMessage}
+        onClose={closeEditModal}
+        onSaved={handleEditSaved}
+      />
+      <ConfirmModal
+        open={pendingDeleteRegistration !== null}
+        title="Xóa đơn đăng ký"
+        message={`Bạn có chắc muốn xóa đơn đăng ký của CLB "${pendingDeleteRegistration?.teamName ?? "này"}" không?\n\nNếu đội chưa phát sinh trận đấu, hệ thống sẽ xóa hồ sơ đăng ký và dữ liệu đội tham gia mùa giải liên quan. Nếu đội đã phát sinh trận đấu, hệ thống sẽ không cho xóa và yêu cầu dùng chức năng vô hiệu hóa.`}
+        confirmText="Xóa đơn"
+        cancelText="Hủy"
+        loading={deletingId !== null}
+        onConfirm={handleConfirmDelete}
+        onClose={() => {
+          if (deletingId === null) setPendingDeleteRegistration(null);
+        }}
+      />
       <ConfirmModal
         open={pendingApproveId !== null}
         title="Duyệt hồ sơ đăng ký"
@@ -1078,23 +1247,33 @@ const StatCard = ({
 type RegistrationRowProps = {
   registration: RegistrationSummaryDTO;
   isProcessing: boolean;
+  isDeleting: boolean;
   onApprove: (id: number) => void;
   onReject: (id: number) => void;
   onConfirmPayment: (id: number, paymentProofUrl?: string | null) => void;
   onView: (registration: RegistrationSummaryDTO) => void;
+  onEdit: (registration: RegistrationSummaryDTO) => void;
+  onDelete: (registration: RegistrationSummaryDTO) => void;
 };
 
 const RegistrationRow = ({
   registration,
   isProcessing,
+  isDeleting,
   onApprove,
   onReject,
   onConfirmPayment,
   onView,
+  onEdit,
+  onDelete,
 }: RegistrationRowProps) => {
   const submittedAt = formatSubmittedAt(registration.submittedAt);
   const status = statusMeta[registration.status];
   const isPending = registration.status === "PENDING";
+  const canEdit =
+    registration.status === "PENDING" || registration.status === "APPROVED";
+  const canDelete =
+    registration.status === "PENDING" || registration.status === "APPROVED";
 
   return (
     <div
@@ -1143,6 +1322,36 @@ const RegistrationRow = ({
           disabled={isProcessing}
           onClick={() => onView(registration)}
         />
+
+        {canEdit && (
+          <button
+            type="button"
+            disabled={isProcessing || isDeleting}
+            onClick={() => onEdit(registration)}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-blue-50 px-3 text-xs font-bold text-blue-600 transition-colors hover:bg-blue-100 disabled:opacity-50"
+            title="Sửa đơn đăng ký"
+            aria-label="Sửa đơn đăng ký"
+          >
+            <span className="material-symbols-outlined text-sm">edit</span>
+            Sửa
+          </button>
+        )}
+
+        {canDelete && (
+          <button
+            type="button"
+            disabled={isProcessing || isDeleting}
+            onClick={() => onDelete(registration)}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-red-50 px-3 text-xs font-bold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
+            title="Xóa đơn đăng ký"
+            aria-label="Xóa đơn đăng ký"
+          >
+            <span className="material-symbols-outlined text-sm">
+              {isDeleting ? "hourglass_top" : "delete"}
+            </span>
+            {isDeleting ? "Đang xóa..." : "Xóa"}
+          </button>
+        )}
 
         {isPending && (
           <>

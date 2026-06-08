@@ -1,5 +1,6 @@
 import axiosClient from "./axiosClient";
 import type {
+  AdminUpdateRegistrationPayload,
   FullRegistrationDTO,
   MessageResponse,
   RegistrationDetailDTO,
@@ -50,6 +51,15 @@ class RegistrationService {
     );
   }
 
+  updateRegistrationByAdmin(
+    id: number,
+    data: AdminUpdateRegistrationPayload,
+  ) {
+    return axiosClient.put<RegistrationDetailDTO>(`${API_BASE_URL}/${id}`, data, {
+      withCredentials: true,
+    });
+  }
+
   approveRegistration(id: number) {
     return axiosClient.post<MessageResponse>(
       `${API_BASE_URL}/${id}/approve`,
@@ -71,6 +81,12 @@ class RegistrationService {
         withCredentials: true,
       },
     );
+  }
+
+  deleteRegistration(id: number) {
+    return axiosClient.delete<MessageResponse>(`${API_BASE_URL}/${id}`, {
+      withCredentials: true,
+    });
   }
 }
 

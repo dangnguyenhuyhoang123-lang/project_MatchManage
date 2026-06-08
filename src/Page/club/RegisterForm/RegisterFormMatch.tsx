@@ -512,9 +512,7 @@ const RegisterFormMatch: React.FC = () => {
       },
     }));
     setStep(1);
-    setDraftMessage(
-      "Đã gửi hồ sơ thành công. Hệ thống đã xóa bản nháp và đặt lại form đăng ký về trạng thái ban đầu.",
-    );
+    setDraftMessage("Đã gửi hồ sơ thành công.");
   };
 
   // Cập nhật thông tin sân trong bản nháp.

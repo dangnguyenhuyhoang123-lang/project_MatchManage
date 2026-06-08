@@ -165,6 +165,11 @@ export default function StandingsPage() {
           return {
             rank: item.rank || item.rankPosition || index + 1,
             name: item.teamName || item.name || item.clubName || "Đội bóng",
+            stadium:
+              item.stadium ||
+              item.stadiumName ||
+              item.homeStadium ||
+              "Chua cap nhat",
             played: item.played || item.matchesPlayed || 0,
             stats: `${item.win ?? item.won ?? 0} - ${item.draw ?? item.drawn ?? 0} - ${item.lose ?? item.lost ?? 0}`,
             hs: goalDifference > 0 ? `+${goalDifference}` : `${goalDifference}`,

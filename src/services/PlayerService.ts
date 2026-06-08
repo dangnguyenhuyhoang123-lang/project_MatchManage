@@ -109,12 +109,15 @@ class PlayerService {
   async getPlayersByTeamNormalized(teamId: number, page = 0, size = 10) {
     const response = await this.getPlayersByTeam(teamId, page, size);
     const data = response.data;
+    const content = Array.isArray(data?.content)
+      ? data.content
+      : Array.isArray(data)
+        ? data
+        : [];
 
     return {
       ...data,
-      content: Array.isArray(data?.content)
-        ? data.content.map(normalizePlayer)
-        : [],
+      content: content.map(normalizePlayer),
     };
   }
 
