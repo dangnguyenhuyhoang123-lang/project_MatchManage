@@ -2,7 +2,9 @@ import { Client, type IMessage, type StompSubscription } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import type { RealtimeEventDTO } from "../../model/RealtimeEvent";
 
-const WS_URL = import.meta.env.VITE_WS_BASE_URL ?? "http://localhost:8080/ws";
+// const WS_URL = import.meta.env.VITE_WS_BASE_URL ?? "http://localhost:8080/ws";
+// const WS_URL = import.meta.env.VITE_WS_BASE_URL ?? "/ws";
+const WS_URL = "/ws";
 
 class PublicSocketService {
   private client: Client | null = null;

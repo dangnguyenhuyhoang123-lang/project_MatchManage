@@ -419,7 +419,7 @@ const MatchResults: React.FC = () => {
                         </div>
 
                         <div className="truncate text-body-sm font-medium text-on-surface">
-                          {match.league?.name || "-"}
+                          {match?.season.name || "-"}
                         </div>
                         <div>
                           <span className="inline-block rounded-sm bg-[#ABF4AC80] px-2 py-1 text-[10px] font-bold uppercase text-[#07521D]">

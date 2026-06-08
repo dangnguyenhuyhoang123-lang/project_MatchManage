@@ -31,8 +31,9 @@ export type {
 let stompClient: Client | null = null;
 let currentUserId: number | null = null;
 
-const WS_URL = import.meta.env.VITE_WS_BASE_URL ?? "http://localhost:8080/ws";
-
+// const WS_URL = import.meta.env.VITE_WS_BASE_URL ?? "http://localhost:8080/ws";
+// const WS_URL = import.meta.env.VITE_WS_BASE_URL ?? "/ws";
+const WS_URL = "/ws";
 function parseSocketMessage<T>(message: IMessage, label: string): T | null {
   try {
     return JSON.parse(message.body) as T;

@@ -20,10 +20,7 @@ import RoundService from "../../../services/RoundService";
 import { useRealtimeEvent } from "../../../hooks/useRealtimeEvent";
 import type { RealtimeEventDTO } from "../../../services/websocket/NotificationSocketService";
 import { getErrorMessage } from "../../../utils/errorUtils";
-import {
-  getMatchStatusLabel,
-  getStatusTone,
-} from "../../../utils/statusUtils";
+import { getMatchStatusLabel, getStatusTone } from "../../../utils/statusUtils";
 
 const SO_TRAN_MOI_TRANG = 8;
 const CLIENT_FETCH_SIZE = 1000;
@@ -161,7 +158,9 @@ export default function MatchSchedule() {
       fetchMatches(trangHienTai);
     } catch (error) {
       console.error("Lỗi khi dự đoán trận đấu:", error);
-      toast.error(getErrorMessage(error, "Không thể dự đoán trận đấu. Vui lòng thử lại!"));
+      toast.error(
+        getErrorMessage(error, "Không thể dự đoán trận đấu. Vui lòng thử lại!"),
+      );
     } finally {
       setPredictingIds((current) => {
         const next = new Set(current);
@@ -476,7 +475,7 @@ export default function MatchSchedule() {
               <div className="grid grid-cols-[150px_320px_190px_150px_150px_170px] border-t border-gray-200/60 px-6 pt-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
                 <div>Thời gian</div>
                 <div className="text-center">Trận đấu</div>
-                <div>Sân/Giải đấu</div>
+                <div>Giải đấu</div>
                 <div className="text-center">Dự đoán</div>
                 <div className="text-center">Trạng thái</div>
                 <div className="text-right">Thao tác</div>
@@ -672,13 +671,10 @@ function MatchRow({
       </div>
 
       <div className="flex items-center gap-2">
-        <span className="material-symbols-outlined text-gray-400">
-          location_on
-        </span>
         <span
           className={`line-clamp-2 text-sm ${isConflict ? "font-bold text-red-500" : ""}`}
         >
-          {match.league?.name || "-"}
+          {match.season?.name || "-"}
         </span>
       </div>
 

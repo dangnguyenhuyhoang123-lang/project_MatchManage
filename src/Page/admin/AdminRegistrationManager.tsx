@@ -1270,10 +1270,12 @@ const RegistrationRow = ({
   const submittedAt = formatSubmittedAt(registration.submittedAt);
   const status = statusMeta[registration.status];
   const isPending = registration.status === "PENDING";
-  const canEdit =
-    registration.status === "PENDING" || registration.status === "APPROVED";
-  const canDelete =
-    registration.status === "PENDING" || registration.status === "APPROVED";
+  const isApproved = registration.status === "APPROVED";
+  const isRejected = registration.status === "REJECTED";
+
+  const canView = isPending || isApproved || isRejected;
+  const canEdit = isApproved;
+  const canDelete = isApproved;
 
   return (
     <div
@@ -1315,13 +1317,50 @@ const RegistrationRow = ({
       </div>
 
       <div className="md:col-span-2 flex md:justify-end gap-2">
-        <IconButton
-          label="Xem chi tiáº¿t"
-          icon="visibility"
-          className="bg-[#f5f3ef] hover:bg-gray-200 text-gray-700"
-          disabled={isProcessing}
-          onClick={() => onView(registration)}
-        />
+        {isPending && (
+          <>
+            {registration.feeStatus !== "PAID" && (
+              <IconButton
+                label="Xác nhận lệ phí"
+                icon="payments"
+                className="bg-amber-50 hover:bg-amber-100 text-amber-700 disabled:opacity-50"
+                disabled={isProcessing}
+                onClick={() =>
+                  onConfirmPayment(
+                    registration.id,
+                    registration.paymentProofUrl,
+                  )
+                }
+              />
+            )}
+
+            <IconButton
+              label="Chấp nhận"
+              icon="check"
+              className="bg-[#008C2F] hover:bg-green-800 text-white disabled:opacity-50"
+              disabled={isProcessing || registration.feeStatus !== "PAID"}
+              onClick={() => onApprove(registration.id)}
+            />
+
+            <IconButton
+              label="Từ chối"
+              icon="close"
+              className="bg-red-50 hover:bg-red-100 text-red-500 disabled:opacity-50"
+              disabled={isProcessing}
+              onClick={() => onReject(registration.id)}
+            />
+          </>
+        )}
+
+        {canView && (
+          <IconButton
+            label="Xem chi tiết"
+            icon="visibility"
+            className="bg-[#f5f3ef] hover:bg-gray-200 text-gray-700"
+            disabled={isProcessing}
+            onClick={() => onView(registration)}
+          />
+        )}
 
         {canEdit && (
           <button
@@ -1351,40 +1390,6 @@ const RegistrationRow = ({
             </span>
             {isDeleting ? "Đang xóa..." : "Xóa"}
           </button>
-        )}
-
-        {isPending && (
-          <>
-            {registration.feeStatus !== "PAID" && (
-              <IconButton
-                label="Xác nhận lệ phí"
-                icon="payments"
-                className="bg-amber-50 hover:bg-amber-100 text-amber-700 disabled:opacity-50"
-                disabled={isProcessing}
-                onClick={() =>
-                  onConfirmPayment(
-                    registration.id,
-                    registration.paymentProofUrl,
-                  )
-                }
-              />
-            )}
-            <IconButton
-              label="Chấp nhận"
-              icon="check"
-              className="bg-[#008C2F] hover:bg-green-800 text-white disabled:opacity-50"
-              disabled={isProcessing || registration.feeStatus !== "PAID"}
-              onClick={() => onApprove(registration.id)}
-            />
-
-            <IconButton
-              label="Từ chối"
-              icon="close"
-              className="bg-red-50 hover:bg-red-100 text-red-500 disabled:opacity-50"
-              disabled={isProcessing}
-              onClick={() => onReject(registration.id)}
-            />
-          </>
         )}
       </div>
     </div>
